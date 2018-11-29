@@ -213,7 +213,9 @@
     <ClCompile Include="KDTree.cpp" />
     <ClCompile Include="KDTreeGPUUtills.cpp" />
     <ClCompile Include="Light.cpp" />
-    <CudaCompile Include="MainWindow.cpp" />
+    <ClCompile Include="MainWindow.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="Plane.cpp" />
     <ClCompile Include="Ray.cpp" />
@@ -235,7 +237,9 @@
     <ClInclude Include="helper_math.h" />
     <ClInclude Include="KDThreeGPU.h" />
     <ClInclude Include="KDTreeGPUUtills.h" />
-    <ClInclude Include="MainWindow.h" />
+    <ClInclude Include="MainWindow.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="KDTree.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Object.h" />

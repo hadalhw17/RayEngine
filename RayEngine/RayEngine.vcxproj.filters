@@ -72,6 +72,9 @@
     <ClCompile Include="KDThreeGPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MainWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BoundingVolume.h">
@@ -146,8 +149,5 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="CUDARayTracing.cu" />
-    <CudaCompile Include="MainWindow.cpp">
-      <Filter>Source Files</Filter>
-    </CudaCompile>
   </ItemGroup>
 </Project>

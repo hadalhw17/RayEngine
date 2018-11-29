@@ -12,6 +12,10 @@
 
 #include <iostream>
 #include <vector>
+#include "MainWindow.h"
+
+
+MainWindow *main_window;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -19,6 +23,157 @@ void processInput(GLFWwindow *window);
 static void cursorPositionCallback(GLFWwindow *window, double xPos, double yPos);
 void cursorEnterCallback(GLFWwindow *widnow, int entered);
 void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
+
+
+MainWindow::MainWindow()
+{
+	setup_camera();
+
+	build_scene();
+	
+	init_triangles();
+}
+
+MainWindow::~MainWindow()
+{
+}
+
+
+extern "C" float4 *Render(class RKDThreeGPU *tree, RCamera _sceneCam, std::vector<float4> h_triangles);
+
+
+void MainWindow::RenderFrame(RKDThreeGPU * CUDATree)
+{
+	pixels = Render(CUDATree, *SceneCam, triangles);
+	// create some image data
+	GLubyte *image = new GLubyte[4 * SCR_WIDTH * SCR_HEIGHT];
+	for (int j = 0; j < SCR_HEIGHT; ++j) {
+		for (int i = 0; i < SCR_WIDTH; ++i) {
+			size_t index = j * SCR_WIDTH + i;
+			image[4 * index + 0] = 0xFF * pixels[index].x; // R
+			image[4 * index + 1] = 0xFF * pixels[index].y; // G
+			image[4 * index + 2] = 0xFF * pixels[index].z; // B
+			image[4 * index + 3] = 0xFF;
+		}
+	}
+
+	// set texture parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	// set texture content
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, &image[0]);
+
+	free(pixels);
+	free(image);
+}
+
+
+// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
+// ---------------------------------------------------------------------------------------------------------
+void MainWindow::processInput(GLFWwindow *window)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+	{
+		SceneCam->move_forward();
+
+	}
+	else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	{
+		SceneCam->move_backward();
+
+	}
+	else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	{
+		SceneCam->strafe_left();
+	}
+	else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+	{
+		SceneCam->strafe_right();
+	}
+	else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	{
+		x_look_at -= 10.f;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+	{
+		x_look_at += 10.f;
+
+	}
+	else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+	{
+		yDelta++;
+
+
+	}
+	else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+	{
+		yDelta--;
+
+	}
+}
+
+
+void MainWindow::init_triangles()
+{
+	float3 *verts = CUDATree->get_verts();
+	float3 *faces = CUDATree->get_faces();
+
+	for (unsigned int i = 0; i < CUDATree->get_num_faces(); ++i)
+	{
+		// make a local copy of the triangle vertices
+		float3 tri = faces[i];
+		float3 v0 = verts[(int)tri.x];
+		float3 v1 = verts[(int)tri.y];
+		float3 v2 = verts[(int)tri.z];
+
+		// store triangle data as float4
+		// store two edges per triangle instead of vertices, to save some calculations in the
+		// ray triangle intersection test
+		triangles.push_back(make_float4(v0.x, v0.y, v0.z, 0));
+		triangles.push_back(make_float4(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z, 0));
+		triangles.push_back(make_float4(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z, 0));
+	}
+
+	delete[] verts, faces;
+}
+
+
+void MainWindow::setup_camera()
+{
+	SceneCam = new RCamera();
+	SceneCam->campos = make_float3(10, 0, 10);
+
+
+	//Vector between camera and the point where to look at
+	float3 diffBtw = make_float3(SceneCam->campos.x - x_look_at,
+		SceneCam->campos.y - y_look_at,
+		SceneCam->campos.z - z_look_at);
+	float3 Y = make_float3(0.f, 1.f, 0.f);
+	//Variables defining camera
+	SceneCam->camdir = make_float3(1, 0, 1);
+	SceneCam->camdown = Y;
+	SceneCam->camright = cross(SceneCam->camdown, SceneCam->camdir);
+
+	//SceneCam->lookAt(make_float3(x_look_at, y_look_at, z_look_at), 360);
+}
+
+
+void MainWindow::build_scene()
+{
+	Scene = new RScene;
+	Scene->BuildScene();
+	Tree = Scene->GetSceneTree();
+	CUDATree = new RKDThreeGPU(Tree);
+
+	delete[] Tree, Scene;
+}
+
 
 // helper to check and display for shader compiler errors
 bool check_shader_compile_status(GLuint obj) {
@@ -51,58 +206,47 @@ bool check_program_link_status(GLuint obj) {
 	return true;
 }
 
-extern "C" float4 *Render(class RKDThreeGPU *tree, RCamera _sceneCam, std::vector<float4> h_triangles);
 
-double x_pos = 0;
-double y_pos;
-double z_pos = 0;
-double x_look_at = 0;
-double y_look_at = 0;
-double z_look_at = -0.8;
-double xDelta = 0;
-double yDelta = 0;
-double oldMouseX = 0;
-double oldMouseY = 0;
-std::vector<float4> triangles;
-
-RCamera sceneCam;
-RKDThreeGPU *CUDATree;
-
-float4 *pixels;
-void RenderFrame(RKDThreeGPU *CUDATree)
+void processInput(GLFWwindow *window)
 {
-	pixels = Render(CUDATree, sceneCam, triangles);
-	// create some image data
-	GLubyte *image = new GLubyte[4 * SCR_WIDTH * SCR_HEIGHT];
-	for (int j = 0; j < SCR_HEIGHT; ++j) {
-		for (int i = 0; i < SCR_WIDTH; ++i) {
-			size_t index = j * SCR_WIDTH + i;
-			image[4 * index + 0] = 0xFF * pixels[index].x; // R
-			image[4 * index + 1] = 0xFF * pixels[index].y; // G
-			image[4 * index + 2] = 0xFF * pixels[index].z; // B
-			image[4 * index + 3] = 0xFF;
-		}
-	}
-
-	// set texture parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	// set texture content
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, &image[0]);
-
-	free(pixels);
-	free(image);
+	main_window->processInput(window);
 }
 
 
 
+// glfw: whenever the window size changed (by OS or user resize) this callback function executes
+// ---------------------------------------------------------------------------------------------
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	// make sure the viewport matches the new window dimensions; note that width and 
+	// height will be significantly larger than specified on retina displays.
+	glViewport(0, 0, width, height);
+}
+
+static float2 oldMousePosition;
+
+
+static void cursorPositionCallback(GLFWwindow *window, double xPos, double yPos)
+{
+
+}
+void cursorEnterCallback(GLFWwindow *widnow, int entered)
+{
+
+}
+
+void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
+{
+
+}
+
+
 int main()
 {
+	main_window = new MainWindow();
+
 	// glfw: initialize and configure
-	// ------------------------------
+// ------------------------------
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
@@ -260,49 +404,7 @@ int main()
 
 	// bind the texture
 	glBindTexture(GL_TEXTURE_2D, texture);
-	RRayTracer *RayTracer;
-	RScene *Scene;
-	RKDTreeCPU *Tree;
 
-	sceneCam.campos =  make_float3(10, 0, 10);
-
-
-	//Vector between camera and the point where to look at
-	float3 diffBtw = make_float3(sceneCam.campos.x - x_look_at,
-		sceneCam.campos.y - y_look_at, 
-		sceneCam.campos.z - z_look_at);
-	float3 Y = make_float3(0.f, 1.f, 0.f);
-	//Variables defining camera
-	sceneCam.camdir = make_float3(1, 0, 1);
-	sceneCam.camdown = Y;
-	sceneCam.camright = cross(sceneCam.camdown, sceneCam.camdir);
-
-	//sceneCam.lookAt(make_float3(x_look_at, y_look_at, z_look_at), 360);
-
-	RayTracer = new RRayTracer;
-	Scene = new RScene;
-	Scene->BuildScene();
-	Tree = Scene->GetSceneTree();
-	CUDATree = new RKDThreeGPU(Tree);
-	//RGBType *pixels = RayTracer->trace(Tree, 0.2, 0.f, -2, 0, 0);
-	float3 *verts = CUDATree->get_verts();
-	float3 *faces = CUDATree->get_faces();
-
-	for (unsigned int i = 0; i < CUDATree->get_num_faces(); ++i)
-	{
-		// make a local copy of the triangle vertices
-		float3 tri = faces[i];
-		float3 v0 = verts[(int)tri.x];
-		float3 v1 = verts[(int)tri.y];
-		float3 v2 = verts[(int)tri.z];
-
-		// store triangle data as float4
-		// store two edges per triangle instead of vertices, to save some calculations in the
-		// ray triangle intersection test
-		triangles.push_back(make_float4(v0.x, v0.y, v0.z, 0));
-		triangles.push_back(make_float4(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z, 0));
-		triangles.push_back(make_float4(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z, 0));
-	}
 
 	// Main render loop
 	// -----------
@@ -311,7 +413,7 @@ int main()
 		// input
 		// -----
 		processInput(window);
-		RenderFrame(CUDATree);
+		main_window->RenderFrame(main_window->CUDATree);
 
 		// render
 		// ------
@@ -352,77 +454,3 @@ int main()
 	glfwTerminate();
 	return 0;
 }
-
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
-{
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-	{
-		sceneCam.move_forward();
-
-	}
-	else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-	{
-		sceneCam.move_backward();
-
-	}
-	else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-	{
-		sceneCam.strafe_left();
-	}
-	else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-	{
-		sceneCam.strafe_right();
-	}
-	else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-	{
-		x_look_at -= 10.f;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-	{
-		x_look_at += 10.f;
-
-	}
-	else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-	{
-		yDelta ++;
-
-
-	}
-	else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-	{
-		yDelta --;
-
-	}
-}
-
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-	// make sure the viewport matches the new window dimensions; note that width and 
-	// height will be significantly larger than specified on retina displays.
-	glViewport(0, 0, width, height);
-}
-
-static float2 oldMousePosition;
-
-
-static void cursorPositionCallback(GLFWwindow *window, double xPos, double yPos)
-{
-
-}
-void cursorEnterCallback(GLFWwindow *widnow, int entered)
-{
-
-}
-
-void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
-{
-
-}
-

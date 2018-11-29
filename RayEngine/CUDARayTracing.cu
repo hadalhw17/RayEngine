@@ -21,6 +21,7 @@
 #include "KDThreeGPU.h"
 #include <thrust/device_vector.h>
 #include <thrust/device_ptr.h>
+#include "MainWindow.h"
 
 #include "RayEngine.h"
 
@@ -762,6 +763,7 @@ float4 *Render(RKDThreeGPU *tree, RCamera sceneCam, std::vector<float4> triangle
 	cudaFree(d_pixels);
 	cudaFree(d_tree);
 	cudaFree(d_index_list);
+	cudaFree(dev_triangle_p);
 
 	// Release host memory.
 	delete[] tri_index_array;
