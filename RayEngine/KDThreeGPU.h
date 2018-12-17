@@ -21,7 +21,7 @@ public:
 	int GetNumNodes() const;
 	int get_num_verts() const;
 	int get_num_faces() const;
-	int GoutRootIndes() const;
+	int get_root_index() const;
 	
 
 	void PrintCPUAndGPUTrees(class KDNodeCPU *CPUNode, bool PauseOnEachNode = false);

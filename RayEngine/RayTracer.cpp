@@ -6,7 +6,6 @@
 #include "Light.h"
 #include "Plane.h"
 #include "RStaticMesh.h"
-#include "Color.h"
 #include "Source.h"
 #include "Triangle.h"
 #include "KDTree.h"
@@ -17,53 +16,31 @@
 #include <cmath>
 #include <iostream>
 
-#include "cuda_runtime.h"
+#include "cuda_runtime_api.h"
 #include "cutil_math.h"
+#define M_PI 3.14156265
 
 
-
-RVectorF Y(0, 1, 0);
 RRayTracer::RRayTracer()
 {
-
-}
-
-
-RGBType *RRayTracer::trace(RKDTreeCPU *tree, float xCamPos, float zCamPos, float xLookAt, float yLookAt, float zLookAt)
-{
-
-	RVectorF A(0, 3, 0);
-	RVectorF B(3, 3, 0);
-	RVectorF C(3, 0, 0);
-	RVectorF D(0, 0, 0);
-
-	float aspectratio = SCR_WIDTH / (float)SCR_HEIGHT;
-
-	float3 camPos = make_float3(xCamPos, 0.3, zCamPos);
-
-	float3 diffBtw = make_float3(camPos.x - xLookAt,
-		camPos.y - yLookAt,
-		camPos.z - zLookAt);
-	float3 Y = make_float3(0.f, 1.f, 0.f);
-	//Variables defining camera
-	float3 camdir = normalize(-diffBtw);
-	float3 camdown = normalize(cross(Y, camdir));
-	float3 camright = cross(camdown, camdir);
-	//RCamera
-	RCamera sceneCam(camPos, camdir, camdown, camright);
-
-	RColor whiteLight(1.0, 1.0, 1.0, 0);
+	float4 whiteLight = make_float4(1.0, 1.0, 1.0, 0);
 	//Position of light
-	RVectorF lightPosition(0, 3, 0);
+	float3 lightPosition = make_float3(0, 3, 0);
 
 	//Light
 	RLight sceneLight(lightPosition, whiteLight);
 
 	//Set of light sources(can be several)
 	lightSources.push_back(std::shared_ptr<RSource>(&sceneLight));
+}
 
 
-	RGBType *pixels = new RGBType[SCR_WIDTH * SCR_HEIGHT * sizeof(pixels)];
+float4 *RRayTracer::trace(RKDTreeCPU *tree, RCamera *scene_camera)
+{
+
+	float aspectratio = SCR_WIDTH / (float)SCR_HEIGHT;
+
+	float4 *pixels = new float4[SCR_WIDTH * SCR_HEIGHT * sizeof(pixels)];
 
 	auto start = std::chrono::system_clock::now();
 
@@ -76,19 +53,44 @@ RGBType *RRayTracer::trace(RKDTreeCPU *tree, float xCamPos, float zCamPos, float
 			{
 				int flatIndex = j * SCR_WIDTH + i;
 
-				float x = (i + 0.5) / SCR_WIDTH;
-				float y = ((SCR_HEIGHT - j) + 0.5) / SCR_HEIGHT;
+				float sx = (float)i / (SCR_WIDTH - 1.0f);
+				float sy = 1.0f - ((float)j / (SCR_HEIGHT - 1.0f));
 
+				float3 rendercampos = scene_camera->campos;
 
-				//cast rays
-				float3 cam_ray_origin = sceneCam.getCameraPosition();
-				float3 cam_ray_direction = normalize(camdir +  camdown * (x) + (camright * (y)));
+				// compute primary ray direction
+				// use camera view of current frame (transformed on CPU side) to create local orthonormal basis
+				float3 rendercamview = scene_camera->view; rendercamview = normalize(rendercamview); // view is already supposed to be normalized, but normalize it explicitly just in case.
+				float3 rendercamup = scene_camera->camdown; rendercamup = normalize(rendercamup);
+				float3 horizontalAxis = cross(rendercamview, rendercamup); horizontalAxis = normalize(horizontalAxis); // Important to normalize!
+				float3 verticalAxis = cross(horizontalAxis, rendercamview); verticalAxis = normalize(verticalAxis); // verticalAxis is normalized by default, but normalize it explicitly just for good measure.
 
-				RRay *cam_ray = new RRay(cam_ray_origin, cam_ray_direction);
-				RColor finalRColor = castRay(cam_ray, 0, tree);
-				pixels[flatIndex].r = finalRColor.GetColorRed();
-				pixels[flatIndex].g = finalRColor.GetColorGreen();
-				pixels[flatIndex].b = finalRColor.GetColorBlue();
+				float3 middle = rendercampos + rendercamview;
+				float3 horizontal = horizontalAxis * tanf(scene_camera->fov.x * 0.5 * (M_PI / 180)); // Treating FOV as the full FOV, not half, so multiplied by 0.5
+				float3 vertical = verticalAxis * tanf(scene_camera->fov.y * 0.5 * (M_PI / 180)); // Treating FOV as the full FOV, not half, so multiplied by 0.5
+
+				// compute pixel on screen
+				float3 pointOnPlaneOneUnitAwayFromEye = middle + (horizontal * ((2 * sx) - 1)) + (vertical * ((2 * sy) - 1));
+				float3 pointOnImagePlane = rendercampos + ((pointOnPlaneOneUnitAwayFromEye - rendercampos) * scene_camera->focial_distance); // Important for depth of field!		
+
+				float3 aperturePoint = rendercampos;
+
+				// calculate ray direction of next ray in path
+				float3 apertureToImagePlane = pointOnImagePlane - aperturePoint;
+				apertureToImagePlane = normalize(apertureToImagePlane); // ray direction needs to be normalised
+
+				// ray direction
+				float3 rayInWorldSpace = apertureToImagePlane;
+				float3 ray_dir = normalize(rayInWorldSpace);
+
+				// ray origin
+				float3 ray_o = rendercampos;
+				RRay *cam_ray = new RRay(ray_o, ray_dir);
+				float4 finalRColor = castRay(cam_ray, 0, tree);
+				pixels[flatIndex].x = finalRColor.x;
+				pixels[flatIndex].y = finalRColor.y;
+				pixels[flatIndex].z = finalRColor.z;
+				delete cam_ray;
 			}
 		}
 
@@ -106,121 +108,125 @@ inline float modulo(const float &f)
 	return f - std::floor(f);
 }
 
-RColor RRayTracer::castRay(RRay *ray, int depth, RKDTreeCPU *node)
+float4 RRayTracer::castRay(RRay *ray, int depth, RKDTreeCPU *node)
 {
-	//RColor finalRColor(0, 0, 0, 0);
-	//if (depth > 2) return RColor(0, 0, 0, 0);
-	//RObject *hitObject = nullptr;
-	//float tNear = kInfinity;
+	float4 finalRColor = make_float4(0, 0, 0, 0);
+	if (depth > 2) return make_float4(0, 0, 0, 0);
+	RObject *hitObject = nullptr;
+	float tNear = kInfinity;
+	float3 tmp_normal;
 
-	////distance to the intersection and bariocentric coordinates
-	//if (traceShadow(ray, tNear, &hitObject, node))
-	//{
-	//	//qDebug() << node->intersectionAmount;
-	//	finalRColor = hitObject->GetColor();
-	//	RVectorF intersectionPosition = ray->getRayOrigin().VectorAdd(ray->getRayDirection().VectorMult(tNear));
-	//	RVectorF intersectingRayDirection = ray->getRayDirection();
-	//	RVectorF normal = hitObject->GetNormalAt(intersectionPosition);
-	//	RVectorF bias = normal.VectorMult(1e-4);
+	//distance to the intersection and bariocentric coordinates
+	if (traceShadow(ray, tNear, tmp_normal, node))
+	{
+		//qDebug() << node->intersectionAmount;
+		finalRColor.x = (tmp_normal.x < 0.0f) ? (tmp_normal.x * -1.0f) : tmp_normal.x;
+		finalRColor.y = (tmp_normal.y < 0.0f) ? (tmp_normal.y * -1.0f) : tmp_normal.y;
+		finalRColor.z = (tmp_normal.z < 0.0f) ? (tmp_normal.z * -1.0f) : tmp_normal.z;
+	//	float3 intersectionPosition = ray->getRayOrigin() + (ray->getRayDirection() * tNear);
+	//	float3 intersectingRayDirection = ray->getRayDirection();
+	//	float3 normal = hitObject->GetNormalAt(intersectionPosition);
+	//	float3 bias = normal * (1e-4);
 
 	//	//if object has tile pattern
-	//	if (hitObject->GetColor().GetColorSpecial() == 2)
+	//	if (hitObject->GetColor().w == 2)
 	//	{
-	//		int square = (int)floor(intersectionPosition.getVecX()) + (int)floor(intersectionPosition.getVecZ());
+	//		int square = (int)floor(intersectionPosition.x) + (int)floor(intersectionPosition.z);
 	//		tilePattern(finalRColor, square);
 	//	}
 	//	ambientLight(finalRColor);
 	//	//Phong color model
-	//	if (hitObject->GetColor().GetColorSpecial() > 0 && hitObject->GetColor().GetColorSpecial() <= 1)
+	//	if (hitObject->GetColor().w > 0 && hitObject->GetColor().w <= 1)
 	//	{
-	//		RColor diffuse, specular;
+	//		float4 diffuse, specular;
 	//		for (int i = 0; i < lightSources.size(); i++)
 	//		{
 	//			float3 lightDir;
-	//			RColor lightInt;
+	//			float4 lightInt;
 	//			float tShadowed;
 	//			lightSources[i]->Illuminate(intersectionPosition, lightDir, lightInt, tShadowed);
 	//			RObject *intObj;
 
-	//			RRay *difRay = new RRay(intersectionPosition.VectorAdd(normal), -lightDir);
+	//			RRay *difRay = new RRay(intersectionPosition + (normal), -lightDir);
 
 	//			bool vis = traceShadow(difRay, tShadowed, &intObj, node);
 
-	//			diffuse = diffuse.ColorAdd(lightInt.ColorScalar(vis * 0.18).ColorScalar(std::max(0.0, (double)normal.DotProduct(lightDir.Negative()))));
+	//			diffuse = diffuse + (lightInt * (vis * 0.18) * (std::max(0.0, (double)dot(normal,(-lightDir)))));
 
-	//			RVectorF R = reflect(lightDir, normal);
-	//			specular = specular.ColorAdd(lightInt.ColorScalar(vis).ColorScalar(std::pow(std::max(0.0, (double)R.DotProduct(-ray->getRayDirection())), 10)));
+	//			float3 R = reflect(lightDir, normal);
+	//			float3 dir = ray->getRayDirection();
+	//			specular = specular + (lightInt * (vis) * (std::pow(std::max(0.0, (double)dot(R, -dir)), 10)));
 	//		}
-	//		finalRColor = finalRColor.ColorMultiply(diffuse.ColorScalar(0.8)).ColorAdd(specular.ColorScalar(0.2));
+	//		 finalRColor = finalRColor + (diffuse * (0.8)) + (specular * (0.2));
 	//	}
 	//	//reflections
-	//	if (hitObject->GetColor().GetColorSpecial() > 0 && hitObject->GetColor().GetColorSpecial() <= 1)
+	//	if (hitObject->GetColor().w > 0 && hitObject->GetColor().w <= 1)
 	//	{
-	//		RColor refractionRColor, reflectionRColor;
+	//		float4 refractionRColor, reflectionRColor;
 	//		float kr = 0, ior = 1.5;
-	//		RVectorF direct = ray->getRayDirection();
+	//		float3 direct = ray->getRayDirection();
 	//		fresnel(direct, normal, ior, kr);
 	//		if (kr < 1)
 	//		{
-	//			RVectorF refractionDirection = refract(direct, normal, ior).Normalize();
-	//			RVectorF refractionRayOrig = refractionDirection.DotProduct(normal) < 0 ? intersectionPosition.VectorAdd(bias.Negative()) : intersectionPosition.VectorAdd(bias);
+	//			float3 refractionDirection = normalize(refract(direct, normal, ior));
+	//			float3 refractionRayOrig = dot(refractionDirection, normal) < 0 ? intersectionPosition  - (bias) : intersectionPosition + (bias);
 	//			RRay *refractionRay = new RRay(refractionRayOrig, refractionDirection);
 	//			refractionRColor = castRay(refractionRay, depth + 1, node);
 	//		}
 
-	//		RVectorF reflectionDirection = reflect(direct, normal).Normalize();
-	//		RVectorF reflectionRayOrig = reflectionDirection.DotProduct(normal) < 0 ? intersectionPosition.VectorAdd(bias) : intersectionPosition.VectorAdd(bias.Negative());
+	//		float3 reflectionDirection = normalize(reflect(direct, normal));
+	//		float3 reflectionRayOrig = dot(reflectionDirection, normal) < 0 ? intersectionPosition + (bias) : intersectionPosition -(bias);
 	//		RRay *reflectionRay = new RRay(reflectionRayOrig, reflectionDirection);
 	//		reflectionRColor = castRay(reflectionRay, depth + 1, node);
 
 	//		// mix the two
-	//		finalRColor = finalRColor.ColorAdd(reflectionRColor.ColorScalar(kr)).ColorAdd(refractionRColor.ColorScalar(1 - kr));
+	//		finalRColor = finalRColor + (reflectionRColor * (kr)) + (refractionRColor * (1 - kr));
 	//	}
 
 	//	//shadows
 	//	for (size_t i = 0; i < lightSources.size(); ++i)
 	//	{
-	//		RVectorF lightDir;
-	//		RColor lightIntensity;
+	//		float3 lightDir;
+	//		float4 lightIntensity;
 	//		float tShad;
 	//		RObject *shadObject;
 	//		lightSources[i]->Illuminate(intersectionPosition, lightDir, lightIntensity, tShad);
-	//		RRay *shadowRay = new RRay(intersectionPosition.VectorAdd(bias), lightDir.Negative());
+	//		RRay *shadowRay = new RRay(intersectionPosition + (bias), -lightDir);
 	//		bool vis = !traceShadow(shadowRay, tShad, &shadObject, node);
 	//		if (vis)
-	//			finalRColor = finalRColor.ColorAdd(lightIntensity.ColorMultiply(lightSources[i]->getLightColor())
-	//				.ColorScalar(std::max(0.0, (double)normal.DotProduct(lightDir.Negative()))).ColorScalar(0.099));
+	//			finalRColor = finalRColor + (lightIntensity * (std::max(0.0, (double)dot(normal,-lightDir))) * (0.099));
 
 	//	}
-	//}
-	//return finalRColor.Clip();
+	}
+	delete hitObject;
+	return finalRColor;
 }
 
-void RRayTracer::tilePattern(RColor &color, int square)
+void RRayTracer::tilePattern(float4 &color, int square)
 {
 	if ((square % 2) == 0) {
 		// black tile
-		color.SetColorRed(0);
-		color.SetColorGreen(0);
-		color.SetColorBlue(0);
+		color.x = 0;
+		color.y = 0;
+		color.z = 0;
 	}
 	else {
 		// white tile
-		color.SetColorRed(1);
-		color.SetColorGreen(1);
-		color.SetColorRed(1);
+		color.x = 1;
+		color.y = 1;
+		color.z = 1;
 	}
 }
 
-void RRayTracer::ambientLight(RColor &color)
+void RRayTracer::ambientLight(float4 &color)
 {
-	color = color.ColorScalar(0.2);
+	color = color * (0.2);
 }
 
-void RRayTracer::fresnel(RVectorF &I, RVectorF &N, float &ior, float &kr)
+void RRayTracer::fresnel(float3 &I, float3 &N, float &ior, float &kr)
 {
-	const float dot = I.DotProduct(N);
-	float cosi = clamp(-1, 1, dot);
+	const float _dot = dot(I, N);
+	float cosi = clamp(-1, 1, _dot);
 	float etai = 1, etat = ior;
 	if (cosi > 0) { std::swap(etai, etat); }
 	// Compute sini using Snell's law
@@ -238,33 +244,32 @@ void RRayTracer::fresnel(RVectorF &I, RVectorF &N, float &ior, float &kr)
 	}
 }
 
-RVectorF RRayTracer::refract(RVectorF &I, RVectorF &N, float &ior)
+float3 RRayTracer::refract(float3 &I, float3 &N, float &ior)
 {
-	float dot = I.DotProduct(N);
-	float cosi = clamp(-1, 1, dot);
+	float _dot = dot(I, N);
+	float cosi = clamp(-1, 1, _dot);
 	float etai = 1, etat = ior;
-	RVectorF n = N;
+	float3 n = N;
 	if (cosi < 0) { cosi = -cosi; }
-	else { std::swap(etai, etat); n = N.Negative(); }
+	else { std::swap(etai, etat); n = -N; }
 	float eta = etai / etat;
 	float k = 1 - eta * eta * (1 - cosi * cosi);
-	return k < 0 ? 0 : I.VectorMult(eta).VectorAdd(n.VectorMult(eta * cosi - sqrtf(k)));
+	if (k < 0)
+		return make_float3(0);
+	else
+		return I * (eta)+(n * (eta * cosi - sqrtf(k)));
 }
 
-RVectorF RRayTracer::reflect(RVectorF &I, RVectorF &N)
+float3 RRayTracer::reflect(float3 &I, float3 &N)
 {
-	float num = 2 * I.DotProduct(N);
-	return I.VectorAdd(N.VectorMult(num)).Negative();
+	float num = 2 * dot(I, N);
+	return I - (N * (num));
 }
 
 bool RRayTracer::traceShadow(RRay *ray,
-	float &tNear,
-	RObject **hitObject,
-	RKDTreeCPU *tree)
+	float &tNear, float3 &normal, RKDTreeCPU *tree)
 {
-	*hitObject = nullptr;
-
-	bool inter = tree->intersect(tree->root, ray, tNear, hitObject);
+	bool inter = tree->singleRayStacklessIntersect(ray, tNear, normal);
 	return inter;
 }
 

@@ -1,5 +1,4 @@
 #include "Plane.h"
-#include "Color.h"
 #include "Ray.h"
 #include <cmath>
 
@@ -7,12 +6,12 @@
 
 RPlane::RPlane()
 {
-	normal = RVectorF(1, 0, 0);
+	normal = make_float3(1, 0, 0);
 	distance = 0;
-	Color = RColor(0.5, 0.5, 0.5, 0);
+	Color = make_float4(0.5, 0.5, 0.5, 0);
 }
 
-RPlane::RPlane(RVectorF normalValue, float distanceValue, RColor ColorValue)
+RPlane::RPlane(float3 normalValue, float distanceValue, float4 ColorValue)
 {
 	normal = normalValue;
 	distance = distanceValue;
@@ -21,7 +20,7 @@ RPlane::RPlane(RVectorF normalValue, float distanceValue, RColor ColorValue)
 
 bool RPlane::FindIntersection(RRay * ray, float & t, float & u, float & v)
 {
-	//RVectorF ray_direction = ray->getRayDirection();
+	//float3 ray_direction = ray->getRayDirection();
 	//float a = normal.DotProduct(ray_direction);
 
 	//if (fabs(a) == 1e-6) {

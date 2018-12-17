@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Vector.h"
-
 #include <vector>
 #include <memory>
 
@@ -9,12 +7,11 @@
 
 class RObject;
 class RKDTreeCPU;
-class RColor;
+class float4;
+class float3;
 class RSource;
 class RTriangle;
 class RRay;
-
-using RVectorF = RVector<float>;
 
 class RRayTracer
 {
@@ -24,21 +21,21 @@ public:
 	RRayTracer();
 
 
-	RGBType *trace(RKDTreeCPU *tree, float xCamPos, float zCamPos, float xLookAt, float yLookAt, float zLookAt);
+	float4 *trace(RKDTreeCPU *tree, class RCamera *scene_cam);
 
 
-	bool traceShadow(RRay *, float &, RObject **, RKDTreeCPU *tree);
-	RColor castRay(RRay *ray, int depth, RKDTreeCPU *node);
+	bool traceShadow(RRay *, float &, float3 &normal, RKDTreeCPU *tree);
+	float4 castRay(RRay *ray, int depth, RKDTreeCPU *node);
 	void generateScene(std::vector<std::shared_ptr<RObject>> &);
 
 	//Color options
-	void tilePattern(RColor &, int square);
-	void ambientLight(RColor &);
-	void specularReflection(RRay, std::vector<std::shared_ptr<RObject>> &, RColor &, RVectorF);
-	void fresnel(RVectorF &, RVectorF &, float &, float &);
-	RVectorF refract(RVectorF &, RVectorF &, float &);
+	void tilePattern(float4 &, int square);
+	void ambientLight(float4 &);
+	void specularReflection(RRay, std::vector<std::shared_ptr<RObject>> &, float4 &, float4);
+	void fresnel(float3 &, float3 &, float &, float &);
+	float3 refract(float3 &, float3 &, float &);
 
-	RVectorF reflect(RVectorF &, RVectorF &);
+	float3 reflect(float3 &, float3 &);
 
 	float clamp(float lo, float hi, float v);
 

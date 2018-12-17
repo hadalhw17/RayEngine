@@ -1,20 +1,21 @@
 #include "Sphere.h"
-#include "Color.h"
+
 #include "Ray.h"
 
 #include <memory>
 #include <thrust/swap.h>
+#include "cutil_math.h"
 
 
 
 RSphere::RSphere()
 {
-	center = RVectorF(0, 0, 0);
+	center = make_float3(0, 0, 0);
 	radius = 1.0;
-	color = RColor(0.5, 0.5, 0.5, 0);
+	color = make_float4(0.5, 0.5, 0.5, 0);
 }
 
-RSphere::RSphere(RVectorF centerValue, float radiusValue, RColor colorValue)
+RSphere::RSphere(float3 centerValue, float radiusValue, float4 colorValue)
 {
 	center = centerValue;
 	radius = radiusValue;
@@ -23,15 +24,15 @@ RSphere::RSphere(RVectorF centerValue, float radiusValue, RColor colorValue)
 
 bool RSphere::SolveQuadratic(const float & a, const float & b, const float & c, float & x0, float & x1)
 {
-	float discr = b * b - 4 * a * c;
-	if (discr < 0) return false;
+	float discr = b * b - 4.f * a * c;
+	if (discr < .0f) return false;
 	else if (discr == 0) {
-		x0 = x1 = -0.5 * b / a;
+		x0 = x1 = -0.5f * b / a;
 	}
 	else {
-		float q = (b > 0) ?
-			-0.5 * (b + sqrt(discr)) :
-			-0.5 * (b - sqrt(discr));
+		float q = (b > .0f) ?
+			-0.5f * (b + sqrt(discr)) :
+			-0.5f * (b - sqrt(discr));
 		x0 = q / a;
 		x1 = c / q;
 	}
@@ -41,15 +42,15 @@ bool RSphere::SolveQuadratic(const float & a, const float & b, const float & c, 
 
 bool RSphere::SolveQuadratic(float & a, float & b, float & c, float & x0, float & x1)
 {
-	float discr = b * b - 4 * a * c;
-	if (discr < 0) return false;
-	else if (discr == 0) {
-		x0 = x1 = -0.5 * b / a;
+	float discr = b * b - 4.f * a * c;
+	if (discr < .0f) return false;
+	else if (discr == .0f) {
+		x0 = x1 = -0.5f * b / a;
 	}
 	else {
-		float q = (b > 0) ?
-			-0.5 * (b + sqrt(discr)) :
-			-0.5 * (b - sqrt(discr));
+		float q = (b > .0f) ?
+			-0.5f * (b + sqrt(discr)) :
+			-0.5f * (b - sqrt(discr));
 		x0 = q / a;
 		x1 = c / q;
 	}
@@ -57,11 +58,11 @@ bool RSphere::SolveQuadratic(float & a, float & b, float & c, float & x0, float 
 	return true;
 }
 
-RVectorF RSphere::GetNormalAt(RVectorF point)
+float3 RSphere::GetNormalAt(float3 point)
 {
 	// normal always points away from the center of a sphere
-	RVectorF sphereNormal = point.VectorAdd(center.Negative());
-	return sphereNormal.Normalize();
+	float3 sphereNormal = point- center;
+	return normalize(sphereNormal);
 }
 
 bool RSphere::FindIntersection(RRay * ray, float & t, float & u, float & v)

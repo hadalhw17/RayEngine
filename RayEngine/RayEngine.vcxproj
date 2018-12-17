@@ -90,6 +90,10 @@
     <IncludePath>D:\CPPLibs\OpenGL stuff\Include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\CPPLibs\OpenGL stuff\Libraries;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>D:\CPPLibs\OpenGL stuff\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\CPPLibs\OpenGL stuff\Libraries;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <PropertyGroup Label="LLVM" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClangClAdditionalOptions>-O3 -fopenmp</ClangClAdditionalOptions>
   </PropertyGroup>
@@ -131,17 +135,22 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\geron\Projects\RayEngine\RayEngine\filesystem;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <CudaCompile>
       <Optimization>Od</Optimization>
     </CudaCompile>
     <CudaCompile>
-      <Runtime>MD</Runtime>
+      <Runtime>MDd</Runtime>
     </CudaCompile>
     <CudaCompile>
       <Warning>W0</Warning>
       <RuntimeChecks>Default</RuntimeChecks>
+      <FastMath>true</FastMath>
     </CudaCompile>
+    <Link>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;cudart.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -172,13 +181,14 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <OpenMPSupport>true</OpenMPSupport>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>C:\Users\geron\Projects\RayEngine\RayEngine\filesystem;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -189,7 +199,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
-      <Optimization>Od</Optimization>
+      <Optimization>O3</Optimization>
       <Runtime>MD</Runtime>
       <RuntimeChecks>Default</RuntimeChecks>
       <Warning>W0</Warning>
@@ -198,6 +208,7 @@
       </AdditionalCompilerOptions>
       <HostDebugInfo>true</HostDebugInfo>
       <AdditionalOptions>-lineinfo %(AdditionalOptions)</AdditionalOptions>
+      <FastMath>true</FastMath>
     </CudaCompile>
     <CudaLink>
       <Optimization>InheritFromProject</Optimization>
@@ -207,7 +218,6 @@
     <ClCompile Include="..\..\RayTraceer\rply.c" />
     <ClCompile Include="BoundingVolume.cpp" />
     <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="Color.cpp" />
     <ClCompile Include="D:\CPPLibs\GLAD\src\glad.c" />
     <ClCompile Include="KDThreeGPU.cpp" />
     <ClCompile Include="KDTree.cpp" />
@@ -216,7 +226,9 @@
     <ClCompile Include="MainWindow.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="MovableCamera.cpp" />
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="ObjFileReader.cpp" />
     <ClCompile Include="Plane.cpp" />
     <ClCompile Include="Ray.cpp" />
     <ClCompile Include="RayEngine.cpp" />
@@ -231,7 +243,6 @@
     <ClInclude Include="..\..\RayTraceer\rply.h" />
     <ClInclude Include="BoundingVolume.h" />
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="Color.h" />
     <ClInclude Include="cutil_math.h" />
     <ClInclude Include="GPUBoundingBox.h" />
     <ClInclude Include="helper_math.h" />
@@ -242,7 +253,11 @@
     </ClInclude>
     <ClInclude Include="KDTree.h" />
     <ClInclude Include="Light.h" />
+    <ClInclude Include="MovableCamera.h" />
     <ClInclude Include="Object.h" />
+    <ClInclude Include="ObjFileReader.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="Plane.h" />
     <ClInclude Include="Ray.h" />
     <ClInclude Include="RayEngine.h" />
@@ -252,7 +267,6 @@
     <ClInclude Include="Source.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="Triangle.h" />
-    <ClInclude Include="Vector.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="CUDARayTracing.cu">

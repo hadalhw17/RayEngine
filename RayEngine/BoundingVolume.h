@@ -7,7 +7,6 @@
 #include <limits>
 #include <algorithm>
 
-#include "Vector.h"
 #include "Ray.h"
 #include "Object.h"
 #include "Triangle.h"
@@ -26,21 +25,21 @@ class RBoundingVolume
 public:
 	int triangleAmount = 0;
 	int numRayRBoundingVolumeTests = 0;
-	RVectorF splitPos;
-	RVectorF bounds[2] = { 1e20, -1e20 };
+	float3 splitPos;
+	float3 bounds[2] = { kInfinity, -kInfinity };
 
-	HOST_DEVICE_FUNCTION
+	
 	RBoundingVolume() {}
 
-	HOST_DEVICE_FUNCTION
-	RBoundingVolume(RVectorF min_, RVectorF max_)
+	
+	RBoundingVolume(float3 min_, float3 max_)
 	{
 		bounds[0] = min_;
 		bounds[1] = max_;
 	}
 
-	HOST_DEVICE_FUNCTION
-	void extendBy(RVector<float> p)
+	
+	void extendBy(float3 p)
 	{
 		if (p.x < bounds[0].x) bounds[0].x = p.x;
 		if (p.y < bounds[0].y) bounds[0].y = p.y;
@@ -51,7 +50,7 @@ public:
 	}
 
 
-	HOST_DEVICE_FUNCTION
+	
 	float getSA()
 	{
 		const float xLen = this->bounds[1].x - this->bounds[0].x;
@@ -66,48 +65,46 @@ public:
 		return SA;
 	}
 
-	HOST_DEVICE_FUNCTION
-	///*inline */ RVector<float> centroid() const { return (bounds[0] + bounds[1]) * 0.5; }
-
-	HOST_DEVICE_FUNCTION
-	RVectorF& operator [] (bool i) { return bounds[i]; }
-
-	HOST_DEVICE_FUNCTION
-	const RVectorF operator [] (bool i) const { return bounds[i]; }
 	
-	HOST_DEVICE_FUNCTION
+	///*inline */ float3 centroid() const { return (bounds[0] + bounds[1]) * 0.5; }
+
+	
+	float3& operator [] (bool i) { return bounds[i]; }
+
+	
+	const float3 operator [] (bool i) const { return bounds[i]; }
+	
+
 	bool intersect(RRay *r, float &tMin, float &tMax)
 	{
-		float3 invdir = make_float3(r->getRayDirection().x / 1, r->getRayDirection().y / 1, r->getRayDirection().z / 1);
-		float3 boxMin = make_float3(bounds[0].x, bounds[0].y, bounds[0].z);
-		float3 boxMax = make_float3(bounds[1].x, bounds[1].y, bounds[1].z);
+		float3 ray_dir = r->getRayDirection();
+		float3 ray_o = r->getRayOrigin();
+		float3 dirfrac = make_float3(1.0f / ray_dir.x, 1.0f / ray_dir.y, 1.0f / ray_dir.z);
 
-		float lo = (boxMin.x - r->getRayOrigin().x) * invdir.x;
-		float hi = (boxMax.x - r->getRayOrigin().x) * invdir.x;
-		if (lo > hi) std::swap(lo, hi);
-		tMin = lo;
-		tMax = hi;
+		float t1 = (bounds[0].x - ray_o.x) * dirfrac.x;
+		float t2 = (bounds[1].x - ray_o.x) * dirfrac.x;
+		float t3 = (bounds[0].y - ray_o.y) * dirfrac.y;
+		float t4 = (bounds[1].y - ray_o.y) * dirfrac.y;
+		float t5 = (bounds[0].z - ray_o.z) * dirfrac.z;
+		float t6 = (bounds[1].z - ray_o.z) * dirfrac.z;
 
-		float lo1 = (boxMin.y - r->getRayOrigin().y) * invdir.y;
-		float hi1 = (boxMax.y - r->getRayOrigin().y) * invdir.y;
-		if (lo1 > hi1) std::swap(lo1, hi1);
+		float tmin = std::max(std::max(std::min(t1, t2), std::min(t3, t4)), std::min(t5, t6));
+		float tmax = std::min(std::min(std::max(t1, t2), std::max(t3, t4)), std::max(t5, t6));
 
-		if ((tMin > hi1) || (lo1 > tMax))
+		// If tmax < 0, ray intersects AABB, but entire AABB is behind ray, so reject.
+		if (tmax < .0f) {
 			return false;
-		tMin = std::max(lo1, tMin);
-		tMax = std::min(hi1, tMax);
+		}
 
-		float lo2 = (boxMin.z - r->getRayOrigin().z) * invdir.z;
-		float hi2 = (boxMax.z - r->getRayOrigin().z) * invdir.z;
-		if (lo2 > hi2) std::swap(lo2, hi2);
-
-		if ((tMin > hi2) || (lo2 > tMax))
+		// If tmin > tmax, ray does not intersect AABB.
+		if (tmin > tmax) {
 			return false;
+		}
 
-		tMin = std::max(lo2, tMin);
-		tMax = std::min(hi2, tMax);
+		tMin = tmin;
+		tMax = tmax;
 
-		return (tMin <= tMax) && (tMax > 0.0);
+		return true;
 	}
 
 	RBoundingVolume *addObjectToBox(RTriangle *Object, int numObjs, int *objInd)
@@ -123,7 +120,7 @@ public:
 		return box;
 	}
 
-	HOST_DEVICE_FUNCTION
+	
 	int getLongestAxis()
 	{
 		const float xLen = bounds[1].x - bounds[0].x;
@@ -152,8 +149,8 @@ public:
 	//	return Objects;
 	//}
 
-	HOST_DEVICE_FUNCTION
-	bool enclose(RVectorF point) {
+	
+	bool enclose(float3 point) {
 		if (bounds[1].x > point.x &&
 			bounds[0].x < point.x &&
 			bounds[1].y > point.y &&
@@ -168,8 +165,8 @@ public:
 		return false;
 	}
 
-	HOST_DEVICE_FUNCTION
-	bool inBox(RVectorF point)
+	
+	bool inBox(float3 point)
 	{
 		if (point.x < bounds[1].x &&
 			point.x > bounds[0].x &&
@@ -186,15 +183,15 @@ public:
 		}
 	}
 
-	HOST_DEVICE_FUNCTION
-	void splitVoxel(AXIS a, RVectorF coord, RBoundingVolume &lBox, RBoundingVolume &rBox)
+	
+	void splitVoxel(AXIS a, float3 coord, RBoundingVolume &lBox, RBoundingVolume &rBox)
 	{
 		lBox = *this;
 		rBox = *this;
 
 	}
 
-	HOST_DEVICE_FUNCTION
+	
 	inline float clamp(const float &v, const float &lo, const float &hi)
 	{
 		return std::max(lo, std::min(v, hi));

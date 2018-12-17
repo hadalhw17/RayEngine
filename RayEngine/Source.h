@@ -1,9 +1,8 @@
 #pragma once
-#include "Vector.h"
-#include "Color.h"
+#include "RayEngine.h"
 
-using RVectorF = RVector<float>;
-
+extern float3 make_float3(float);
+extern float4 make_float4(float);
 class RSource
 {
 public:
@@ -11,12 +10,12 @@ public:
 	HOST_DEVICE_FUNCTION RSource();
 
 	HOST_DEVICE_FUNCTION
-	inline virtual RVectorF getLightPosition() { return RVectorF(0.f, 0.f, 0.f); }
+	inline virtual float3 getLightPosition() { return make_float3(0); }
 
 	HOST_DEVICE_FUNCTION
-	inline virtual RColor getLightColor() { return RColor(1.f, 1.f, 1.f, 0.f); }
+	inline virtual float4 getLightColor() { return make_float4(0); }
 
 	HOST_DEVICE_FUNCTION
-	inline virtual void Illuminate(RVectorF &P, RVectorF &lightDir, RColor &lightIntensity, float &distance) {}
+	inline virtual void Illuminate(float3 &P, float3 &lightDir, float4 &lightIntensity, float &distance) {}
 };
 

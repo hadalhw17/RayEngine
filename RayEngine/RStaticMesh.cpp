@@ -24,7 +24,7 @@ std::vector<float> RStaticMesh::yCoordinates = {};
 std::vector<float> RStaticMesh::zCoordinates = {};
 std::vector<int> RStaticMesh::vertexIndecies = {};
 
-std::vector<RVectorF> vecArray = {};
+std::vector<float3> vecArray = {};
 
 RStaticMesh::RStaticMesh()
 {
@@ -92,7 +92,7 @@ void RStaticMesh::LoadFromFile(char * fileName)
 	int i = 0;
 	for (i = 0; i < num_verts * 3; i += 3)
 	{
-		RVectorF verticies(xCoordinates.at(i), yCoordinates.at(i + 1), zCoordinates.at(i + 2));
+		float3 verticies = make_float3(xCoordinates.at(i), yCoordinates.at(i + 1), zCoordinates.at(i + 2));
 		vecArray.push_back(verticies);
 	}
 
@@ -119,7 +119,7 @@ void RStaticMesh::LoadFromFile(char * fileName)
 		float y = vertexIndecies.at(i + 1);
 		float z = vertexIndecies.at(i + 2);
 		triangle2 = new RTriangle(vecArray.at(x), vecArray.at(y), vecArray.at(z),
-			RColor(0.5, 0.5, 0.5, 3));
+			make_float4(0.5, 0.5, 0.5, 3));
 	
 		StaticMesh.push_back(std::shared_ptr<RTriangle>(triangle2));
 	}
@@ -151,12 +151,12 @@ void RStaticMesh::LoadPolyMeshFromFile(const char * file)
 		}
 		vertsArraySize += 1;
 		// reading vertices
-		std::unique_ptr<RVectorF[]> vert(new RVectorF[vertsArraySize]);
+		std::unique_ptr<float3[]> vert(new float3[vertsArraySize]);
 		for (uint32_t i = 0; i < vertsArraySize; ++i) {
 			ss >> vert[i].x >> vert[i].y >> vert[i].z;
 		}
 		// reading normals
-		std::unique_ptr<RVectorF[]> normals(new RVectorF[vertsIndexArraySize]);
+		std::unique_ptr<float3[]> normals(new float3[vertsIndexArraySize]);
 		for (uint32_t i = 0; i < vertsIndexArraySize; ++i) {
 			ss >> normals[i].x >> normals[i].y >> normals[i].z;
 		}
@@ -166,7 +166,7 @@ void RStaticMesh::LoadPolyMeshFromFile(const char * file)
 		}
 
 		std::unique_ptr<uint32_t[]> trisIndex = std::unique_ptr<uint32_t[]>(new uint32_t[numFaces * 3]);
-		RVectorF triVerts[3];
+		float3 triVerts[3];
 		uint32_t l = 0;
 		for (uint32_t i = 0, k = 0; i < numFaces; ++i) { // for each  face
 			int a = 0;
@@ -174,16 +174,15 @@ void RStaticMesh::LoadPolyMeshFromFile(const char * file)
 				trisIndex[l] = vertsIndex[k];
 				trisIndex[l + 1] = vertsIndex[k + j + 1];
 				trisIndex[l + 2] = vertsIndex[k + j + 2];
-				RVectorF A = vert[trisIndex[l]];
-				RVectorF B = vert[trisIndex[l + 1]];
-				RVectorF C = vert[trisIndex[l + 2]];
+				float3 A = vert[trisIndex[l]];
+				float3 B = vert[trisIndex[l + 1]];
+				float3 C = vert[trisIndex[l + 2]];
 				//qDebug() << trisIndex[l];
-				triVerts[a] = RVectorF(trisIndex[l], trisIndex[l + 1], trisIndex[l + 2]);
+				triVerts[a] = make_float3(trisIndex[l], trisIndex[l + 1], trisIndex[l + 2]);
 				l += 3;
 				a++;
-				RTriangle *tr = new RTriangle(A, B, C, RColor(1, 0, 0, 0));
+				RTriangle *tr = new RTriangle(A, B, C, make_float4(1, 0, 0, 0));
 				StaticMesh.push_back(std::shared_ptr<RTriangle>(tr));
-				tr->ToString();
 			}
 			k += faceIndex[i];
 

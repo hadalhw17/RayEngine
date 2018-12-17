@@ -1,14 +1,17 @@
 #pragma once
 
-#include "Vector.h"
-#include "Color.h"
+#include "RayEngine.h"
 
 class RRay;
-using RVectorF = RVector<float>;
+
+extern float3 make_float3(float);
+extern float3 make_float3(float, float, float);
+extern float4 make_float4(float);
+
 class RObject
 {
 public:
-	RColor Color;
+	float4 Color;
 	HOST_DEVICE_FUNCTION
 	RObject();
 
@@ -17,21 +20,21 @@ public:
 
 	// method functions
 	HOST_DEVICE_FUNCTION
-	inline virtual RColor GetColor() { return RColor(1,0,1,2); }
+	inline virtual float4 GetColor() { return make_float4(0); }
 
 	HOST_DEVICE_FUNCTION
-	virtual RVectorF GetNormalAt(RVectorF) { return RVectorF(0, 0, 0); }
+	virtual float3 GetNormalAt(float3) { return make_float3(0); }
 
 	__device__
 	virtual bool FindIntersection(RRay *, float &, float &, float &) { return true; };
 
 	HOST_DEVICE_FUNCTION
-	virtual RVectorF GetMax() { return RVectorF(0, 0, 0); }
+	virtual float3 GetMax() { return make_float3(0); }
 
 	HOST_DEVICE_FUNCTION
-	inline virtual RVectorF GetMin() { return RVectorF(0, 0, 0); }
+	inline virtual float3 GetMin() { return make_float3(0); }
 
 	HOST_DEVICE_FUNCTION
-	inline virtual RVectorF Centroid() { return RVectorF(0, 0, 0); }
+	inline virtual float3 Centroid() { return make_float3(0); }
 };
 

@@ -1,6 +1,9 @@
 #pragma once
 #include "device_launch_parameters.h"
 
+#define kInfinity 1e20f
+#define kEpsilon 1e-4f
+
 #define HOST_DEVICE_FUNCTION __device__ __host__
 
 

@@ -1,25 +1,26 @@
 #include "Light.h"
+#include "cutil_math.h"
 
 #define M_PI       3.14159265358979323846   // pi
 
 RLight::RLight()
 {
-	position = RVectorF(0, 0, 0);
-	color = RColor(1, 1, 1, 0);
+	position = make_float3(0, 0, 0);
+	color = make_float4(1, 1, 1, 0);
 }
 
-RLight::RLight(RVectorF p, RColor c)
+RLight::RLight(float3 p, float4 c)
 {
 	position = p;
 	color = c;
 }
 
-void RLight::Illuminate(RVectorF & P, RVectorF & lightDir, RColor & lightIntensity, float & distance)
+void RLight::Illuminate(float3 & P, float3 & lightDir, float4 & lightIntensity, float & distance)
 {
-	lightDir = (P.VectorAdd(position.Negative()));
-	float r2 = lightDir.Norm();
+	lightDir = P - position;
+	float r2 = position.x * position.x + position.y * position.y + position.z * position.z;
 	distance = sqrt(r2);
 	lightDir.x /= distance, lightDir.y /= distance, lightDir.z /= distance;
 	// avoid division by 0
-	lightIntensity = color.ColorScalar(intensity / (4 * M_PI * r2));
+	lightIntensity = color * (intensity / (4 * M_PI * r2));
 }

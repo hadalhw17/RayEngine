@@ -234,7 +234,7 @@ inline __host__ __device__ float2 normalize(float2 v)
 // floor
 inline __host__ __device__ float2 floor(const float2 v)
 {
-	return make_float2(floor(v.x), floor(v.y));
+	return make_float2(floorf(v.x), floorf(v.y));
 }
 
 // reflect

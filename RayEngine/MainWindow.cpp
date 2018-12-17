@@ -13,7 +13,11 @@
 #include <iostream>
 #include <vector>
 #include "MainWindow.h"
+#include "MovableCamera.h"
 
+double currentFrame;
+double lastFrame;
+double deltaTime;
 
 MainWindow *main_window;
 
@@ -23,6 +27,7 @@ void processInput(GLFWwindow *window);
 static void cursorPositionCallback(GLFWwindow *window, double xPos, double yPos);
 void cursorEnterCallback(GLFWwindow *widnow, int entered);
 void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
 
 MainWindow::MainWindow()
@@ -38,18 +43,22 @@ MainWindow::~MainWindow()
 {
 }
 
-
+RMovableCamera *movable_camera;
 extern "C" float4 *Render(class RKDThreeGPU *tree, RCamera _sceneCam, std::vector<float4> h_triangles);
 
 
 void MainWindow::RenderFrame(RKDThreeGPU * CUDATree)
 {
+	RRayTracer *tracer = new RRayTracer();
+	movable_camera->build_camera(SceneCam);
 	pixels = Render(CUDATree, *SceneCam, triangles);
+	//pixels = tracer->trace(Tree,SceneCam);
 	// create some image data
 	GLubyte *image = new GLubyte[4 * SCR_WIDTH * SCR_HEIGHT];
 	for (int j = 0; j < SCR_HEIGHT; ++j) {
 		for (int i = 0; i < SCR_WIDTH; ++i) {
 			size_t index = j * SCR_WIDTH + i;
+			size_t indexT = i * SCR_HEIGHT + j;
 			image[4 * index + 0] = 0xFF * pixels[index].x; // R
 			image[4 * index + 1] = 0xFF * pixels[index].y; // G
 			image[4 * index + 2] = 0xFF * pixels[index].z; // B
@@ -75,26 +84,27 @@ void MainWindow::RenderFrame(RKDThreeGPU * CUDATree)
 // ---------------------------------------------------------------------------------------------------------
 void MainWindow::processInput(GLFWwindow *window)
 {
+	float scale = .5f;
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		SceneCam->move_forward();
+		movable_camera->move_forward(scale);
 
 	}
 	else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
-		SceneCam->move_backward();
+		movable_camera->move_forward(-scale);
 
 	}
 	else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 	{
-		SceneCam->strafe_left();
+		movable_camera->strafe(scale);
 	}
 	else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
-		SceneCam->strafe_right();
+		movable_camera->strafe(-scale);
 	}
 	else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 	{
@@ -116,6 +126,8 @@ void MainWindow::processInput(GLFWwindow *window)
 		yDelta--;
 
 	}
+
+	movable_camera->build_camera(SceneCam);
 }
 
 
@@ -147,20 +159,8 @@ void MainWindow::init_triangles()
 void MainWindow::setup_camera()
 {
 	SceneCam = new RCamera();
-	SceneCam->campos = make_float3(10, 0, 10);
-
-
-	//Vector between camera and the point where to look at
-	float3 diffBtw = make_float3(SceneCam->campos.x - x_look_at,
-		SceneCam->campos.y - y_look_at,
-		SceneCam->campos.z - z_look_at);
-	float3 Y = make_float3(0.f, 1.f, 0.f);
-	//Variables defining camera
-	SceneCam->camdir = make_float3(1, 0, 1);
-	SceneCam->camdown = Y;
-	SceneCam->camright = cross(SceneCam->camdown, SceneCam->camdir);
-
-	//SceneCam->lookAt(make_float3(x_look_at, y_look_at, z_look_at), 360);
+	movable_camera = new RMovableCamera();
+	movable_camera->build_camera(SceneCam);
 }
 
 
@@ -170,8 +170,6 @@ void MainWindow::build_scene()
 	Scene->BuildScene();
 	Tree = Scene->GetSceneTree();
 	CUDATree = new RKDThreeGPU(Tree);
-
-	delete[] Tree, Scene;
 }
 
 
@@ -225,10 +223,33 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 
 static float2 oldMousePosition;
 
+// mouse event handlers
+int lastX = 0, lastY = 0;
+int theButtonState = 0;
+int theModifierState = 0;
+
+void mouse_motion(double xPos, double yPos)
+{
+	int deltaX = lastX - xPos;
+	int deltaY = lastY - yPos;
+
+	if (deltaX != 0 || deltaY != 0)
+	{
+		movable_camera->change_yaw(-deltaX * 0.005);
+		movable_camera->change_pitch(-deltaY * 0.005);
+	}
+	lastX = xPos;
+	lastY = yPos;
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	movable_camera->change_altitude(yoffset * 0.01);
+}
 
 static void cursorPositionCallback(GLFWwindow *window, double xPos, double yPos)
 {
-
+	mouse_motion(xPos, yPos);
 }
 void cursorEnterCallback(GLFWwindow *widnow, int entered)
 {
@@ -239,6 +260,7 @@ void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 {
 
 }
+
 
 
 int main()
@@ -272,8 +294,9 @@ int main()
 	glfwSetCursorPosCallback(window, cursorPositionCallback);
 	glfwSetCursorEnterCallback(window, cursorEnterCallback);
 	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetScrollCallback(window, scroll_callback);
 
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// glad: load all OpenGL function pointers
 	// ---------------------------------------
@@ -405,11 +428,15 @@ int main()
 	// bind the texture
 	glBindTexture(GL_TEXTURE_2D, texture);
 
-
+	currentFrame = glfwGetTime();
+	lastFrame = currentFrame;
 	// Main render loop
 	// -----------
 	while (!glfwWindowShouldClose(window))
 	{
+		currentFrame = glfwGetTime();
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
 		// input
 		// -----
 		processInput(window);

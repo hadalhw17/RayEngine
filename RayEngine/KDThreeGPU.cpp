@@ -87,7 +87,7 @@ int RKDThreeGPU::get_num_faces() const
 	return num_faces;
 }
 
-int RKDThreeGPU::GoutRootIndes() const
+int RKDThreeGPU::get_root_index() const
 {
 	return root_index;
 }
@@ -95,6 +95,7 @@ int RKDThreeGPU::GoutRootIndes() const
 
 void RKDThreeGPU::PrintCPUAndGPUTrees(KDNodeCPU * CPUNode, bool PauseOnEachNode)
 {
+	std::cout << "root index " << root_index << std::endl;
 	CPUNode->PrintDebugString();
 	nodes[CPUNode->vid].PrintDebugString();
 
@@ -119,9 +120,10 @@ void RKDThreeGPU::buildTree(KDNodeCPU *CPUNode)
 	nodes[index].axis = CPUNode->axis;
 	nodes[index].split_val = CPUNode->split_val;
 	nodes[index].box = GPUBoundingBox(&CPUNode->box);
+	nodes[index].num_objs = CPUNode->numFaces;
 
-	if (CPUNode->isLeaf) {
-		nodes[index].num_objs = CPUNode->numObjs;
+	if (CPUNode->isLeaf) 
+	{
 		nodes[index].index_of_first_object = obj_index_list.size(); // tri_index_list initially contains 0 elements.
 
 		// Add triangles to tri_index_list as each leaf node is processed.
@@ -133,6 +135,8 @@ void RKDThreeGPU::buildTree(KDNodeCPU *CPUNode)
 			if (CPUNode->ropes[i]) {
 				nodes[index].neighbor_node_indices[i] = CPUNode->ropes[i]->vid;
 			}
+			else
+				nodes[index].neighbor_node_indices[i] = -1;
 		}
 	}
 	else {

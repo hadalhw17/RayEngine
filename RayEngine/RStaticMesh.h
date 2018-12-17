@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "rply.h"
-#include "Vector.h"
+#include "RayEngine.h"
 
 class RTriangle;
 class RRay;
@@ -46,16 +46,17 @@ public:
 	std::vector<std::shared_ptr<RTriangle>> GetTriangles() { return StaticMesh; }
 
 	HOST_DEVICE_FUNCTION
-	int GetVertexN() { return RStaticMesh::xCoordinates.size(); }
+	size_t GetVertexN() { return RStaticMesh::xCoordinates.size(); }
 
 	float3 *get_verts() { return verts; }
 	float3 *get_faces() { return faces; }
-	int get_num_verts() { return num_verts; }
-	int get_num_faces() { return num_faces; }
-
-private:
+	size_t get_num_verts() { return num_verts; }
+	size_t get_num_faces() { return num_faces; }
 	float3 *verts;
 	float3 *faces;
-	int num_verts, num_faces;
+	size_t num_verts, num_faces;
+private:
+
+
 };
 

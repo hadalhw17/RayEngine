@@ -1,15 +1,11 @@
 #pragma once
 #include "Source.h"
-#include "Vector.h"
-#include "Color.h"
 
-
-using RVectorF = RVector<float>;
 
 class RLight : public RSource
 {
-	RVectorF position;
-	RColor color;
+	float3 position;
+	float4 color;
 
 public:
 	float intensity = 500;
@@ -17,17 +13,17 @@ public:
 	HOST_DEVICE_FUNCTION RLight();
 	
 	HOST_DEVICE_FUNCTION
-	RLight(RVectorF p, RColor c);
+	RLight(float3 p, float4 c);
 
 	// method functions
 	HOST_DEVICE_FUNCTION
-	inline virtual RVectorF getLightPosition() { return position; }
+	inline virtual float3 getLightPosition() { return position; }
 
 	HOST_DEVICE_FUNCTION
-	inline virtual RColor getLightColor() { return color; }
+	inline virtual float4 getLightColor() { return color; }
 
 	HOST_DEVICE_FUNCTION
-	virtual void Illuminate(RVectorF &P, RVectorF &lightDir, RColor &lightIntensity, float &distance);
+	virtual void Illuminate(float3 &P, float3 &lightDir, float4 &lightIntensity, float &distance);
 
 };
 
