@@ -18,6 +18,7 @@ public:
 	std::vector<int> GetIndexList() const;
 	float3 *get_verts() const;
 	float3 *get_faces() const;
+	float3 *get_normals() const;
 	int GetNumNodes() const;
 	int get_num_verts() const;
 	int get_num_faces() const;
@@ -32,7 +33,7 @@ private:
 
 	std::vector<int> obj_index_list;
 
-	float3 *verts, *faces;
+	float3 *verts, *faces, *normals;
 
 	int num_nodes;
 	int root_index;

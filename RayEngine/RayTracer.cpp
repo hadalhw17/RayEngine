@@ -40,7 +40,9 @@ float4 *RRayTracer::trace(RKDTreeCPU *tree, RCamera *scene_camera)
 
 	float aspectratio = SCR_WIDTH / (float)SCR_HEIGHT;
 
-	float4 *pixels = new float4[SCR_WIDTH * SCR_HEIGHT * sizeof(pixels)];
+	size_t size = SCR_WIDTH * SCR_HEIGHT * sizeof(float4);
+
+	float4 *pixels = new float4[size];
 
 	auto start = std::chrono::system_clock::now();
 
@@ -112,7 +114,6 @@ float4 RRayTracer::castRay(RRay *ray, int depth, RKDTreeCPU *node)
 {
 	float4 finalRColor = make_float4(0, 0, 0, 0);
 	if (depth > 2) return make_float4(0, 0, 0, 0);
-	RObject *hitObject = nullptr;
 	float tNear = kInfinity;
 	float3 tmp_normal;
 
@@ -120,6 +121,7 @@ float4 RRayTracer::castRay(RRay *ray, int depth, RKDTreeCPU *node)
 	if (traceShadow(ray, tNear, tmp_normal, node))
 	{
 		//qDebug() << node->intersectionAmount;
+		//simple_shade(finalRColor, tmp_normal, ray->getRayDirection());
 		finalRColor.x = (tmp_normal.x < 0.0f) ? (tmp_normal.x * -1.0f) : tmp_normal.x;
 		finalRColor.y = (tmp_normal.y < 0.0f) ? (tmp_normal.y * -1.0f) : tmp_normal.y;
 		finalRColor.z = (tmp_normal.z < 0.0f) ? (tmp_normal.z * -1.0f) : tmp_normal.z;
@@ -198,7 +200,6 @@ float4 RRayTracer::castRay(RRay *ray, int depth, RKDTreeCPU *node)
 
 	//	}
 	}
-	delete hitObject;
 	return finalRColor;
 }
 
@@ -278,4 +279,10 @@ float RRayTracer::clamp(float lo, float hi, float v)
 	return std::max(lo, std::min(hi, v));
 }
 
+
+
+void RRayTracer::simple_shade(float4 &color, float3 normal, float3 ray_dir)
+{
+	color = make_float4(max(0.f, dot(normal, -ray_dir))); // facing ratio 
+}
 

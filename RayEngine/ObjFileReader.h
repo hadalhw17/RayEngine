@@ -98,7 +98,7 @@ unsigned int toUInt(const std::string &str) {
 				else if (prefix == "vn") {
 					float3 n;
 					line >> n.x >> n.y >> n.z;
-					normals.push_back((n));
+					normals.push_back((normalize(n)));
 				}
 				else if (prefix == "f") {
 					std::string v1, v2, v3, v4;
@@ -132,15 +132,6 @@ unsigned int toUInt(const std::string &str) {
 					}
 				}
 			}
-			
-			//mesh->faces = new float3[indices.size()];
-			//memcpy(mesh->faces, indices.data(), sizeof(uint32_t)*indices.size());
-			//for (uint32_t i = 0; i < indices.size(); i+=3)
-			//{
-			//	mesh->faces[i].x = indices[i];
-			//	mesh->faces[i].y = indices[i+1];
-			//	mesh->faces[i].z = indices[i+2];
-			//}
 
 			mesh->faces = new float3[indices.size() / 3];
 			memcpy(mesh->faces, indices.data(), sizeof(uint32_t)*indices.size());
@@ -154,10 +145,15 @@ unsigned int toUInt(const std::string &str) {
 
 			mesh->verts = new float3[vertices.size()];
 			for (uint32_t i = 0; i < vertices.size(); ++i)
-				mesh->verts[i] = positions.at(vertices[i].p-1);
+				mesh->verts[i] = positions.at(vertices[i].p - 1);
+
+			mesh->norms = new float3[vertices.size()];
+			for (uint32_t i = 0; i < vertices.size(); ++i)
+				mesh->norms[i] = normals.at(vertices[i].n - 1);
 
 			mesh->num_faces = indices.size() / 3;
 			mesh->num_verts = vertices.size();
+			mesh->num_norms = vertices.size();
 			return mesh;
 		}
 

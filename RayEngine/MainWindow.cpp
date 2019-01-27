@@ -15,6 +15,7 @@
 #include "MainWindow.h"
 #include "MovableCamera.h"
 
+
 double currentFrame;
 double lastFrame;
 double deltaTime;
@@ -44,14 +45,15 @@ MainWindow::~MainWindow()
 }
 
 RMovableCamera *movable_camera;
-extern "C" float4 *Render(class RKDThreeGPU *tree, RCamera _sceneCam, std::vector<float4> h_triangles);
+extern "C" float4 *Render(class RKDThreeGPU *tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals);
 
 
-void MainWindow::RenderFrame(RKDThreeGPU * CUDATree)
+void MainWindow::RenderFrame()
 {
+	//Text->RenderText("Hello World!!", 5.0f, 5.0f, 1.0f);
 	RRayTracer *tracer = new RRayTracer();
 	movable_camera->build_camera(SceneCam);
-	pixels = Render(CUDATree, *SceneCam, triangles);
+	pixels = Render(CUDATree, *SceneCam, triangles, normals);
 	//pixels = tracer->trace(Tree,SceneCam);
 	// create some image data
 	GLubyte *image = new GLubyte[4 * SCR_WIDTH * SCR_HEIGHT];
@@ -127,7 +129,7 @@ void MainWindow::processInput(GLFWwindow *window)
 
 	}
 
-	movable_camera->build_camera(SceneCam);
+	//movable_camera->build_camera(SceneCam);
 }
 
 
@@ -135,6 +137,7 @@ void MainWindow::init_triangles()
 {
 	float3 *verts = CUDATree->get_verts();
 	float3 *faces = CUDATree->get_faces();
+	float3 *norms = CUDATree->get_normals();
 
 	for (unsigned int i = 0; i < CUDATree->get_num_faces(); ++i)
 	{
@@ -150,9 +153,27 @@ void MainWindow::init_triangles()
 		triangles.push_back(make_float4(v0.x, v0.y, v0.z, 0));
 		triangles.push_back(make_float4(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z, 0));
 		triangles.push_back(make_float4(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z, 0));
+
+		float3 n0 = norms[(int)tri.x];
+		float3 n1 = norms[(int)tri.y];
+		float3 n2 = norms[(int)tri.z];
+		normals.push_back(make_float4(n0.x, n0.y, n0.z, 0));
+		normals.push_back(make_float4(n1.x, n1.y, n1.z, 0));
+		normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
 	}
 
-	delete[] verts, faces;
+	//for (unsigned int i = 0; i < CUDATree->get_num_faces(); ++i)
+	//{
+	//	float3 tri = faces[i];
+	//	float3 n0 = norms[(int)tri.x];
+	//	float3 n1 = norms[(int)tri.y];
+	//	float3 n2 = norms[(int)tri.z];
+	//	normals.push_back(make_float4(n0.x, n0.y, n0.z, 0));
+	//	normals.push_back(make_float4(n1.x, n1.y, n1.z, 0));
+	//	normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
+	//}
+
+	delete[] verts, faces, norms;
 }
 
 
@@ -306,6 +327,9 @@ int main()
 		return -1;
 	}
 
+	//main_window->Text = new TextRenderer(SCR_WIDTH, SCR_HEIGHT);
+	//main_window->Text->Load("fonts/ocraext.TTF", 24);
+
 	// shader source code
 	std::string vertex_source =
 		"#version 330\n"
@@ -440,7 +464,8 @@ int main()
 		// input
 		// -----
 		processInput(window);
-		main_window->RenderFrame(main_window->CUDATree);
+		main_window->RenderFrame();
+		//main_window->Text->RenderText("Hello World!!", 5.0f, 5.0f, 2.0f);
 
 		// render
 		// ------

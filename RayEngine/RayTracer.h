@@ -39,7 +39,7 @@ public:
 
 	float clamp(float lo, float hi, float v);
 
-
+	void simple_shade(float4 &color, float3 normal, float3 ray_dir);
 
 private:
 	int counterFor = 0;

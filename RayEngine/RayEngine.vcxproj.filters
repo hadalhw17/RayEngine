@@ -39,9 +39,6 @@
     <ClCompile Include="Ray.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\RayTraceer\rply.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -76,6 +73,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ObjFileReader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rply.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -148,6 +148,9 @@
     </ClInclude>
     <ClInclude Include="ObjFileReader.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rplyfile.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

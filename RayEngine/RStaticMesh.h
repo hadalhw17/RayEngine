@@ -54,7 +54,8 @@ public:
 	size_t get_num_faces() { return num_faces; }
 	float3 *verts;
 	float3 *faces;
-	size_t num_verts, num_faces;
+	float3 *norms;
+	size_t num_verts, num_faces, num_norms;
 private:
 
 

@@ -135,7 +135,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\geron\Projects\RayEngine\RayEngine\filesystem;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\geron\Projects\RayEngine\RayEngine\freetype-windows-binaries-master\include;C:\Users\geron\Projects\RayEngine\RayEngine\glm-master;C:\Users\geron\Projects\RayEngine\RayEngine\filesystem;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <CudaCompile>
       <Optimization>Od</Optimization>
@@ -149,7 +149,8 @@
       <FastMath>true</FastMath>
     </CudaCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;cudart.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;cudart.lib;cudart_static.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\geron\Projects\RayEngine\RayEngine\freetype-windows-binaries-master\win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -181,20 +182,21 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <OpenMPSupport>true</OpenMPSupport>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <AdditionalIncludeDirectories>C:\Users\geron\Projects\RayEngine\RayEngine\filesystem;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\geron\Projects\RayEngine\RayEngine\glm-master;C:\Users\geron\Projects\RayEngine\RayEngine\freetype-windows-binaries-master\include;C:\Users\geron\Projects\RayEngine\RayEngine\filesystem;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>opengl32.lib;glfw3.lib;cudart.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
@@ -215,7 +217,6 @@
     </CudaLink>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\RayTraceer\rply.c" />
     <ClCompile Include="BoundingVolume.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="D:\CPPLibs\GLAD\src\glad.c" />
@@ -233,6 +234,7 @@
     <ClCompile Include="Ray.cpp" />
     <ClCompile Include="RayEngine.cpp" />
     <ClCompile Include="RayTracer.cpp" />
+    <ClCompile Include="rply.c" />
     <ClCompile Include="RStaticMesh.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Source.cpp" />
@@ -262,6 +264,7 @@
     <ClInclude Include="Ray.h" />
     <ClInclude Include="RayEngine.h" />
     <ClInclude Include="RayTracer.h" />
+    <ClInclude Include="rplyfile.h" />
     <ClInclude Include="RStaticMesh.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Source.h" />

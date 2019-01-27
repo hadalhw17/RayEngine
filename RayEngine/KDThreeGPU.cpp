@@ -29,13 +29,20 @@ RKDThreeGPU::RKDThreeGPU(RKDTreeCPU *CPUNode)
 		faces[i] = tmp_faces[i];
 	}
 
+	float3 *tmp_norms = CPUNode->norms;
+	normals = new float3[num_verts];
+	for (int i = 0; i < num_verts; ++i)
+	{
+		normals[i] = tmp_norms[i];
+	}
+
 	nodes = new RKDTreeNodeGPU[num_nodes];
 
-	obj_index_list.clear();
+	obj_index_list = {};
 
 	buildTree(CPUNode->root);
 
-	PrintCPUAndGPUTrees(CPUNode->root);
+	//PrintCPUAndGPUTrees(CPUNode->root);
 }
 
 
@@ -70,6 +77,11 @@ float3 * RKDThreeGPU::get_verts() const
 float3 * RKDThreeGPU::get_faces() const
 {
 	return faces;
+}
+
+float3 * RKDThreeGPU::get_normals() const
+{
+	return normals;
 }
 
 int RKDThreeGPU::GetNumNodes() const
@@ -115,7 +127,6 @@ void RKDThreeGPU::buildTree(KDNodeCPU *CPUNode)
 {
 	int index = CPUNode->vid;
 	
-
 	nodes[index].is_leaf = CPUNode->isLeaf;
 	nodes[index].axis = CPUNode->axis;
 	nodes[index].split_val = CPUNode->split_val;

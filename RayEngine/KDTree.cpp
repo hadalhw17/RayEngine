@@ -9,8 +9,8 @@
 #include <memory>
 #include <iostream>
 
-const int MAX_DEPTH = 0;
-const  int OBJECTS_IN_LEAF = 200;
+const int MAX_DEPTH = 9999999999;
+const  int OBJECTS_IN_LEAF = 100;
 const int  MAX_SPLITS_OF_VOXEL = 5;
 const int SPLIT_COST = 5;
 
@@ -110,7 +110,7 @@ RKDTreeCPU::RKDTreeCPU(RKDTreeCPU * node, RBoundingVolume b, float3 lb, float3 u
 
 
 
-RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, int num_verts, int num_faces)
+RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_verts, int num_faces)
 {
 	this->num_verts = num_verts;
 	this->num_faces = num_faces;
@@ -121,6 +121,7 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, int num_verts, int num_fa
 	this->depth = 1;
 
 	this->verts = new float3[num_verts];
+	this->norms = new float3[num_verts];
 	this->faces = new float3[num_faces];
 
 	for (int i = 0; i < num_verts; ++i)
@@ -131,6 +132,11 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, int num_verts, int num_fa
 	for (int i = 0; i < num_faces; ++i)
 	{
 		this->faces[i] = _faces[i];
+	}
+
+	for (int i = 0; i < num_verts; ++i)
+	{
+		this->norms[i] = _norms[i];
 	}
 
 	// Create list of triangle indices for first level of kd-tree.
@@ -145,7 +151,7 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, int num_verts, int num_fa
 
 	// build rope structure
 	KDNodeCPU* ropes[6] = { nullptr };
-	buildRopeStructure( root, ropes, true );
+	buildRopeStructure();
 
 }
 
@@ -254,9 +260,11 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 
 	node->objIndeces = tri_indecies;
 
+	//node->box = generateBox(objCount, tri_indecies);
+
 
 	// Reached minimum abount of primitives in the node => make leaf and return it.
-	if (objCount <= OBJECTS_IN_LEAF || dep > MAX_DEPTH)
+	if (objCount <= OBJECTS_IN_LEAF || dep >= MAX_DEPTH)
 	{
 		node->isLeaf = true;
 
@@ -282,24 +290,22 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 	float midp = 0;
 	Axis split_axis = getLongestBoundingBoxSide(make_float3(bbox.bounds[0].x, bbox.bounds[0].y, bbox.bounds[0].z),
 		make_float3(bbox.bounds[1].x, bbox.bounds[1].y, bbox.bounds[1].z));
+	node->axis = split_axis;
 
 	// Update boxes boundaries according to split axis and mid point.
 	switch (split_axis) {
 	case X_Axis:		//X_Axis
 		midp = bbox.bounds[0].x + ((bbox.bounds[1].x - bbox.bounds[0].x) / (2.f));
-		node->axis = X_Axis;
 		leftBBox.bounds[1].x = midp;
 		rightBBox.bounds[0].x = midp;
 		break;
 	case Y_Axis:		//Y_Axis
 		midp = bbox.bounds[0].y + ((bbox.bounds[1].y - bbox.bounds[0].y) / (2.f));
-		node->axis = Y_Axis;
 		leftBBox.bounds[1].y = midp;
 		rightBBox.bounds[0].y = midp;
 		break;
 	case Z_Axis:		//Z_Axis
 		midp = bbox.bounds[0].z + ((bbox.bounds[1].z - bbox.bounds[0].z) / (2.f));
-		node->axis = Z_Axis;
 		leftBBox.bounds[1].z = midp;
 		rightBBox.bounds[0].z = midp;
 		break;
@@ -441,6 +447,12 @@ void RKDTreeCPU::buildRopeStructure(KDNodeCPU *curr_node, KDNodeCPU *ropes[], bo
 		RS_right[SL] = curr_node->LeftNode;
 		buildRopeStructure(curr_node->RightNode, RS_right, is_single_ray_case);
 	}
+}
+
+void RKDTreeCPU::buildRopeStructure()
+{
+	KDNodeCPU* ropes[6] = { NULL };
+	buildRopeStructure(root, ropes, true);
 }
 
 void RKDTreeCPU::optimizeRopes(KDNodeCPU *ropes[], RBoundingVolume bbox)
@@ -652,7 +664,13 @@ float3 get_tri_normal(float3 &p1, float3 &p2, float3 &p3)
 	return normalize(make_float3(nx, ny, nz));
 }
 
-bool triIntersect(float3 ray_o, float3 ray_dir, float3 v0, float3 v1, float3 v2, float &t, float3 &normal)
+float3 get_tri_normal(float3 &n0, float3 &n1, float3 &n2, float &u, float &v)
+{
+
+	return normalize((1 - u - v) * make_float3(n0.x, n0.y, n0.z) + u * make_float3(n1.x, n1.y, n1.z) + v * make_float3(n2.x, n2.y, n2.z));
+}
+
+bool triIntersect(float3 ray_o, float3 ray_dir, float3 v0, float3 v1, float3 v2, float &t, float3 &normal, float3 &n0, float3 &n1, float3 &n2)
 {
 	float3 e1, e2, h, s, q;
 	float a, f, u, v;
@@ -686,7 +704,7 @@ bool triIntersect(float3 ray_o, float3 ray_dir, float3 v0, float3 v1, float3 v2,
 	t = f * dot(e2, q);
 
 	if (t > 0.00001f) { // ray intersection
-		normal = get_tri_normal(v0, v1, v2);
+		normal = get_tri_normal(n0, n1, n2, u, v);
 		return true;
 	}
 	else { // this means that there is a line intersection but not a ray intersection
@@ -717,7 +735,11 @@ bool RKDTreeCPU::intersect(KDNodeCPU * node, RRay * r, float & t, float3 &normal
 				float3 v0 = verts[(int)tri.x];
 				float3 v1 = verts[(int)tri.y];
 				float3 v2 = verts[(int)tri.z];
-				if (triIntersect(r->getRayOrigin(), r->getRayDirection(), v0, v1, v2, t, normal) )
+
+				float3 n0 = norms[(int)tri.x];
+				float3 n1 = norms[(int)tri.y];
+				float3 n2 = norms[(int)tri.z];
+				if (triIntersect(r->getRayOrigin(), r->getRayDirection(), v0, v1, v2, t, normal, n0, n1, n2))
 				{
 					has_intersected = true;
 					//*hitObject = &objects[node->objIndeces[i]];
@@ -731,83 +753,74 @@ bool RKDTreeCPU::intersect(KDNodeCPU * node, RRay * r, float & t, float3 &normal
 	return false;
 }
 
-bool RKDTreeCPU::singleRayStacklessIntersect(KDNodeCPU *node, RRay * ray, float &t_near, float &t_far, float3 & normal)
+bool RKDTreeCPU::singleRayStacklessIntersect(KDNodeCPU *node, float3 ray_o, float3 ray_dir, float &t, float3 & normal)
 {
-	bool intersection_detected = false;
-	float3 ray_o = ray->getRayOrigin();
-	float3 ray_dir = ray->getRayDirection();
-	float t_entry_prev = -INFINITY;
-	while (t_near < t_far && t_near > t_entry_prev) {
-		t_entry_prev = t_near;
+	// Perform ray/AABB intersection test.
+	float t_near, t_far;
+	RRay *ray = new RRay(ray_o, ray_dir);
 
-		// Down traversal - Working our way down to a leaf node.
-		float3 p_entry = ray_o + (t_near * ray_dir);
-		while (!node->isLeaf) {
-			node = node->isPointToLeftOfSplittingPlane(p_entry) ? node->LeftNode : node->RightNode;
-		}
+	node->box.intersect(ray,t_near, t_far);
+	bool intersects_aabb = node->box.intersect(ray, t_near, t_far);
 
-		// We've reached a leaf node.
-		// Check intersection with triangles contained in current leaf node.
-		for (int i = 0; i < node->numFaces; ++i) {
-			float3 tri = faces[node->objIndeces[i]];
-			float3 v0 = verts[(int)tri.x];
-			float3 v1 = verts[(int)tri.y];
-			float3 v2 = verts[(int)tri.z];
+	if (intersects_aabb) {
+		// If current node is a leaf node.
+		if (!node->LeftNode && !node->RightNode) {
+			// Check triangles for intersections.
+			bool intersection_detected = false;
+			for (int i = 0; i < node->numFaces; ++i) {
+				float3 tri = faces[node->objIndeces[i]];
+				float3 v0 = verts[(int)tri.x];
+				float3 v1 = verts[(int)tri.y];
+				float3 v2 = verts[(int)tri.z];
 
-			// Perform ray/triangle intersection test.
-			float tmp_t = INFINITY;
-			float3 tmp_normal = make_float3(0.0f, 0.0f, 0.0f);
-			bool intersects_tri = triIntersect(ray_o, ray_dir, v0, v1, v2, tmp_t, tmp_normal);
+				float3 n0 = norms[(int)tri.x];
+				float3 n1 = norms[(int)tri.y];
+				float3 n2 = norms[(int)tri.z];
 
-			if (intersects_tri) {
-				if (tmp_t < t_far) {
+				// Perform ray/triangle intersection test.
+				float tmp_t = INFINITY;
+				float3 tmp_normal = make_float3(0.0f, 0.0f, 0.0f);
+				bool intersects_tri = triIntersect(ray->getRayOrigin(), ray->getRayDirection(), v0, v1, v2, tmp_t, tmp_normal, n0, n1, n2);
+
+				if (intersects_tri) {
 					intersection_detected = true;
-					t_far = tmp_t;
-					normal = tmp_normal;
+					if (tmp_t < t) {
+						t = tmp_t;
+						normal = tmp_normal;
+					}
 				}
 			}
-		}
 
-		// Compute distance along ray to exit current node.
-		float tmp_t_near, tmp_t_far;
-		bool intersects_curr_node_bounding_box = node->box.intersect(ray,tmp_t_near, tmp_t_far);
-		if (intersects_curr_node_bounding_box) {
-			// Set t_entry to be the entrance point of the next (neighboring) node.
-			t_near = tmp_t_far;
+			return intersection_detected;
 		}
+		// Else, recurse.
 		else {
-			// This should never happen.
-			// If it does, then that means we're checking triangles in a node that the ray never intersects.
-			break;
-		}
-
-		// Get neighboring node using ropes attached to current node.
-		float3 p_exit = ray_o + (t_near * ray_dir);
-		node = node->getNeighboringNode(p_exit);
-
-		// Break if neighboring node not found, meaning we've exited the kd-tree.
-		if (node == NULL) {
-			break;
+			bool hit_left = false, hit_right = false;
+			if (node->LeftNode) {
+				hit_left = singleRayStacklessIntersect(node->LeftNode, ray_o, ray_dir, t, normal);
+			}
+			if (node->RightNode) {
+				hit_right = singleRayStacklessIntersect(node->RightNode, ray_o, ray_dir, t, normal);
+			}
+			return hit_left || hit_right;
 		}
 	}
 
-	return intersection_detected;
+	return false;
 }
 bool RKDTreeCPU::singleRayStacklessIntersect(RRay * ray, float & t, float3 & normal)
 {
 	// Perform ray/AABB intersection test.
+	t = kInfinity;
 	float t_near, t_far;
-	bool intersects_root_node_bounding_box = root->box.intersect(ray, t_near, t_far);
-	if (intersects_root_node_bounding_box) {
-		bool hit = singleRayStacklessIntersect(root, ray, t_near, t_far, normal);
-		if (hit) {
-			t = t_far;
-		}
-		return hit;
+	float3 ray_o = ray->getRayOrigin();
+	float3 ray_dir = ray->getRayDirection();
+	bool hit = singleRayStacklessIntersect(root, ray_o, ray_dir, t, normal);
+	if (hit) {
+		//t = t_far;
 	}
-	else {
-		return false;
-	}
+	return hit;
+	
 }
 
 bool RKDTreeCPU::intersect(RRay * r, float &t, float3 &normal)

@@ -29,6 +29,8 @@ public:
 
 	RKDTreeCPU *tree;
 	std::vector<std::shared_ptr<RTriangle>> sceneObjects;
+	float3 *normals;
+	int num_normals;
 private:
 	HOST_DEVICE_FUNCTION 
 	void AddObjects(std::vector<std::shared_ptr<RTriangle>> *sceneObject, std::vector<std::shared_ptr<RTriangle>> *complexObject);

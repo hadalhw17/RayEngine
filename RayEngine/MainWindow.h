@@ -10,6 +10,7 @@ class RKDThreeGPU;
 struct RCamera;
 struct float4;
 struct GLFWwindow;
+class TextRenderer;
 class RMovableCamera;
 
 class MainWindow
@@ -19,7 +20,7 @@ public:
 	MainWindow();
 	~MainWindow();
 
-	void RenderFrame(RKDThreeGPU *CUDATree);
+	void RenderFrame();
 	void processInput(GLFWwindow *window);
 
 
@@ -27,9 +28,11 @@ public:
 	RScene *Scene;
 	RKDTreeCPU *Tree;
 	RCamera *SceneCam;
+	TextRenderer  *Text;
 
 	RKDThreeGPU *CUDATree;
 	std::vector<float4> triangles;
+	std::vector<float4> normals;
 	float4 *pixels;
 
 	double x_pos = 0;

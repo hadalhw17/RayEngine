@@ -57,7 +57,7 @@ public:
 	int intersectionAmount;
 
 	RBoundingVolume box;
-	float3 *verts, *faces;
+	float3 *verts, *faces, *norms;
 	int num_verts, num_faces;
 	bool isLeaf = false;
 
@@ -67,13 +67,14 @@ public:
 	RKDTreeCPU(RKDTreeCPU* node, RBoundingVolume b, float3 lb, float3 ub, int depth);
 
 	HOST_DEVICE_FUNCTION 
-	RKDTreeCPU(float3 *_verts, float3 *_faces, int numVerts, int numFaces);
+	RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms, int numVerts, int numFaces);
 
 	Axis getLongestBoundingBoxSide(float3 min, float3 max);
 
 	float getMinTriValue(int tri_index, Axis axis);
 
 	float getMaxTriValue(int tri_index, Axis axis);
+
 
 	HOST_DEVICE_FUNCTION 
 	KDNodeCPU *build(int dep, int objCount, int *tri_indecies, RBoundingVolume bbox);
@@ -83,11 +84,13 @@ public:
 
 	void buildRopeStructure(KDNodeCPU *curr_node, KDNodeCPU *ropes[], bool is_single_ray_case);
 
+	void buildRopeStructure();
+
 	void optimizeRopes(KDNodeCPU *ropes[], RBoundingVolume bbox);
 
 	HOST_DEVICE_FUNCTION
 	bool intersect(KDNodeCPU *node, RRay *r, float &t, float3 &normal);
-	bool singleRayStacklessIntersect(KDNodeCPU *node, RRay *ray, float &t_near, float&t_far, float3 &normal);
+	bool singleRayStacklessIntersect(KDNodeCPU *node, float3 ray_o, float3 ray_dir, float &t, float3 &normal);
 	bool singleRayStacklessIntersect(RRay *ray, float &t, float3 &normal);
 
 
