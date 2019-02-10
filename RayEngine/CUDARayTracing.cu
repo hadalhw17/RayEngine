@@ -282,7 +282,7 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node, float3 ray_o, float3 ray_d
 		bool intersects_curr_node_bounding_box = gpu_ray_box_intersect(curr_node.box, ray_o, ray_dir, tmp_t_near, tmp_t_far);
 		if (intersects_curr_node_bounding_box) {
 			// Set t_entry to be the entrance point of the next (neighboring) node.
-			t_entry = tmp_t_far;
+			t_entry = tmp_t_far + 0.00001f;
 		}
 		else {
 			// This should never happen.
@@ -291,16 +291,16 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node, float3 ray_o, float3 ray_d
 		}
 
 
-		// Get neighboring node using ropes attached to current node.
-		float3 p_exit = ray_o + (t_entry * ray_dir);
-		int new_node_index = get_neighboring_node_index(curr_node, p_exit);
+		//// Get neighboring node using ropes attached to current node.
+		//float3 p_exit = ray_o + (t_entry * ray_dir);
+		//int new_node_index = get_neighboring_node_index(curr_node, p_exit);
 
-		// Break if neighboring node not found, meaning we've exited the kd-tree.
-		if (new_node_index == -1) {
-			break;
-		}
+		//// Break if neighboring node not found, meaning we've exited the kd-tree.
+		//if (new_node_index == -1) {
+		//	//break;
+		//}
 
-		curr_node = node[new_node_index];
+		curr_node = node[root_index];
 
 	}
 
@@ -626,7 +626,7 @@ void phong_light(float4 &finalColor, float3 P, float3 &normal, float3 &hit_point
 	float3 R = reflect(lightDir, normal);
 	specular += (lightInt * make_float4(vis) * (powf(max(0.0, dot(R,(ray_dir))), 10)));
 
-	finalColor = finalColor * (diffuse * (1)) + (specular * (0));
+	finalColor = finalColor * (diffuse * (0.8)) + (specular * (0.2));
 }
 
 ////////////////////////////////////////////////////
@@ -774,8 +774,8 @@ void stackless_trace_scene(RKDTreeNodeGPU *tree, int width, int height, float4 *
 
 		tile_pattern(pixel_color, square);
 		//simple_shade(pixel_color, normal, ray_dir);
-		//phong_light(pixel_color, hit_point, normal,hit_point, tree, root_index, indexList);
-		shade(pixel_color, normal, hit_point, tree, root_index, indexList);
+		phong_light(pixel_color, hit_point, normal,hit_point, tree, root_index, indexList);
+		//shade(pixel_color, normal, hit_point, tree, root_index, indexList);
 	}
 	else
 	{

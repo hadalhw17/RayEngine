@@ -14,6 +14,7 @@
 #include <vector>
 #include "MainWindow.h"
 #include "MovableCamera.h"
+#include <thread>
 
 
 double currentFrame;
@@ -51,16 +52,16 @@ extern "C" float4 *Render(class RKDThreeGPU *tree, RCamera _sceneCam, std::vecto
 void MainWindow::RenderFrame()
 {
 	//Text->RenderText("Hello World!!", 5.0f, 5.0f, 1.0f);
-	RRayTracer *tracer = new RRayTracer();
+	//RRayTracer *tracer = new RRayTracer();
 	movable_camera->build_camera(SceneCam);
 	pixels = Render(CUDATree, *SceneCam, triangles, normals);
 	//pixels = tracer->trace(Tree,SceneCam);
 	// create some image data
 	GLubyte *image = new GLubyte[4 * SCR_WIDTH * SCR_HEIGHT];
 	for (int j = 0; j < SCR_HEIGHT; ++j) {
+		size_t indexY = j * SCR_WIDTH;
 		for (int i = 0; i < SCR_WIDTH; ++i) {
-			size_t index = j * SCR_WIDTH + i;
-			size_t indexT = i * SCR_HEIGHT + j;
+			size_t index = indexY + i;
 			image[4 * index + 0] = 0xFF * pixels[index].x; // R
 			image[4 * index + 1] = 0xFF * pixels[index].y; // G
 			image[4 * index + 2] = 0xFF * pixels[index].z; // B
@@ -138,6 +139,8 @@ void MainWindow::init_triangles()
 	float3 *verts = CUDATree->get_verts();
 	float3 *faces = CUDATree->get_faces();
 	float3 *norms = CUDATree->get_normals();
+	triangles = {};
+	normals = {};
 
 	for (unsigned int i = 0; i < CUDATree->get_num_faces(); ++i)
 	{
@@ -188,7 +191,7 @@ void MainWindow::setup_camera()
 void MainWindow::build_scene()
 {
 	Scene = new RScene;
-	Scene->BuildScene();
+
 	Tree = Scene->GetSceneTree();
 	CUDATree = new RKDThreeGPU(Tree);
 }
@@ -282,7 +285,10 @@ void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 
 }
 
-
+void render_thread(MainWindow *mc)
+{
+	mc->RenderFrame();
+}
 
 int main()
 {
@@ -464,7 +470,9 @@ int main()
 		// input
 		// -----
 		processInput(window);
+
 		main_window->RenderFrame();
+
 		//main_window->Text->RenderText("Hello World!!", 5.0f, 5.0f, 2.0f);
 
 		// render
@@ -499,6 +507,13 @@ int main()
 		// -------------------------------------------------------------------------------
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+
+
+		main_window->Scene->rebuild_scene();
+
+		main_window->Tree = main_window->Scene->GetSceneTree();
+		main_window->CUDATree = new RKDThreeGPU(main_window->Tree);
+		main_window->init_triangles();
 	}
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.

@@ -9,8 +9,8 @@
 #include <memory>
 #include <iostream>
 
-const int MAX_DEPTH = 9999999999;
-const  int OBJECTS_IN_LEAF = 100;
+const int MAX_DEPTH = 41;
+const  int OBJECTS_IN_LEAF = 20;
 const int  MAX_SPLITS_OF_VOXEL = 5;
 const int SPLIT_COST = 5;
 
@@ -136,7 +136,7 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_
 
 	for (int i = 0; i < num_verts; ++i)
 	{
-		this->norms[i] = _norms[i];
+		//this->norms[i] = _norms[i];
 	}
 
 	// Create list of triangle indices for first level of kd-tree.
@@ -150,8 +150,8 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_
 	this->root = build(1, num_faces, tri_indices, bbox);
 
 	// build rope structure
-	KDNodeCPU* ropes[6] = { nullptr };
-	buildRopeStructure();
+	//KDNodeCPU* ropes[6] = { nullptr };
+	//buildRopeStructure();
 
 }
 

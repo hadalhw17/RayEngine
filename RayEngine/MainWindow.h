@@ -49,7 +49,6 @@ public:
 
 
 
-private:
 	void init_triangles();
 	void setup_camera();
 	void build_scene();
