@@ -78,8 +78,8 @@ void MainWindow::RenderFrame()
 	// set texture content
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, &image[0]);
 
-	free(pixels);
-	free(image);
+	delete[] pixels;
+	delete[] image;
 }
 
 
@@ -165,16 +165,16 @@ void MainWindow::init_triangles()
 		normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
 	}
 
-	//for (unsigned int i = 0; i < CUDATree->get_num_faces(); ++i)
-	//{
-	//	float3 tri = faces[i];
-	//	float3 n0 = norms[(int)tri.x];
-	//	float3 n1 = norms[(int)tri.y];
-	//	float3 n2 = norms[(int)tri.z];
-	//	normals.push_back(make_float4(n0.x, n0.y, n0.z, 0));
-	//	normals.push_back(make_float4(n1.x, n1.y, n1.z, 0));
-	//	normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
-	//}
+	for (unsigned int i = 0; i < CUDATree->get_num_faces(); ++i)
+	{
+		float3 tri = faces[i];
+		float3 n0 = norms[(int)tri.x];
+		float3 n1 = norms[(int)tri.y];
+		float3 n2 = norms[(int)tri.z];
+		normals.push_back(make_float4(n0.x, n0.y, n0.z, 0));
+		normals.push_back(make_float4(n1.x, n1.y, n1.z, 0));
+		normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
+	}
 
 	delete[] verts, faces, norms;
 }
@@ -285,9 +285,23 @@ void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 
 }
 
-void render_thread(MainWindow *mc)
+void render_thread(MainWindow *main_window, float delta_time)
 {
-	mc->RenderFrame();
+	if (main_window->CUDATree)
+	{
+		delete main_window->CUDATree;
+		delete main_window->Tree;
+	}
+	main_window->Scene->Tick(delta_time);
+
+	main_window->Tree = main_window->Scene->GetSceneTree();
+	main_window->CUDATree = new RKDThreeGPU(main_window->Tree);
+	main_window->init_triangles();
+}
+
+void render(MainWindow *main_window)
+{
+	main_window->RenderFrame();
 }
 
 int main()
@@ -471,7 +485,7 @@ int main()
 		// -----
 		processInput(window);
 
-		main_window->RenderFrame();
+
 
 		//main_window->Text->RenderText("Hello World!!", 5.0f, 5.0f, 2.0f);
 
@@ -508,12 +522,8 @@ int main()
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 
-
-		main_window->Scene->rebuild_scene();
-
-		main_window->Tree = main_window->Scene->GetSceneTree();
-		main_window->CUDATree = new RKDThreeGPU(main_window->Tree);
-		main_window->init_triangles();
+		main_window->RenderFrame();
+		render_thread(main_window, deltaTime);
 	}
 
 	// glfw: terminate, clearing all previously allocated GLFW resources.

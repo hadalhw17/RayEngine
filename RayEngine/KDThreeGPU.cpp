@@ -49,7 +49,8 @@ RKDThreeGPU::RKDThreeGPU(RKDTreeCPU *CPUNode)
 RKDThreeGPU::~RKDThreeGPU()
 {
 	if (num_verts > 0) {
-		delete[] verts;
+		//delete[] verts;
+		delete[] normals;
 	}
 
 	if (num_faces > 0) {

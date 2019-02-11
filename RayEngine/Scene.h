@@ -24,28 +24,32 @@ public:
 	HOST_DEVICE_FUNCTION 
 	RKDTreeCPU *GetSceneTree();
 	HOST_DEVICE_FUNCTION 
-	inline std::vector<std::shared_ptr<RTriangle>> getObjects() { return sceneObjects; }
+
 	
 	void rebuild_scene();
 
 	RKDTreeCPU *tree;
-	std::vector<std::shared_ptr<RTriangle>> sceneObjects;
-	float3 *normals;
-	int num_normals;
+
+
+	void Tick(float delta_time);
 
 private:
 	void initialise_scene();
-	void load_meshes_from_file(RStaticMesh *complexObject, RStaticMesh *complexObject2);
+	void load_meshes_from_file(std::vector<char *>);
+	void clear_memory();
 	std::pair<size_t, size_t> merge_meshes();
 
 	void build_tree();
 
 	RStaticMesh *complexObject;
 	RStaticMesh *complexObject2;
+	std::vector<RStaticMesh *> sceneObjects;
 
 	float3 *arrv;
 	float3 *arrf;
-
+	float3 *normals;
+	
+	size_t num_normals;
 	size_t numFaces;
 	size_t numVerts;
 };

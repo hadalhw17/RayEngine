@@ -75,10 +75,10 @@ public:
 	const float3 operator [] (bool i) const { return bounds[i]; }
 	
 
-	bool intersect(RRay *r, float &tMin, float &tMax)
+	bool intersect(RRay r, float &tMin, float &tMax)
 	{
-		float3 ray_dir = r->getRayDirection();
-		float3 ray_o = r->getRayOrigin();
+		float3 ray_dir = r.getRayDirection();
+		float3 ray_o = r.getRayOrigin();
 		float3 dirfrac = make_float3(1.0f / ray_dir.x, 1.0f / ray_dir.y, 1.0f / ray_dir.z);
 
 		float t1 = (bounds[0].x - ray_o.x) * dirfrac.x;

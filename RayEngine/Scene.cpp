@@ -15,7 +15,8 @@
 
 RScene::RScene()
 {
-	load_meshes_from_file(complexObject, complexObject2);
+	load_meshes_from_file({ (char *)"Meshes/floor.obj" ,
+							(char *)"Meshes/cat.obj"});
 
 	initialise_scene();
 }
@@ -23,9 +24,15 @@ RScene::RScene()
 
 RScene::~RScene()
 {
+	clear_memory();
 }
 float RScene::moveCounter = 0.f;
 
+
+void RScene::Tick(float delta_time)
+{
+	rebuild_scene();
+}
 
 void RScene::initialise_scene()
 {
@@ -46,6 +53,7 @@ RKDTreeCPU * RScene::GetSceneTree()
 
 void RScene::rebuild_scene()
 {
+	clear_memory();
 	moveCounter += 0.001f;
 	auto mesh_sizes = merge_meshes();
 
@@ -56,14 +64,22 @@ void RScene::rebuild_scene()
 }
 
 
-void RScene::load_meshes_from_file(RStaticMesh * _complexObject, RStaticMesh * _complexObject2)
+void RScene::load_meshes_from_file(std::vector<char *> files)
 {
-	char *FileName = (char *)"Meshes/character.obj";
-	
-	WavefrontOBJ *reader = new WavefrontOBJ(FileName);
-	complexObject = reader->loadObjFromFile(FileName);
-	FileName = (char *)"Meshes/cat.obj";
-	complexObject2 = reader->loadObjFromFile(FileName);
+	for (auto file : files)
+	{
+		WavefrontOBJ *reader = new WavefrontOBJ((char *)file);
+		sceneObjects.push_back(reader->loadObjFromFile((char *)file));
+
+		delete reader;
+	}
+}
+
+void RScene::clear_memory()
+{
+	delete[] arrf;
+	delete[] arrv;
+	delete[] normals;
 }
 
 std::pair<size_t, size_t> RScene::merge_meshes()
@@ -71,47 +87,57 @@ std::pair<size_t, size_t> RScene::merge_meshes()
 	size_t numFaces;
 	size_t numVerts;
 
-	numFaces = complexObject->get_num_faces() + complexObject2->get_num_faces();
-	numVerts = complexObject->get_num_verts() + complexObject2->get_num_verts();
+	numFaces = sceneObjects[0]->get_num_faces() + sceneObjects[1]->get_num_faces();
+	numVerts = sceneObjects[0]->get_num_verts() + sceneObjects[1]->get_num_verts();
 	
-	for (int i = 0; i < complexObject->get_num_verts(); i++)
+	for (size_t i = 0; i < sceneObjects[0]->get_num_verts(); i++)
 	{
-		complexObject->verts[i].y += moveCounter;
+		sceneObjects[0]->verts[i].y -= 0.01f;
 	}
 
 
-	for (int i = 0; i < complexObject2->get_num_verts(); i++)
+	for (int i = 0; i < sceneObjects[1]->get_num_verts(); i++)
 	{
-		complexObject2->verts[i].z += moveCounter;
+		sceneObjects[1]->verts[i].z += 0.01;
 	}
 
-	std::vector<float3> tmp_faces(complexObject->get_faces(), complexObject->get_faces() + complexObject->get_num_faces());
-	std::vector<float3> tmp_verts(complexObject->get_verts(), complexObject->get_verts() + complexObject->get_num_verts());
-
-
-	for (int i = 0; i < complexObject2->get_num_faces(); i++)
+	std::vector<float3> tmp_faces = {};
+	std::vector<float3> tmp_verts = {};
+	std::vector<float3> tmp_norms = {};
+	size_t stride = 0;
+	for (int counter = 0; counter < sceneObjects.size(); counter++)
 	{
-		tmp_faces.push_back(complexObject2->get_faces()[i] + complexObject->get_num_verts());
+		for (size_t i = 0; i < sceneObjects.at(counter)->get_num_faces(); i++)
+		{
+			tmp_faces.push_back(sceneObjects.at(counter)->get_faces()[i] + stride);
+		}
+
+		for (size_t i = 0; i < sceneObjects.at(counter)->get_num_verts(); i++)
+		{
+			tmp_verts.push_back(sceneObjects.at(counter)->get_verts()[i]);
+		}
+
+		for (size_t i = 0; i < sceneObjects.at(counter)->get_num_verts(); i++)
+		{
+			tmp_norms.push_back(sceneObjects.at(counter)->norms[i]);
+		}
+
+		stride += sceneObjects.at(counter)->get_num_verts();
 	}
-	for (int i = 0; i < complexObject2->get_num_verts(); i++)
-	{
-		tmp_verts.push_back(complexObject2->get_verts()[i]);
-	}
+
 	numFaces = tmp_faces.size();
 	numVerts = tmp_verts.size();
-	normals = new float3[complexObject->num_norms];
-	for (int i = 0; i < complexObject->num_norms; ++i)
-	{
-		normals[i] = complexObject->norms[i];
-	}
-	num_normals = complexObject->num_norms;
+	num_normals = tmp_norms.size();
 
 	arrv = new float3[numVerts];
 	arrf = new float3[numFaces];
+	normals = new float3[num_normals];
 
 	std::copy(tmp_verts.begin(), tmp_verts.end(), arrv);
 
 	std::copy(tmp_faces.begin(), tmp_faces.end(), arrf);
+	
+	std::copy(tmp_norms.begin(), tmp_norms.end(), normals);
 
 	return std::pair<size_t, size_t>(numFaces, numVerts);
 }

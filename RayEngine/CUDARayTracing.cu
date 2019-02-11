@@ -606,12 +606,12 @@ void ambient_light(float4 &color)
 // Phong light
 ////////////////////////////////////////////////////
 __device__
-void phong_light(float4 &finalColor, float3 P, float3 &normal, float3 &hit_point, RKDTreeNodeGPU *tree, 
+void phong_light(float4 &finalColor, float3 P, float3 dir, float3 &normal, float3 &hit_point, RKDTreeNodeGPU *tree, 
 	int root_index, int *index_list)
 {
 	float3 bias = normal * make_float3(1e-4);
-	float4 diffuse, specular;
-	float3 lightpos = make_float3(50, -10, 10), lightDir;
+	float4 diffuse = make_float4(0), specular = make_float4(0);
+	float3 lightpos = make_float3(10, 10, 10), lightDir;
 	float4 lightInt;
 	float tShadowed;
 	illuminate(P, lightpos, lightDir, lightInt, tShadowed);
@@ -621,12 +621,12 @@ void phong_light(float4 &finalColor, float3 P, float3 &normal, float3 &hit_point
 
 	bool vis = trace_shadow(tree, ray_o, ray_dir, tShadowed, root_index, index_list , normal, hit_point);
 
-	diffuse += (lightInt * make_float4(vis * 0.18) * (max(0.0, dot(normal, (lightDir)))));
+	diffuse += (lightInt * make_float4(vis * 0.18) * (max(0.0, dot(normal, (-lightDir)))));
 
 	float3 R = reflect(lightDir, normal);
-	specular += (lightInt * make_float4(vis) * (powf(max(0.0, dot(R,(ray_dir))), 10)));
+	specular += (lightInt * make_float4(vis) * (powf(max(0.0, dot(R,(-dir))), 10)));
 
-	finalColor = finalColor * (diffuse * (0.8)) + (specular * (0.2));
+	finalColor = finalColor + (diffuse * (0.8)) + (specular * (0.2));
 }
 
 ////////////////////////////////////////////////////
@@ -698,15 +698,17 @@ void gpu_bruteforce_ray_cast(float4 *image_buffer,
 				if (tmp_t < t)
 				{
 					t = tmp_t;
+					hit_point = ray_o + (t * ray_dir);
 					//narmals_mat(pixel_color, tmp_normal);
 					simple_shade(pixel_color, tmp_normal, ray_dir);
+					phong_light(pixel_color, hit_point, ray_dir, tmp_normal, hit_point, tree, root_index, index_list);
 				}
 			}
 		}
 	}
 
 	//ambient_light(pixel_color);
-	//pixel_color = clip(pixel_color);
+	pixel_color = clip(pixel_color);
 
 	image_buffer[index] = pixel_color;
 	return;
@@ -772,9 +774,9 @@ void stackless_trace_scene(RKDTreeNodeGPU *tree, int width, int height, float4 *
 		//narmals_mat(pixel_color, normal);
 		
 
-		tile_pattern(pixel_color, square);
-		//simple_shade(pixel_color, normal, ray_dir);
-		phong_light(pixel_color, hit_point, normal,hit_point, tree, root_index, indexList);
+		//tile_pattern(pixel_color, square);
+		simple_shade(pixel_color, normal, ray_dir);
+		phong_light(pixel_color, hit_point, ray_dir, normal,hit_point, tree, root_index, indexList);
 		//shade(pixel_color, normal, hit_point, tree, root_index, indexList);
 	}
 	else
@@ -783,7 +785,7 @@ void stackless_trace_scene(RKDTreeNodeGPU *tree, int width, int height, float4 *
 		sky_mat(pixel_color, ray_dir);
 	}
 
-	ambient_light(pixel_color);
+	//ambient_light(pixel_color);
 	pixel_color = clip(pixel_color);
 	pixels[index + stride] = pixel_color;
 	return;
@@ -824,9 +826,12 @@ float4 *Render(RKDThreeGPU *tree, RCamera sceneCam, std::vector<float4> triangle
 
 	// initialise array of triangle indecies.
 	std::vector<int> kd_tree_tri_indics = tree->GetIndexList();
+
 	float size_kd_tree_tri_indices = kd_tree_tri_indics.size() * sizeof(int);
-	int *tri_index_array = new int[kd_tree_tri_indics.size()];
-	for (int i = 0; i < kd_tree_tri_indics.size(); ++i) {
+
+	std::unique_ptr<int[]> tri_index_array  (new int[kd_tree_tri_indics.size()]);
+
+	for (size_t i = 0; i < kd_tree_tri_indics.size(); ++i) {
 		tri_index_array[i] = kd_tree_tri_indics[i];
 	}
 
@@ -872,7 +877,7 @@ float4 *Render(RKDThreeGPU *tree, RCamera sceneCam, std::vector<float4> triangle
 	cudaMemcpy(d_pixels, h_pixels, size, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_render_camera, h_camera, sizeof(RCamera), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_tree, h_tree, size_kd_tree, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_index_list, tri_index_array, size_kd_tree_tri_indices, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_index_list, tri_index_array.get(), size_kd_tree_tri_indices, cudaMemcpyHostToDevice);
 	d_root_index = tree->get_root_index();
 
 	// Number of threads in each thread block
@@ -895,16 +900,16 @@ float4 *Render(RKDThreeGPU *tree, RCamera sceneCam, std::vector<float4> triangle
 	//auto start = std::chrono::steady_clock::now();
 
 	// Perform bruteforce approach or use kd-tree acceleration.
-	if (!bruteforce)
-	{
-		gpu_bruteforce_ray_cast << < blockSize, gridSize >> > (d_pixels, SCR_WIDTH, SCR_HEIGHT,
-			d_render_camera, nun_faces, bbox, 0, d_tree, d_root_index, d_index_list);
-	}
-	else
-	{
-		stackless_trace_scene << < blockSize, gridSize >> > (d_tree, SCR_WIDTH, SCR_HEIGHT, d_pixels,
-			d_render_camera, d_root_index, nun_faces, d_index_list, 0);
-	}
+	//if (!bruteforce)
+	//{
+		//gpu_bruteforce_ray_cast << < blockSize, gridSize >> > (d_pixels, SCR_WIDTH, SCR_HEIGHT,
+		//	d_render_camera, nun_faces, bbox, 0, d_tree, d_root_index, d_index_list);
+	//}
+	//else
+	//{
+	//}
+	stackless_trace_scene << < blockSize, gridSize >> > (d_tree, SCR_WIDTH, SCR_HEIGHT, d_pixels,
+		d_render_camera, d_root_index, nun_faces, d_index_list, 0);
 
 	cudaDeviceSynchronize();
 
@@ -928,7 +933,7 @@ float4 *Render(RKDThreeGPU *tree, RCamera sceneCam, std::vector<float4> triangle
 	cudaFree(d_render_camera);
 
 	// Release host memory.
-	delete[] tri_index_array;
+//	free(tri_index_array);
 
 	triangles.clear(); //clear content
 	triangles.resize(0); //resize it to 0

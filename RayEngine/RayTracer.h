@@ -24,8 +24,8 @@ public:
 	float4 *trace(RKDTreeCPU *tree, class RCamera *scene_cam);
 
 
-	bool traceShadow(RRay *, float &, float3 &normal, RKDTreeCPU *tree);
-	float4 castRay(RRay *ray, int depth, RKDTreeCPU *node);
+	bool traceShadow(RRay , float &, float3 &normal, RKDTreeCPU *tree);
+	float4 castRay(RRay ray, int depth, RKDTreeCPU *node);
 	void generateScene(std::vector<std::shared_ptr<RObject>> &);
 
 	//Color options

@@ -22,6 +22,7 @@ class RStaticMesh
 
 public:
 	HOST_DEVICE_FUNCTION RStaticMesh();
+	~RStaticMesh();
 
 	HOST_DEVICE_FUNCTION
 	RStaticMesh(char *fileName) { LoadFromFile(fileName); }

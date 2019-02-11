@@ -27,7 +27,7 @@ KDNodeCPU::KDNodeCPU()
 
 KDNodeCPU::~KDNodeCPU()
 {
-	if (numFaces > 0) {
+	if (numFaces > 0 && objIndeces) {
 		delete[] objIndeces;
 	}
 
@@ -36,6 +36,10 @@ KDNodeCPU::~KDNodeCPU()
 	}
 	if (RightNode) {
 		delete RightNode;
+	}
+	for (auto rope : ropes)
+	{
+		delete rope;
 	}
 }
 
@@ -136,7 +140,7 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_
 
 	for (int i = 0; i < num_verts; ++i)
 	{
-		//this->norms[i] = _norms[i];
+		this->norms[i] = _norms[i];
 	}
 
 	// Create list of triangle indices for first level of kd-tree.
@@ -153,6 +157,23 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_
 	//KDNodeCPU* ropes[6] = { nullptr };
 	//buildRopeStructure();
 
+}
+
+RKDTreeCPU::~RKDTreeCPU()
+{
+	if (num_verts)
+	{
+		delete[] verts;
+		delete[] norms;
+	}
+	if (num_faces)
+	{
+		delete[] faces;
+	}
+	if (root)
+	{
+		delete root;
+	}
 }
 
 Axis RKDTreeCPU::getLongestBoundingBoxSide(float3 min, float3 max)
@@ -322,6 +343,7 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 
 	// Decide whether primitive goes to the right or to the left node.
 	float minVal, maxVal;
+
 	for (size_t i = 0; i < objCount; i++)
 	{
 		// Split objects based on their midpoints size of average in axises.
@@ -370,7 +392,8 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 
 	// Filter indecies between right and left by removing the one that have -1.
 	int left_index = 0, right_index = 0;
-	for (int i = 0; i < objCount; ++i) {
+
+	for (size_t i = 0; i < objCount; ++i) {
 		if (temp_left_tri_indices[i] != -1) {
 			left_tri_indices[left_index] = temp_left_tri_indices[i];
 			++left_index;
@@ -386,17 +409,12 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 	delete[] temp_right_tri_indices;
 
 
-	//leftBBox = generateBox(leftObjCount, left_tri_indices);
-	//rightBBox = generateBox(rightObjCount, right_tri_indices);
-
 	node->LeftNode = build(dep + 1, leftObjCount, left_tri_indices, leftBBox);
 	node->RightNode = build(dep + 1, rightObjCount, right_tri_indices, rightBBox);
 
 	// Assign final parametres.
 	node->vid = numNodes;
 	++numNodes;
-
-
 
 	return node;
 }
@@ -712,7 +730,7 @@ bool triIntersect(float3 ray_o, float3 ray_dir, float3 v0, float3 v1, float3 v2,
 	}
 }
 
-bool RKDTreeCPU::intersect(KDNodeCPU * node, RRay * r, float & t, float3 &normal)
+bool RKDTreeCPU::intersect(KDNodeCPU * node, RRay r, float & t, float3 &normal)
 {	
 	float tNear, tFar;
 	bool has_intersected = false;
@@ -739,7 +757,7 @@ bool RKDTreeCPU::intersect(KDNodeCPU * node, RRay * r, float & t, float3 &normal
 				float3 n0 = norms[(int)tri.x];
 				float3 n1 = norms[(int)tri.y];
 				float3 n2 = norms[(int)tri.z];
-				if (triIntersect(r->getRayOrigin(), r->getRayDirection(), v0, v1, v2, t, normal, n0, n1, n2))
+				if (triIntersect(r.getRayOrigin(), r.getRayDirection(), v0, v1, v2, t, normal, n0, n1, n2))
 				{
 					has_intersected = true;
 					//*hitObject = &objects[node->objIndeces[i]];
@@ -757,7 +775,7 @@ bool RKDTreeCPU::singleRayStacklessIntersect(KDNodeCPU *node, float3 ray_o, floa
 {
 	// Perform ray/AABB intersection test.
 	float t_near, t_far;
-	RRay *ray = new RRay(ray_o, ray_dir);
+	RRay ray (ray_o, ray_dir);
 
 	node->box.intersect(ray,t_near, t_far);
 	bool intersects_aabb = node->box.intersect(ray, t_near, t_far);
@@ -780,7 +798,7 @@ bool RKDTreeCPU::singleRayStacklessIntersect(KDNodeCPU *node, float3 ray_o, floa
 				// Perform ray/triangle intersection test.
 				float tmp_t = INFINITY;
 				float3 tmp_normal = make_float3(0.0f, 0.0f, 0.0f);
-				bool intersects_tri = triIntersect(ray->getRayOrigin(), ray->getRayDirection(), v0, v1, v2, tmp_t, tmp_normal, n0, n1, n2);
+				bool intersects_tri = triIntersect(ray.getRayOrigin(), ray.getRayDirection(), v0, v1, v2, tmp_t, tmp_normal, n0, n1, n2);
 
 				if (intersects_tri) {
 					intersection_detected = true;
@@ -808,13 +826,13 @@ bool RKDTreeCPU::singleRayStacklessIntersect(KDNodeCPU *node, float3 ray_o, floa
 
 	return false;
 }
-bool RKDTreeCPU::singleRayStacklessIntersect(RRay * ray, float & t, float3 & normal)
+bool RKDTreeCPU::singleRayStacklessIntersect(RRay ray, float & t, float3 & normal)
 {
 	// Perform ray/AABB intersection test.
 	t = kInfinity;
 	float t_near, t_far;
-	float3 ray_o = ray->getRayOrigin();
-	float3 ray_dir = ray->getRayDirection();
+	float3 ray_o = ray.getRayOrigin();
+	float3 ray_dir = ray.getRayDirection();
 	bool hit = singleRayStacklessIntersect(root, ray_o, ray_dir, t, normal);
 	if (hit) {
 		//t = t_far;
@@ -823,7 +841,7 @@ bool RKDTreeCPU::singleRayStacklessIntersect(RRay * ray, float & t, float3 & nor
 	
 }
 
-bool RKDTreeCPU::intersect(RRay * r, float &t, float3 &normal)
+bool RKDTreeCPU::intersect(RRay r, float &t, float3 &normal)
 {
 	t = kInfinity;
 	return intersect(root, r, t, normal);

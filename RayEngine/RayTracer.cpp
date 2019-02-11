@@ -15,6 +15,7 @@
 #include <random>
 #include <cmath>
 #include <iostream>
+#include <memory>
 
 #include "cuda_runtime_api.h"
 #include "cutil_math.h"
@@ -87,12 +88,11 @@ float4 *RRayTracer::trace(RKDTreeCPU *tree, RCamera *scene_camera)
 
 				// ray origin
 				float3 ray_o = rendercampos;
-				RRay *cam_ray = new RRay(ray_o, ray_dir);
+				RRay cam_ray = RRay(ray_o, ray_dir);
 				float4 finalRColor = castRay(cam_ray, 0, tree);
 				pixels[flatIndex].x = finalRColor.x;
 				pixels[flatIndex].y = finalRColor.y;
 				pixels[flatIndex].z = finalRColor.z;
-				delete cam_ray;
 			}
 		}
 
@@ -110,7 +110,7 @@ inline float modulo(const float &f)
 	return f - std::floor(f);
 }
 
-float4 RRayTracer::castRay(RRay *ray, int depth, RKDTreeCPU *node)
+float4 RRayTracer::castRay(RRay ray, int depth, RKDTreeCPU *node)
 {
 	float4 finalRColor = make_float4(0, 0, 0, 0);
 	if (depth > 2) return make_float4(0, 0, 0, 0);
@@ -267,7 +267,7 @@ float3 RRayTracer::reflect(float3 &I, float3 &N)
 	return I - (N * (num));
 }
 
-bool RRayTracer::traceShadow(RRay *ray,
+bool RRayTracer::traceShadow(RRay ray,
 	float &tNear, float3 &normal, RKDTreeCPU *tree)
 {
 	bool inter = tree->singleRayStacklessIntersect(ray, tNear, normal);

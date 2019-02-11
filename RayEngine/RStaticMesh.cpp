@@ -30,6 +30,13 @@ RStaticMesh::RStaticMesh()
 {
 }
 
+RStaticMesh::~RStaticMesh()
+{
+	delete[] verts;
+	delete[] faces;
+	delete[] norms;
+}
+
 int RStaticMesh::vertex_cb(p_ply_argument argument)
 {
 	long eol;

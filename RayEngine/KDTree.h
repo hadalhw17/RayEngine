@@ -69,6 +69,8 @@ public:
 	HOST_DEVICE_FUNCTION 
 	RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms, int numVerts, int numFaces);
 
+	~RKDTreeCPU();
+
 	Axis getLongestBoundingBoxSide(float3 min, float3 max);
 
 	float getMinTriValue(int tri_index, Axis axis);
@@ -89,15 +91,10 @@ public:
 	void optimizeRopes(KDNodeCPU *ropes[], RBoundingVolume bbox);
 
 	HOST_DEVICE_FUNCTION
-	bool intersect(KDNodeCPU *node, RRay *r, float &t, float3 &normal);
+	bool intersect(KDNodeCPU *node, RRay r, float &t, float3 &normal);
 	bool singleRayStacklessIntersect(KDNodeCPU *node, float3 ray_o, float3 ray_dir, float &t, float3 &normal);
-	bool singleRayStacklessIntersect(RRay *ray, float &t, float3 &normal);
-
-
-
+	bool singleRayStacklessIntersect(RRay ray, float &t, float3 &normal);
 
 	HOST_DEVICE_FUNCTION
-	bool intersect(RRay *r, float &t, float3 &normal);
-
-
+	bool intersect(RRay r, float &t, float3 &normal);
 };
