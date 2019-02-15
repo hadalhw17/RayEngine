@@ -10,7 +10,7 @@
 
 // settings
 const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 700;
+const unsigned int SCR_HEIGHT = 600;
 
 enum Axis
 {
@@ -58,6 +58,8 @@ struct HitResult
 	float t;
 	float3 normal;
 	float3 hit_point;
+	float3 ray_dir;
+	float3 ray_o;
 	bool hits;
 
 	HOST_DEVICE_FUNCTION

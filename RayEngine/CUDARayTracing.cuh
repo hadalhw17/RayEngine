@@ -17,25 +17,28 @@ texture<float4, 1, cudaReadModeElementType> normals_texture;
 
 float4 *h_pixels;
 
-__device__
+__device__ __constant__
 class RKDTreeNodeGPU *d_tree;
 
 __device__
 class RCamera *d_render_camera;
 
-__device__
+__device__ __constant__
 int *d_index_list;
 
 __device__
 float4 *d_pixels;
 
 __device__
+struct HitResult *d_hit_result;
+
+__device__ __constant__
 int *d_root_index;
 
 __device__
 RCamera *h_camera;
 
-__device__
+__device__ __constant__
 struct GPUSceneObject *d_scene_objects;
 
 __device__

@@ -66,12 +66,12 @@ float3 gpu_get_tri_normal(int tri_index, float u, float v)
 // Between ray and triangle
 ////////////////////////////////////////////////////
 __device__
-bool gpu_ray_tri_intersect(float3 ray_o, float3 ray_dir, float3 v0, float3 e1, float3 e2, int tri_index, HitResult &hit_result)
+bool gpu_ray_tri_intersect(float3 v0, float3 e1, float3 e2, int tri_index, HitResult &hit_result)
 {
 	float3 h, s, q;
 	float a, f, u, v;
 
-	h = cross(ray_dir, e2);
+	h = cross(hit_result.ray_dir, e2);
 	a = dot(e1, h);
 
 	if (a > -1e-4 && a < 1e-4) {
@@ -79,7 +79,7 @@ bool gpu_ray_tri_intersect(float3 ray_o, float3 ray_dir, float3 v0, float3 e1, f
 	}
 
 	f = 1.0f / a;
-	s = ray_o - v0;
+	s = hit_result.ray_o - v0;
 	u = f * dot(s, h);
 
 	if (u < 0.0f || u > 1.0f) {
@@ -87,7 +87,7 @@ bool gpu_ray_tri_intersect(float3 ray_o, float3 ray_dir, float3 v0, float3 e1, f
 	}
 
 	q = cross(s, e1);
-	v = f * dot(ray_dir, q);
+	v = f * dot(hit_result.ray_dir, q);
 
 	if (v < 0.0f || u + v > 1.0f) {
 		return false;
@@ -98,7 +98,7 @@ bool gpu_ray_tri_intersect(float3 ray_o, float3 ray_dir, float3 v0, float3 e1, f
 
 	if (hit_result.t > 1e-4) { // ray intersection
 		hit_result.normal = gpu_get_tri_normal(v0, e1, e2);
-		hit_result.hit_point = ray_o + (hit_result.t * ray_dir);
+		hit_result.hit_point = hit_result.ray_o + (hit_result.t * hit_result.ray_dir);
 		return true;
 	}
 	else { // this means that there is a line intersection but not a ray intersection
@@ -209,7 +209,7 @@ int get_neighboring_node_index(RKDTreeNodeGPU node, float3 p)
 // Stackless kd-tree traversal algorithm
 ////////////////////////////////////////////////////
 __device__
-bool stackless_kdtree_traversal(RKDTreeNodeGPU *node, float3 ray_o, float3 ray_dir,
+bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 	GPUSceneObject *scene_objs, int num_objs, int curr_obj_count,
 	int *root_index, int *indexList, HitResult &hit_result)
 {
@@ -221,7 +221,7 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node, float3 ray_o, float3 ray_d
 	GPUBoundingBox transformed_box = curr_node.box;
 	transformed_box.Min += scene_objs[curr_obj_count].location;
 	transformed_box.Max += scene_objs[curr_obj_count].location;
-	bool intersects_root_node_bounding_box = gpu_ray_box_intersect(curr_node.box, ray_o, ray_dir, t_entry, t_exit);
+	bool intersects_root_node_bounding_box = gpu_ray_box_intersect(curr_node.box, hit_result.ray_o, hit_result.ray_dir, t_entry, t_exit);
 	
 
 	if (!intersects_root_node_bounding_box) {
@@ -239,7 +239,7 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node, float3 ray_o, float3 ray_d
 		t_entry_prev = t_entry;
 
 		// Down traversal - Working our way down to a leaf node.
-		float3 p_entry = ray_o + (t_entry * ray_dir);
+		float3 p_entry = hit_result.ray_o + (t_entry * hit_result.ray_dir);
 		while (!curr_node.is_leaf) {
 			curr_node = is_point_to_the_left_of_split(curr_node, p_entry) ? node[curr_node.left_index] : node[curr_node.right_index];
 		}
@@ -268,9 +268,10 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node, float3 ray_o, float3 ray_d
 
 			// Perform ray/triangle intersection test.
 			HitResult local_hit_result;
+			local_hit_result.ray_o = hit_result.ray_o;
+			local_hit_result.ray_dir = hit_result.ray_dir;
 
-			bool intersects_tri = gpu_ray_tri_intersect(ray_o, ray_dir, 
-				v0, v1 - v0, v2 - v0, tri, local_hit_result);
+			bool intersects_tri = gpu_ray_tri_intersect(v0, v1 - v0, v2 - v0, tri, local_hit_result);
 
 			if (intersects_tri) {
 				if (local_hit_result.t < t_exit) {
@@ -286,7 +287,7 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node, float3 ray_o, float3 ray_d
 		transformed_box = curr_node.box;
 		transformed_box.Min += scene_objs[curr_obj_count].location;
 		transformed_box.Max += scene_objs[curr_obj_count].location;
-		bool intersects_curr_node_bounding_box = gpu_ray_box_intersect(transformed_box, ray_o, ray_dir, tmp_t_near, tmp_t_far);
+		bool intersects_curr_node_bounding_box = gpu_ray_box_intersect(transformed_box, hit_result.ray_o, hit_result.ray_dir, tmp_t_near, tmp_t_far);
 		if (intersects_curr_node_bounding_box) {
 			// Set t_entry to be the entrance point of the next (neighboring) node.
 			t_entry = tmp_t_far + 1e-4;
@@ -329,18 +330,15 @@ float4 *device_trace_ray(RKDTreeNodeGPU *tree, float3 ray_o, float3 ray_dir,
 	GPUSceneObject *scene_objs, int num_objs,
 	float4 *Pixel, int *root_index, int num_faces, int *indexList)
 {
-	float3 hit_point;
-	float3 normal;
-	float t = 9999999; 
 	HitResult hit_result;
 	float4 pixel_color;
 	for (int i = 0; i < num_objs; ++i)
 	{
-		if (stackless_kdtree_traversal(tree, ray_o, ray_dir,scene_objs, num_objs, i, root_index, indexList, hit_result))
+		if (stackless_kdtree_traversal(tree,scene_objs, num_objs, i, root_index, indexList, hit_result))
 		{
-			pixel_color.x = (normal.x < 0.0f) ? (normal.x * -1.0f) : normal.x;;
-			pixel_color.y = (normal.y < 0.0f) ? (normal.y * -1.0f) : normal.y;
-			pixel_color.z = (normal.z < 0.0f) ? (normal.z * -1.0f) : normal.z;
+			pixel_color.y = (hit_result.normal.y < 0.0f) ? (hit_result.normal.y * -1.0f) : hit_result.normal.y;
+			pixel_color.z = (hit_result.normal.z < 0.0f) ? (hit_result.normal.z * -1.0f) : hit_result.normal.z;
+			pixel_color.x = (hit_result.normal.x < 0.0f) ? (hit_result.normal.x * -1.0f) : hit_result.normal.x;
 
 		}
 		Pixel = &pixel_color;
@@ -353,20 +351,20 @@ float4 *device_trace_ray(RKDTreeNodeGPU *tree, float3 ray_o, float3 ray_dir,
 // Generates ray origin and ray direction thread index
 ////////////////////////////////////////////////////
 __device__ 
-void generate_ray(float3 &ray_o, float3 &ray_dir, int width, int heigth,
+void generate_ray(float3 &ray_o, float3 &ray_dir,
 	const RCamera *render_camera, int stride)
 {
 	int index = ((threadIdx.x * gridDim.x) + blockIdx.x) + stride;
 
-	int x = index % width;
-	int y = index / width;
+	int x = index % SCR_WIDTH;
+	int y = index / SCR_WIDTH;
 
-	if (index > (width * heigth)) {
+	if (index > (SCR_WIDTH * SCR_HEIGHT)) {
 		return;
 	}
 
-	float sx = (float)x / (width - 1.0f);
-	float sy = 1.0f - ((float)y / (heigth - 1.0f));
+	float sx = (float)x / (SCR_WIDTH - 1.0f);
+	float sy = 1.0f - ((float)y / (SCR_HEIGHT - 1.0f));
 
 	float3 rendercampos = render_camera->campos;
 
@@ -409,7 +407,7 @@ float4 *trace_pixel(RKDTreeNodeGPU *tree, float4 *pixels, int width, int heigth,
 	int root_index, int num_faces, int *indexList, int stride)
 {
 	float3 ray_o, ray_dir;
-	generate_ray(ray_o, ray_dir, width, heigth, render_camera, stride);
+	generate_ray(ray_o, ray_dir, render_camera, stride);
 
 	pixels = device_trace_ray(tree, ray_o, ray_dir, scene_objs, num_objs, pixels, &root_index, num_faces, indexList);
 
@@ -551,14 +549,16 @@ float3 refract(float3 &I, float3 &N, float &ior)
 // Trace for shadows
 ////////////////////////////////////////////////////
 __device__
-bool trace_shadow(RKDTreeNodeGPU *tree, float3 ray_o, float3 ray_dir, GPUSceneObject *scene_objs, int num_objs,
+bool trace_shadow(RKDTreeNodeGPU *tree, GPUSceneObject *scene_objs, int num_objs,
 	int *root_index, int *index_list, HitResult &hit_result)
 {
 	bool inter = false;
 	for (int i = 0; i < num_objs; i++)
 	{
 		HitResult tmp_hit_result;
-		bool hits = stackless_kdtree_traversal(tree, ray_o, ray_dir, scene_objs, num_objs,i, root_index, index_list, tmp_hit_result);
+		tmp_hit_result.ray_dir = hit_result.ray_dir;
+		tmp_hit_result.ray_o = hit_result.ray_o;
+		bool hits = stackless_kdtree_traversal(tree, scene_objs, num_objs, i, root_index, index_list, tmp_hit_result);
 		if (hits)
 		{
 			if (hit_result.t< tmp_hit_result.t)
@@ -630,24 +630,24 @@ void ambient_light(float4 &color)
 // Phong light
 ////////////////////////////////////////////////////
 __device__
-void phong_light(float4 &finalColor, float3 P, float3 dir, RKDTreeNodeGPU *tree, 
+void phong_light(float4 &finalColor, RKDTreeNodeGPU *tree, 
 	GPUSceneObject *scene_objs, int num_objs, int *root_index, int *index_list, HitResult &hit_result)
 {
 	float3 bias = hit_result.normal * make_float3(1e-4);
 	float4 diffuse = make_float4(0), specular = make_float4(0);
 	float3 lightpos = make_float3(10, 10, 10), lightDir;
 	float4 lightInt;
-	illuminate(P, lightpos, lightDir, lightInt, hit_result.t);
+	illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, hit_result.t);
 
-	const float3 ray_o = P + bias;
+	const float3 ray_o = hit_result.hit_point + bias;
 	float3 ray_dir = -lightDir;
 
-	bool vis = trace_shadow(tree, ray_o, ray_dir, scene_objs, num_objs, root_index, index_list, hit_result);
+	bool vis = trace_shadow(tree, scene_objs, num_objs, root_index, index_list, hit_result);
 
 	diffuse += (lightInt * make_float4(vis * 0.18) * (fmaxf(0.0, dot(hit_result.normal, (-lightDir)))));
 
 	float3 R = reflect(lightDir, hit_result.normal);
-	specular += (lightInt * make_float4(vis) * (powf(fmaxf(0.0, dot(R,(-dir))), 10)));
+	specular += (lightInt * make_float4(vis) * (powf(fmaxf(0.0, dot(R,(-hit_result.ray_dir))), 10)));
 
 	finalColor = finalColor + (diffuse * (0.8)) + (specular * (0.2));
 }
@@ -656,23 +656,23 @@ void phong_light(float4 &finalColor, float3 P, float3 dir, RKDTreeNodeGPU *tree,
 // Shade
 ////////////////////////////////////////////////////
 __device__
-void shade(float4 &finalColor, float3 &normal, float3 &hit_point, RKDTreeNodeGPU *tree, GPUSceneObject *scene_objs, int num_objs,
-	int *root_index, int *index_list)
+void shade(float4 &finalColor, RKDTreeNodeGPU *tree, GPUSceneObject *scene_objs, int num_objs,
+	int *root_index, int *index_list, HitResult &hit_result)
 {
-	float3 bias = normal + make_float3(1e-4);
-	float3 lightpos = make_float3(1, 50, 5), lightDir;
+	float3 bias = hit_result.normal + make_float3(1e-4);
+	float3 lightpos = make_float3(10, 100, 10), lightDir;
 	float4 lightInt;
 	float4 lightColor = make_float4(1);
-	HitResult hit_result;
+	
 	float tShad;
-	illuminate(hit_point, lightpos, lightDir, lightInt, tShad);
+	illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, tShad);
 
-	const float3 ray_o = hit_point + bias;
+	const float3 ray_o = hit_result.hit_point + bias;
 	float3 ray_dir = -lightDir;
 
-	bool vis = !trace_shadow(tree, ray_o, ray_dir, scene_objs, num_objs, root_index, index_list, hit_result);
+	bool vis = !trace_shadow(tree, scene_objs, num_objs, root_index, index_list, hit_result);
 
-	finalColor += vis * lightInt * fmaxf(0.0, dot(normal,(ray_dir)));
+	finalColor += vis * lightInt * fmaxf(0.0, dot(hit_result.normal,(ray_dir)));
 
 }
 
@@ -690,7 +690,7 @@ void gpu_bruteforce_ray_cast(float4 *image_buffer,
 		return;
 
 	float3 ray_o, ray_dir;
-	generate_ray(ray_o, ray_dir, width, height, render_camera, stride);
+	generate_ray(ray_o, ray_dir, render_camera, stride);
 
 	
 	float4 pixel_color = make_float4(0);
@@ -713,7 +713,7 @@ void gpu_bruteforce_ray_cast(float4 *image_buffer,
 
 			// Perform ray-triangle intersection test.
 			HitResult tmp_hit_result;
-			bool intersects_tri = gpu_ray_tri_intersect(ray_o, ray_dir, make_float3(v0.x, v0.y, v0.z), make_float3(edge1.x, edge1.y, edge1.z),
+			bool intersects_tri = gpu_ray_tri_intersect(make_float3(v0.x, v0.y, v0.z), make_float3(edge1.x, edge1.y, edge1.z),
 				make_float3(edge2.x, edge2.y, edge2.z), i, tmp_hit_result);
 
 			if (intersects_tri) 
@@ -722,7 +722,7 @@ void gpu_bruteforce_ray_cast(float4 *image_buffer,
 				{
 					hit_result = tmp_hit_result;
 					//narmals_mat(pixel_color, tmp_normal);
-					simple_shade(pixel_color, hit_result.normal, ray_dir);
+					//simple_shade(pixel_color, hit_result.normal, ray_dir);
 					//phong_light(pixel_color, hit_point, ray_dir, tmp_normal, hit_point, tree, scene_objs, num_objs, root_index, index_list);
 				}
 			}
@@ -769,60 +769,72 @@ void bind_normals_tro_texture(float4 *dev_normals_p, unsigned int number_of_norm
 // Perform ray-casting with kd-tree
 ////////////////////////////////////////////////////
 __global__
-void stackless_trace_scene(RKDTreeNodeGPU *tree, int width, int height, float4 *pixels,
+void stackless_trace_scene(RKDTreeNodeGPU *tree,
 	RCamera *render_camera, GPUSceneObject *scene_objs, int num_objs,
-	int *root_index, int *indexList, int stride)
+	int *root_index, int *indexList, int stride, HitResult *hit_results)
 {
 
 	int index = (threadIdx.x * gridDim.x) + blockIdx.x;
-	if (index > width * height)
+	if (index > SCR_WIDTH * SCR_HEIGHT)
 		return;
 
-	float3 ray_o, ray_dir;
-	generate_ray(ray_o, ray_dir, width, height, render_camera, stride);
-
-
 	HitResult hit_result;
+	generate_ray(hit_result.ray_o, hit_result.ray_dir, render_camera, stride);
 
 
-	float4 pixel_color = make_float4(0);
+	//float4 pixel_color = make_float4(0);
 
 	// Perform ray-box intersection test.
-	bool intersects_aabb = false;
-	int tmp_tree_counter = 0;
-
 	for (int i = 0; i < num_objs; i++)
 	{
 		HitResult tmp_hit_result;
-		bool hits = stackless_kdtree_traversal(tree , ray_o, ray_dir, scene_objs, num_objs, i, root_index, indexList, tmp_hit_result);
+		tmp_hit_result.ray_dir = hit_result.ray_dir;
+		tmp_hit_result.ray_o= hit_result.ray_o;
+
+		bool hits = stackless_kdtree_traversal(tree ,scene_objs, num_objs, i, root_index, indexList, tmp_hit_result);
 		if (hits) {
 			if (tmp_hit_result.t< hit_result.t) {
-				intersects_aabb = hits;
 				hit_result = tmp_hit_result;
+				hit_result.hits = hits;
 			}
 		}
 	}
-	if (intersects_aabb)
-	{
-		//int square = (int)floor(hit_point.x) + (int)floor(hit_point.z);
-		//narmals_mat(pixel_color, normal);
-		
 
-		//tile_pattern(pixel_color, square);
-		simple_shade(pixel_color, hit_result.normal, ray_dir);
-		//phong_light(pixel_color, hit_point, ray_dir, normal,hit_point, tree, scene_objs, num_objs, root_index, indexList);
-		//shade(pixel_color, normal, hit_point, tree, scene_objs, num_objs, root_index, indexList);
+	hit_results[index + stride] = hit_result;
+	return;
+}
+
+
+__global__
+void shade_scene(RKDTreeNodeGPU *tree,
+	RCamera *render_camera, GPUSceneObject *scene_objs, int num_objs,
+	int *root_index, int *indexList, float4 *pixels, HitResult *hit_results, int stride)
+{
+	float4 pixel_color = make_float4(0);
+	int index = (threadIdx.x * gridDim.x) + blockIdx.x;
+	if (index > SCR_WIDTH * SCR_HEIGHT)
+		return;
+
+	if (hit_results[index].hits)
+	{
+		int square = (int)floor(hit_results[index].hit_point.x) + (int)floor(hit_results[index].hit_point.z);
+		//narmals_mat(pixel_color, normal);
+
+
+		tile_pattern(pixel_color, square);
+		//simple_shade(pixel_color, hit_results[index].normal, hit_results[index].ray_dir);
+		//phong_light(pixel_color, tree, scene_objs, num_objs, root_index, indexList, hit_results[index]);
+		shade(pixel_color, tree, scene_objs, num_objs, root_index, indexList, hit_results[index]);
 	}
 	else
 	{
-		// If ray missed draw sky there.
-		sky_mat(pixel_color, ray_dir);
+		// if ray missed draw sky there.
+		sky_mat(pixel_color, hit_results[index].ray_dir);
 	}
 
-	ambient_light(pixel_color);
+	//ambient_light(pixel_color);
 	pixel_color = clip(pixel_color);
 	pixels[index + stride] = pixel_color;
-	return;
 }
 
 extern "C"
@@ -850,7 +862,10 @@ void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<f
 {
 	// --------------------------------Initialize host variables----------------------------------------------------
 
-	int size = SCR_WIDTH * SCR_HEIGHT * sizeof(float4);
+	size_t image_size = SCR_WIDTH * SCR_HEIGHT;
+
+	int size = image_size * sizeof(float4);
+	size_t size_hit_result = image_size * sizeof(HitResult);
 	size_t size_kd_tree = 0;
 
 	for (auto t : tree)
@@ -901,6 +916,7 @@ void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<f
 	size_t size_kd_tree_tri_indices = kd_tree_tri_indics.size() * sizeof(int);
 
 	cudaMalloc(&d_pixels, size);
+	cudaMalloc(&d_hit_result, size_hit_result);
 	cudaMalloc(&d_render_camera, sizeof(RCamera));
 	cudaMalloc(&d_tree, size_kd_tree * sizeof(RKDTreeNodeGPU));
 	cudaMalloc(&d_index_list, size_kd_tree_tri_indices);
@@ -992,8 +1008,9 @@ float4 *Render(RCamera sceneCam)
 	//else
 	//{
 	//}
-	stackless_trace_scene << < blockSize, gridSize >> > (d_tree, SCR_WIDTH, SCR_HEIGHT, d_pixels,
-		d_render_camera, d_scene_objects, d_object_number, d_root_index,  d_index_list, 0);
+	stackless_trace_scene << < blockSize, 600 >> > (d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index,  d_index_list, 0, d_hit_result);
+
+	shade_scene << < blockSize, 600 >> > (d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list, d_pixels, d_hit_result, 0);
 
 	cudaDeviceSynchronize();
 
