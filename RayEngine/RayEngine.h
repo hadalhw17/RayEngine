@@ -56,8 +56,14 @@ struct GPUSceneObject
 struct HitResult
 {
 	float t;
-	float3 &normal;
-	float3 &hit_point;
+	float3 normal;
+	float3 hit_point;
+	bool hits;
 
-	HitResult();
+	HOST_DEVICE_FUNCTION
+	HitResult()
+	{
+		t = kInfinity;
+		hits = false;
+	}
 };
