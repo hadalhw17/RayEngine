@@ -16,6 +16,8 @@
 #include "MovableCamera.h"
 #include <thread>
 
+//#include "CUDARayTracing.cuh"
+
 
 double currentFrame;
 double lastFrame;
@@ -31,6 +33,8 @@ void cursorEnterCallback(GLFWwindow *widnow, int entered);
 void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
+extern "C" void copy_memory(std::vector<RKDThreeGPU *> tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals, GPUSceneObject *objs, int num_objs);
+extern "C" void free_memory();
 
 MainWindow::MainWindow()
 {
@@ -39,22 +43,26 @@ MainWindow::MainWindow()
 	build_scene();
 	
 	init_triangles();
+
+	copy_memory(CUDATree, *SceneCam, triangles, normals, Scene->objs, Scene->num_objs);
 }
 
 MainWindow::~MainWindow()
 {
+	delete Scene, SceneCam;
+	delete[] pixels;
 }
 
 RMovableCamera *movable_camera;
-extern "C" float4 *Render(class RKDThreeGPU *tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals);
-
+extern
+float4 *Render(RCamera sceneCam);
 
 void MainWindow::RenderFrame()
 {
 	//Text->RenderText("Hello World!!", 5.0f, 5.0f, 1.0f);
 	//RRayTracer *tracer = new RRayTracer();
 	movable_camera->build_camera(SceneCam);
-	pixels = Render(CUDATree, *SceneCam, triangles, normals);
+	pixels = Render(*SceneCam);
 	//pixels = tracer->trace(Tree,SceneCam);
 	// create some image data
 	GLubyte *image = new GLubyte[4 * SCR_WIDTH * SCR_HEIGHT];
@@ -78,7 +86,7 @@ void MainWindow::RenderFrame()
 	// set texture content
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, &image[0]);
 
-	delete[] pixels;
+	//delete[] pixels;
 	delete[] image;
 }
 
@@ -136,52 +144,68 @@ void MainWindow::processInput(GLFWwindow *window)
 
 void MainWindow::init_triangles()
 {
-	float3 *verts = CUDATree->get_verts();
-	float3 *faces = CUDATree->get_faces();
-	float3 *norms = CUDATree->get_normals();
+	std::cout << "Initialising triangle buffer" << "\" .. " << std::endl;
 	triangles = {};
 	normals = {};
+	int count = 0;
+	size_t offset = 0;
+	size_t root_offset = 0;
 
-	for (unsigned int i = 0; i < CUDATree->get_num_faces(); ++i)
+	for (auto t : CUDATree)
 	{
-		// make a local copy of the triangle vertices
-		float3 tri = faces[i];
-		float3 v0 = verts[(int)tri.x];
-		float3 v1 = verts[(int)tri.y];
-		float3 v2 = verts[(int)tri.z];
 
-		// store triangle data as float4
-		// store two edges per triangle instead of vertices, to save some calculations in the
-		// ray triangle intersection test
-		triangles.push_back(make_float4(v0.x, v0.y, v0.z, 0));
-		triangles.push_back(make_float4(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z, 0));
-		triangles.push_back(make_float4(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z, 0));
+		float3 *verts = t->get_verts();
+		float3 *faces = t->get_faces();
+		float3 *norms = t->get_normals();
 
-		float3 n0 = norms[(int)tri.x];
-		float3 n1 = norms[(int)tri.y];
-		float3 n2 = norms[(int)tri.z];
-		normals.push_back(make_float4(n0.x, n0.y, n0.z, 0));
-		normals.push_back(make_float4(n1.x, n1.y, n1.z, 0));
-		normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
+		for (size_t i = 0; i < t->get_num_faces(); ++i)
+		{
+			// make a local copy of the triangle vertices
+			float3 tri = faces[i];
+			float3 v0 = verts[(size_t)tri.x];
+			float3 v1 = verts[(size_t)tri.y];
+			float3 v2 = verts[(size_t)tri.z];
+
+			// store triangle data as float4
+			// store two edges per triangle instead of vertices, to save some calculations in the
+			// ray triangle intersection test
+			triangles.push_back(make_float4(v0.x, v0.y, v0.z, 0));
+			triangles.push_back(make_float4(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z, 0));
+			triangles.push_back(make_float4(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z, 0));
+
+			float3 n0 = norms[(size_t)tri.x];
+			float3 n1 = norms[(size_t)tri.y];
+			float3 n2 = norms[(size_t)tri.z];
+			//normals.push_back(make_float4(n0.x, n0.y, n0.z, 0));
+			//normals.push_back(make_float4(n1.x, n1.y, n1.z, 0));
+			//normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
+			//t->GetIndexList()[i] += offset;
+		}
+		std::cout << "Old root index: " << t->root_index << std::endl;
+
+		for (int k = 0; k < t->GetNumNodes(); ++k)
+		{
+			t->GetNodes()[k].left_index += root_offset;
+			t->GetNodes()[k].right_index += root_offset;
+			t->GetNodes()[k].index_of_first_object += root_offset;
+		}
+		t->root_index += root_offset;
+		
+		offset += t->obj_index_list.size();
+		
+		root_offset += t->GetNumNodes();
+		std::cout << "New root index: " << t->root_index << std::endl;
+
+		++count;
+		delete[] verts, faces, norms;
 	}
-
-	for (unsigned int i = 0; i < CUDATree->get_num_faces(); ++i)
-	{
-		float3 tri = faces[i];
-		float3 n0 = norms[(int)tri.x];
-		float3 n1 = norms[(int)tri.y];
-		float3 n2 = norms[(int)tri.z];
-		normals.push_back(make_float4(n0.x, n0.y, n0.z, 0));
-		normals.push_back(make_float4(n1.x, n1.y, n1.z, 0));
-		normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
-	}
-
-	delete[] verts, faces, norms;
+	std::cout << "Done initialising triangle buffer" << std::endl;
 }
 
 
 void MainWindow::setup_camera()
 {
+	std::cout << "Camera initial setup." << std::endl;
 	SceneCam = new RCamera();
 	movable_camera = new RMovableCamera();
 	movable_camera->build_camera(SceneCam);
@@ -190,10 +214,26 @@ void MainWindow::setup_camera()
 
 void MainWindow::build_scene()
 {
+	std::cout << "Building scene" << "\" .. " << std::endl;
 	Scene = new RScene;
-
+	int i = 0;
 	Tree = Scene->GetSceneTree();
-	CUDATree = new RKDThreeGPU(Tree);
+	for (auto t : Tree)
+	{
+		RKDThreeGPU *gpu_tree = new RKDThreeGPU(t);
+		Scene->objs[i].index_list_size = gpu_tree->GetIndexList().size();
+		CUDATree.push_back(gpu_tree);
+		++i;
+	}
+	for (i = 0; i < Scene->num_objs; i++)
+	{
+		for (int k = 0; k < i; k++)
+		{
+			Scene->objs[i].offset += Scene->objs[k].index_list_size - Scene->objs[k].num_nodes;
+		}
+	}
+
+	std::cout << "Done building scene" << std::endl;
 }
 
 
@@ -287,22 +327,24 @@ void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
 
 void render_thread(MainWindow *main_window, float delta_time)
 {
-	if (main_window->CUDATree)
+	if (main_window->CUDATree.size() > 0)
 	{
-		delete main_window->CUDATree;
-		delete main_window->Tree;
+		//main_window->CUDATree.clear(); //clear content
+		//main_window->CUDATree.resize(0); //resize it to 0
+		//main_window->CUDATree.shrink_to_fit(); //reallocate memory
+		//delete main_window->Tree;
 	}
 	main_window->Scene->Tick(delta_time);
 
-	main_window->Tree = main_window->Scene->GetSceneTree();
-	main_window->CUDATree = new RKDThreeGPU(main_window->Tree);
-	main_window->init_triangles();
+	//main_window->Tree = main_window->Scene->GetSceneTree();
+	for (auto t : main_window->Tree)
+	{
+		//main_window->CUDATree.push_back(new RKDThreeGPU(t));
+	}
+	//main_window->init_triangles();
 }
 
-void render(MainWindow *main_window)
-{
-	main_window->RenderFrame();
-}
+
 
 int main()
 {
@@ -471,16 +513,25 @@ int main()
 
 	// bind the texture
 	glBindTexture(GL_TEXTURE_2D, texture);
-
+	std::cout << "Welcome" << "\" .. " << std::endl;
 	currentFrame = glfwGetTime();
 	lastFrame = currentFrame;
+	int frame_counter = 0;
 	// Main render loop
 	// -----------
 	while (!glfwWindowShouldClose(window))
 	{
 		currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
+		//lastFrame = currentFrame;
+		frame_counter++;
+		if (deltaTime >= 1.0)
+		{
+			printf("%f ms/frame\n", 1000.0 / double(frame_counter));
+			frame_counter = 0;
+			lastFrame++;
+
+		}
 		// input
 		// -----
 		processInput(window);
@@ -525,9 +576,12 @@ int main()
 		main_window->RenderFrame();
 		render_thread(main_window, deltaTime);
 	}
+	free_memory();
 
+	delete main_window;
 	// glfw: terminate, clearing all previously allocated GLFW resources.
 	// ------------------------------------------------------------------
 	glfwTerminate();
+
 	return 0;
 }

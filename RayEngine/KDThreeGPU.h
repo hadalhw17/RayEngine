@@ -27,16 +27,16 @@ public:
 
 	void PrintCPUAndGPUTrees(class KDNodeCPU *CPUNode, bool PauseOnEachNode = false);
 
+	std::vector<int> obj_index_list;
+	int root_index;
 
 private:
 	RKDTreeNodeGPU *nodes;
 
-	std::vector<int> obj_index_list;
 
 	float3 *verts, *faces, *normals;
 
 	int num_nodes;
-	int root_index;
 	int num_faces;
 	int num_verts;
 

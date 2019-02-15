@@ -245,6 +245,7 @@
     <ClInclude Include="..\..\RayTraceer\rply.h" />
     <ClInclude Include="BoundingVolume.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CUDARayTracing.cuh" />
     <ClInclude Include="cutil_math.h" />
     <ClInclude Include="GPUBoundingBox.h" />
     <ClInclude Include="helper_math.h" />

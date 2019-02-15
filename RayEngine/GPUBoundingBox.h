@@ -7,6 +7,7 @@
 struct GPUBoundingBox
 {
 public:
+	HOST_DEVICE_FUNCTION
 	GPUBoundingBox() { Min = make_float3(1e20, 1e20, 1e20), Max = make_float3(-1e20, -1e20, -1e20); }
 	GPUBoundingBox(RBoundingVolume *box)
 	{

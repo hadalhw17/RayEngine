@@ -1,6 +1,7 @@
 #pragma once
 #include "device_launch_parameters.h"
 
+
 #define kInfinity 1e20f
 #define kEpsilon 1e-4f
 
@@ -9,7 +10,7 @@
 
 // settings
 const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 800;
+const unsigned int SCR_HEIGHT = 700;
 
 enum Axis
 {
@@ -18,7 +19,8 @@ enum Axis
 	Z_Axis = 2		// Z Axis.
 };
 
-enum BoxFace {
+enum BoxFace 
+{
 	LEFT = 0,		// Left.
 	FRONT = 1,		// Front.
 	RIGHT = 2,		// Right.
@@ -30,4 +32,32 @@ enum BoxFace {
 struct RGBType 
 { 
 	float r, g, b; 
+};
+
+struct GPUSceneObject
+{
+	size_t index_of_first_prim;
+	size_t num_prims;
+	float3 location;
+	size_t num_nodes;
+	size_t index_list_size;
+	size_t offset;
+
+	GPUSceneObject()
+	{
+		index_of_first_prim = 0;
+		num_prims = 0;
+		num_nodes = 0;
+		index_list_size = 0;
+		offset = 0;
+	}
+};
+
+struct HitResult
+{
+	float t;
+	float3 &normal;
+	float3 &hit_point;
+
+	HitResult();
 };

@@ -9,7 +9,7 @@
 #include <memory>
 #include <iostream>
 
-const int MAX_DEPTH = 41;
+const int MAX_DEPTH = 51;
 const  int OBJECTS_IN_LEAF = 20;
 const int  MAX_SPLITS_OF_VOXEL = 5;
 const int SPLIT_COST = 5;
@@ -149,7 +149,7 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_
 		tri_indices[i] = i;
 	}
 	RBoundingVolume bbox;
-	bbox = generateBox(verts, num_verts);
+	bbox = generateBox(num_faces, tri_indices);
 
 	this->root = build(1, num_faces, tri_indices, bbox);
 
@@ -619,8 +619,8 @@ void RKDTreeCPU::optimizeRopes(KDNodeCPU *ropes[], RBoundingVolume bbox)
 RBoundingVolume RKDTreeCPU::generateBox(float3 *verts, int num_verts)
 {
 	// Compute bounding box for input mesh.
-	float3 max =make_float3(-INFINITY, -INFINITY, -INFINITY);
-	float3 min = make_float3(INFINITY, INFINITY, INFINITY);
+	float3 max = make_float3(-kInfinity, -kInfinity, -kInfinity);
+	float3 min = make_float3(kInfinity, kInfinity, kInfinity);
 
 	for (int i = 0; i < num_verts; ++i) {
 		if (verts[i].x < min.x) {

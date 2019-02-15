@@ -26,11 +26,11 @@ public:
 
 	RRayTracer *RayTracer;
 	RScene *Scene;
-	RKDTreeCPU *Tree;
+	std::vector<RKDTreeCPU *>Tree;
 	RCamera *SceneCam;
 	TextRenderer  *Text;
 
-	RKDThreeGPU *CUDATree;
+	std::vector<RKDThreeGPU *> CUDATree;
 	std::vector<float4> triangles;
 	std::vector<float4> normals;
 	float4 *pixels;

@@ -152,8 +152,13 @@
     <ClInclude Include="rplyfile.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="CUDARayTracing.cuh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="CUDARayTracing.cu" />
+    <CudaCompile Include="CUDARayTracing.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

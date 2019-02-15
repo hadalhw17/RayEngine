@@ -19,6 +19,7 @@
 #include <resolver.h>
 #include <unordered_map>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include "cuda_runtime_api.h"
 
@@ -55,9 +56,6 @@ unsigned int toUInt(const std::string &str) {
  */
 	class WavefrontOBJ {
 	public:
-		WavefrontOBJ(const char *fileName) 
-		{
-		}
 
 
 		RStaticMesh *loadObjFromFile(const char *fileName)
@@ -68,7 +66,7 @@ unsigned int toUInt(const std::string &str) {
 			std::ifstream is(fileName);
 
 
-			std::cout << "Loading \"" << fileName << "\" .. ";
+			std::cout << "Loading \"" << fileName << "\" .. " << std::endl;
 			std::cout.flush();
 
 			std::vector<float3>   positions;

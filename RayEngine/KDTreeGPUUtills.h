@@ -9,6 +9,7 @@ class RKDTreeNodeGPU
 {
 public:
 	
+	HOST_DEVICE_FUNCTION
 	RKDTreeNodeGPU();
 
 	// Getters.
