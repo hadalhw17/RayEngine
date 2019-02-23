@@ -22,6 +22,7 @@ public:
 	int GetNumNodes() const;
 	int get_num_verts() const;
 	int get_num_faces() const;
+	int get_num_norms() const;
 	int get_root_index() const;
 	
 
@@ -36,9 +37,10 @@ private:
 
 	float3 *verts, *faces, *normals;
 
-	int num_nodes;
-	int num_faces;
-	int num_verts;
+	size_t num_nodes;
+	size_t num_faces;
+	size_t num_verts;
+	size_t num_norms;
 
 	void buildTree(class KDNodeCPU *CPUNode);
 };

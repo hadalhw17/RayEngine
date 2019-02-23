@@ -219,7 +219,10 @@
   <ItemGroup>
     <ClCompile Include="BoundingVolume.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Cow.cpp" />
     <ClCompile Include="D:\CPPLibs\GLAD\src\glad.c" />
+    <ClCompile Include="Floor.cpp" />
+    <ClCompile Include="Glass.cpp" />
     <ClCompile Include="KDThreeGPU.cpp" />
     <ClCompile Include="KDTree.cpp" />
     <ClCompile Include="KDTreeGPUUtills.cpp" />
@@ -229,6 +232,7 @@
     </ClCompile>
     <ClCompile Include="MovableCamera.cpp" />
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="ObjectComponent.cpp" />
     <ClCompile Include="ObjFileReader.cpp" />
     <ClCompile Include="Plane.cpp" />
     <ClCompile Include="Ray.cpp" />
@@ -237,6 +241,7 @@
     <ClCompile Include="rply.c" />
     <ClCompile Include="RStaticMesh.cpp" />
     <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="SceneObject.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="Sphere.cpp" />
     <ClCompile Include="Triangle.cpp" />
@@ -245,8 +250,11 @@
     <ClInclude Include="..\..\RayTraceer\rply.h" />
     <ClInclude Include="BoundingVolume.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Cow.h" />
     <ClInclude Include="CUDARayTracing.cuh" />
     <ClInclude Include="cutil_math.h" />
+    <ClInclude Include="Floor.h" />
+    <ClInclude Include="Glass.h" />
     <ClInclude Include="GPUBoundingBox.h" />
     <ClInclude Include="helper_math.h" />
     <ClInclude Include="KDThreeGPU.h" />
@@ -258,6 +266,7 @@
     <ClInclude Include="Light.h" />
     <ClInclude Include="MovableCamera.h" />
     <ClInclude Include="Object.h" />
+    <ClInclude Include="ObjectComponent.h" />
     <ClInclude Include="ObjFileReader.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
@@ -268,6 +277,7 @@
     <ClInclude Include="rplyfile.h" />
     <ClInclude Include="RStaticMesh.h" />
     <ClInclude Include="Scene.h" />
+    <ClInclude Include="SceneObject.h" />
     <ClInclude Include="Source.h" />
     <ClInclude Include="Sphere.h" />
     <ClInclude Include="Triangle.h" />

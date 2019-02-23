@@ -21,7 +21,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
-#include "cuda_runtime_api.h"
+
 
 /// Tokenize a string into a list by splitting at 'delim'
 std::vector<std::string> tokenize(const std::string &string, const std::string &delim, bool includeEmpty)
@@ -96,7 +96,7 @@ unsigned int toUInt(const std::string &str) {
 				else if (prefix == "vn") {
 					float3 n;
 					line >> n.x >> n.y >> n.z;
-					normals.push_back((normalize(n)));
+					normals.push_back((n));
 				}
 				else if (prefix == "f") {
 					std::string v1, v2, v3, v4;

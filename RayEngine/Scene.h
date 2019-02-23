@@ -12,6 +12,7 @@ class RTriangle;
 class RTriMesh;
 class RPlane;
 class RStaticMesh;
+class RSceneObject;
 
 class RScene
 {
@@ -29,8 +30,9 @@ public:
 	void rebuild_scene();
 
 	std::vector<RKDTreeCPU *> tree;
-	GPUSceneObject *objs;
-	size_t num_objs;
+	std::vector<RSceneObject *> sceneObjects;
+
+
 	size_t numFaces;
 
 
@@ -47,7 +49,7 @@ private:
 
 	RStaticMesh *complexObject;
 	RStaticMesh *complexObject2;
-	std::vector<RStaticMesh *> sceneObjects;
+
 
 
 	float3 *arrv;

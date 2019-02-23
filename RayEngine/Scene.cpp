@@ -5,7 +5,9 @@
 #include "Sphere.h"
 #include "KDTree.h"
 #include "RStaticMesh.h"
-#include "ObjFileReader.h"
+#include "Cow.h"
+#include "Floor.h"
+#include "Glass.h"
 
 #include <iostream>
 #include <vector>
@@ -15,12 +17,19 @@
 
 RScene::RScene()
 {
-	load_meshes_from_file({ (char *)"Meshes/cat.obj" , (char *)"Meshes/cow.obj" });
+	
+	ACow *cow = new ACow;
+	sceneObjects.push_back(cow);
+	AFloor *floor = new AFloor;
+	sceneObjects.push_back(floor);
+
+	AGlass *glass = new AGlass;
+	sceneObjects.push_back(glass);
 
 	initialise_scene();
 }
 extern "C"
-void update_objects(GPUSceneObject *objs, int num_objs);
+void update_objects(std::vector<GPUSceneObject> objs);
 
 RScene::~RScene()
 {
@@ -33,10 +42,14 @@ void RScene::Tick(float delta_time)
 {
 	rebuild_scene();
 
-	moveCounter += 0.001f;
 
-	//objs[0].location.y += 0.001f;
-	//update_objects(objs, num_objs);
+	std::vector<GPUSceneObject> tmp_objs;
+	for (auto obj : sceneObjects)
+	{
+		obj->tick(delta_time);
+		tmp_objs.push_back(obj->object_properties);
+	}
+	update_objects(tmp_objs);
 }
 
 void RScene::initialise_scene()
@@ -71,11 +84,10 @@ void RScene::load_meshes_from_file(std::vector<char *> files)
 {
 	for (auto file : files)
 	{
-		WavefrontOBJ *reader = new WavefrontOBJ;
-		sceneObjects.push_back(reader->loadObjFromFile((char *)file));
+		sceneObjects.push_back(new RSceneObject((char *)file));
 
-		delete reader;
 	}
+
 }
 
 void RScene::clear_memory()
@@ -87,17 +99,16 @@ void RScene::clear_memory()
 
 void RScene::build_gpu_structs()
 {
-	objs = new GPUSceneObject[sceneObjects.size()];
-	int i = 0, first_index = 0;
+	//objs = new GPUSceneObject[sceneObjects.size()];
+	int first_index = 0;
 	for (auto obj : sceneObjects)
 	{
-		objs[i].num_prims = obj->get_num_faces();
-		objs[i].index_of_first_prim = first_index;
-		objs[i].location = make_float3(0, 0, 0);
-		i++;
-		first_index += obj->get_num_faces();
+		obj->object_properties.num_prims = obj->root_component->get_num_faces();
+		obj->object_properties.index_of_first_prim = first_index;
+		first_index += obj->root_component->get_num_faces();
 	}
-	num_objs = sceneObjects.size();
+
+	//num_objs = sceneObjects.size();
 }
 
 std::pair<size_t, size_t> RScene::merge_meshes()
@@ -122,25 +133,25 @@ std::pair<size_t, size_t> RScene::merge_meshes()
 	size_t stride = 0;
 	for (int counter = 0; counter < sceneObjects.size(); counter++)
 	{
-		for (size_t i = 0; i < sceneObjects.at(counter)->get_num_faces(); i++)
+		for (size_t i = 0; i < sceneObjects.at(counter)->root_component->get_num_faces(); i++)
 		{
-			tmp_faces.push_back(sceneObjects.at(counter)->get_faces()[i] + stride);
-			sceneObjects.at(counter)->get_faces()[i] = tmp_faces[i];
+			tmp_faces.push_back(sceneObjects.at(counter)->root_component->get_faces()[i] + stride);
+			sceneObjects.at(counter)->root_component->get_faces()[i] = tmp_faces[i];
 		}
 
-		for (size_t i = 0; i < sceneObjects.at(counter)->get_num_verts(); i++)
+		for (size_t i = 0; i < sceneObjects.at(counter)->root_component->get_num_verts(); i++)
 		{
-			tmp_verts.push_back(sceneObjects.at(counter)->get_verts()[i]);
-			sceneObjects.at(counter)->get_verts()[i] = tmp_verts[i];
+			tmp_verts.push_back(sceneObjects.at(counter)->root_component->get_verts()[i]);
+			sceneObjects.at(counter)->root_component->get_verts()[i] = tmp_verts[i];
 		}
 
-		for (size_t i = 0; i < sceneObjects.at(counter)->get_num_verts(); i++)
+		for (size_t i = 0; i < sceneObjects.at(counter)->root_component->get_num_verts(); i++)
 		{
-			tmp_norms.push_back(sceneObjects.at(counter)->norms[i]);
-			sceneObjects.at(counter)->norms[i] = tmp_norms[i];
+			tmp_norms.push_back(sceneObjects.at(counter)->root_component->norms[i]);
+			sceneObjects.at(counter)->root_component->norms[i] = tmp_norms[i];
 		}
 
-		stride += sceneObjects.at(counter)->get_num_verts();
+		stride += sceneObjects.at(counter)->root_component->get_num_verts();
 	}
 
 	numFaces = tmp_faces.size();
@@ -163,19 +174,20 @@ std::pair<size_t, size_t> RScene::merge_meshes()
 void RScene::build_tree()
 {
 	tree = {};
-	int i = 0;
 	for (auto obj : sceneObjects)
 	{
 		std::cout << "Constructing tree" << "\" .. " << std::endl;
 		auto start = std::chrono::high_resolution_clock::now();
-		RKDTreeCPU *new_tree = new RKDTreeCPU(obj->get_verts(), obj->get_faces(), obj->norms, obj->num_verts, obj->num_faces);
-		objs[i].num_nodes = new_tree->numNodes;
+		RKDTreeCPU *new_tree = new RKDTreeCPU(obj->root_component->get_verts(), obj->root_component->get_faces(), 
+			obj->root_component->get_norms(), obj->root_component->num_verts, obj->root_component->num_faces, obj->root_component->num_norms);
+
+		obj->object_properties.num_nodes = new_tree->numNodes;
 		tree.push_back(new_tree);
 		auto finish = std::chrono::high_resolution_clock::now();
 		float elapsed_seconds = std::chrono::duration_cast<
 			std::chrono::duration<float>>(finish - start).count();
 		std::cout << "Tree is constructed in " << elapsed_seconds << " seconds." << std::endl;
-		i++;
+
 	}
 	//std::cout << "Constructing tree" << std::endl;
 	//auto start = std::chrono::high_resolution_clock::now();

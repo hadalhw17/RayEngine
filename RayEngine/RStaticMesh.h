@@ -4,11 +4,12 @@
 
 #include "rply.h"
 #include "RayEngine.h"
+#include "ObjectComponent.h"
 
 class RTriangle;
 class RRay;
 
-class RStaticMesh
+class RStaticMesh : public RObjectComponent
 {
 	std::vector<std::shared_ptr<RTriangle>> StaticMesh;
 
@@ -51,6 +52,7 @@ public:
 
 	float3 *get_verts() { return verts; }
 	float3 *get_faces() { return faces; }
+	float3 *get_norms() { return norms; }
 	size_t get_num_verts() { return num_verts; }
 	size_t get_num_faces() { return num_faces; }
 	float3 *verts;

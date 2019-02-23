@@ -9,8 +9,8 @@
 
 
 // settings
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1000;
+const unsigned int SCR_HEIGHT = 500;
 
 enum Axis
 {
@@ -34,6 +34,21 @@ struct RGBType
 	float r, g, b; 
 };
 
+enum MaterialType
+{
+	COLOR = 0,		// Default material.
+	TILE = 1,		// Tile pattern.
+	PHONG = 2,		// Phong model.
+	REFLECT = 3,	// Just reflection.
+	REFRACT = 4		// Both - reflection and refration.
+};
+
+struct Material
+{
+	float4 color;
+	MaterialType type = COLOR;
+};
+
 struct GPUSceneObject
 {
 	size_t index_of_first_prim;
@@ -42,6 +57,7 @@ struct GPUSceneObject
 	size_t num_nodes;
 	size_t index_list_size;
 	size_t offset;
+	Material material;
 
 	GPUSceneObject()
 	{
@@ -61,11 +77,13 @@ struct HitResult
 	float3 ray_dir;
 	float3 ray_o;
 	bool hits;
-
+	int obj_index;
+	float4 hit_color;
 	HOST_DEVICE_FUNCTION
 	HitResult()
 	{
 		t = kInfinity;
 		hits = false;
+		obj_index;
 	}
 };

@@ -9,7 +9,7 @@
 #include <memory>
 #include <iostream>
 
-const int MAX_DEPTH = 51;
+const int MAX_DEPTH = 31;
 const  int OBJECTS_IN_LEAF = 20;
 const int  MAX_SPLITS_OF_VOXEL = 5;
 const int SPLIT_COST = 5;
@@ -114,10 +114,11 @@ RKDTreeCPU::RKDTreeCPU(RKDTreeCPU * node, RBoundingVolume b, float3 lb, float3 u
 
 
 
-RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_verts, int num_faces)
+RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_verts, int num_faces, int num_norms)
 {
 	this->num_verts = num_verts;
 	this->num_faces = num_faces;
+	this->num_norms = num_norms;
 
 	this->numNodes = 0;
 	this->numLevels = 0;
@@ -125,7 +126,7 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_
 	this->depth = 1;
 
 	this->verts = new float3[num_verts];
-	this->norms = new float3[num_verts];
+	this->norms = new float3[num_norms];
 	this->faces = new float3[num_faces];
 
 	for (int i = 0; i < num_verts; ++i)
@@ -138,7 +139,7 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_
 		this->faces[i] = _faces[i];
 	}
 
-	for (int i = 0; i < num_verts; ++i)
+	for (int i = 0; i < num_norms; ++i)
 	{
 		this->norms[i] = _norms[i];
 	}
@@ -317,18 +318,18 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 	switch (split_axis) {
 	case X_Axis:		//X_Axis
 		midp = bbox.bounds[0].x + ((bbox.bounds[1].x - bbox.bounds[0].x) / (2.f));
-		leftBBox.bounds[1].x = midp;
-		rightBBox.bounds[0].x = midp;
+		leftBBox.bounds[1].x = midp + kEpsilon;
+		rightBBox.bounds[0].x = midp - kEpsilon;
 		break;
 	case Y_Axis:		//Y_Axis
 		midp = bbox.bounds[0].y + ((bbox.bounds[1].y - bbox.bounds[0].y) / (2.f));
-		leftBBox.bounds[1].y = midp;
-		rightBBox.bounds[0].y = midp;
+		leftBBox.bounds[1].y = midp + kEpsilon;
+		rightBBox.bounds[0].y = midp - kEpsilon;
 		break;
 	case Z_Axis:		//Z_Axis
 		midp = bbox.bounds[0].z + ((bbox.bounds[1].z - bbox.bounds[0].z) / (2.f));
-		leftBBox.bounds[1].z = midp;
-		rightBBox.bounds[0].z = midp;
+		leftBBox.bounds[1].z = midp + kEpsilon;
+		rightBBox.bounds[0].z = midp - kEpsilon;
 		break;
 	}
 

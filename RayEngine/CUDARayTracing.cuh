@@ -21,6 +21,11 @@ __device__ __constant__
 class RKDTreeNodeGPU *d_tree;
 
 __device__
+class float3 *d_light;
+
+size_t num_light;
+
+__device__
 class RCamera *d_render_camera;
 
 __device__ __constant__
@@ -43,6 +48,8 @@ struct GPUSceneObject *d_scene_objects;
 
 __device__
 int d_object_number;
+
+float angle;
 
 float4 *Render(class RCamera sceneCam);
 class CUDARenderer

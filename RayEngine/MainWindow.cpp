@@ -7,6 +7,7 @@
 #include "KDTree.h"
 #include "Camera.h"
 #include "KDThreeGPU.h"
+#include "SceneObject.h"
 
 #include "cutil_math.h"
 
@@ -33,7 +34,7 @@ void cursorEnterCallback(GLFWwindow *widnow, int entered);
 void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 
-extern "C" void copy_memory(std::vector<RKDThreeGPU *> tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals, GPUSceneObject *objs, int num_objs);
+extern "C" void copy_memory(std::vector<RKDThreeGPU *> tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals, std::vector<GPUSceneObject> objs);
 extern "C" void free_memory();
 
 MainWindow::MainWindow()
@@ -44,7 +45,12 @@ MainWindow::MainWindow()
 	
 	init_triangles();
 
-	copy_memory(CUDATree, *SceneCam, triangles, normals, Scene->objs, Scene->num_objs);
+	std::vector<GPUSceneObject> tmp_objs;
+	for (auto objs : Scene->sceneObjects)
+	{
+		tmp_objs.push_back(objs->object_properties);
+	}
+	copy_memory(CUDATree, *SceneCam, triangles, normals, tmp_objs);
 }
 
 MainWindow::~MainWindow()
@@ -63,7 +69,7 @@ void MainWindow::RenderFrame()
 	//RRayTracer *tracer = new RRayTracer();
 	movable_camera->build_camera(SceneCam);
 	pixels = Render(*SceneCam);
-	//pixels = tracer->trace(Tree,SceneCam);
+	//pixels = tracer->trace(Tree[0],SceneCam);
 	// create some image data
 	GLubyte *image = new GLubyte[4 * SCR_WIDTH * SCR_HEIGHT];
 	for (int j = 0; j < SCR_HEIGHT; ++j) {
@@ -176,9 +182,9 @@ void MainWindow::init_triangles()
 			float3 n0 = norms[(size_t)tri.x];
 			float3 n1 = norms[(size_t)tri.y];
 			float3 n2 = norms[(size_t)tri.z];
-			//normals.push_back(make_float4(n0.x, n0.y, n0.z, 0));
-			//normals.push_back(make_float4(n1.x, n1.y, n1.z, 0));
-			//normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
+			normals.push_back(make_float4(n0.x, n0.y, n0.z, 0));
+			normals.push_back(make_float4(n1.x, n1.y, n1.z, 0));
+			normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
 			//t->GetIndexList()[i] += offset;
 		}
 		std::cout << "Old root index: " << t->root_index << std::endl;
@@ -221,18 +227,18 @@ void MainWindow::build_scene()
 	for (auto t : Tree)
 	{
 		RKDThreeGPU *gpu_tree = new RKDThreeGPU(t);
-		Scene->objs[i].index_list_size = gpu_tree->GetIndexList().size();
+		Scene->sceneObjects.at(i)->object_properties.index_list_size = gpu_tree->GetIndexList().size();
+		
 		CUDATree.push_back(gpu_tree);
 		++i;
 	}
-	for (i = 0; i < Scene->num_objs; i++)
+	for (i = 0; i < Scene->sceneObjects.size(); i++)
 	{
 		for (int k = 0; k < i; k++)
 		{
-			Scene->objs[i].offset += Scene->objs[k].index_list_size - Scene->objs[k].num_nodes;
+			Scene->sceneObjects.at(i)->object_properties.offset += Scene->sceneObjects.at(k)->object_properties.index_list_size - Scene->sceneObjects.at(k)->object_properties.num_nodes;
 		}
 	}
-
 	std::cout << "Done building scene" << std::endl;
 }
 
