@@ -8,7 +8,7 @@ AFloor::AFloor()
 {
 	Material material;
 	material.type = TILE;
-	material.color = make_float4(0);
+	material.color = make_float4(0.f);
 	float3 location = make_float3(0);
 	object_properties.material = material;
 	object_properties.location = location;

@@ -19,3 +19,10 @@ AGlass::AGlass()
 AGlass::~AGlass()
 {
 }
+
+void AGlass::tick(float delta_time)
+{
+	RSceneObject::tick(delta_time);
+
+	//object_properties.location.y -= 0.01f;
+}

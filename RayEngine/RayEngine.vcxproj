@@ -248,6 +248,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\RayTraceer\rply.h" />
+    <CudaCompile Include="Atmosphere.cuh" />
     <ClInclude Include="BoundingVolume.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Cow.h" />
@@ -283,6 +284,9 @@
     <ClInclude Include="Triangle.h" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="Atmosphere.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </CudaCompile>
     <CudaCompile Include="CUDARayTracing.cu">
       <FileType>Document</FileType>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Od</Optimization>

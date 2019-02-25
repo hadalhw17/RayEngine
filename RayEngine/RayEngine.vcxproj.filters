@@ -196,5 +196,11 @@
     <CudaCompile Include="CUDARayTracing.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
+    <CudaCompile Include="Atmosphere.cu">
+      <Filter>Source Files</Filter>
+    </CudaCompile>
+    <CudaCompile Include="Atmosphere.cuh">
+      <Filter>Header Files</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

@@ -2,6 +2,7 @@
 
 #include "device_launch_parameters.h"
 #include "cuda_runtime.h"
+#include "curand_kernel.h"
 #include "cuda_runtime_api.h"
 
 ////////////////////////////////////////////////////
@@ -16,6 +17,12 @@ texture<float4, 1, cudaReadModeElementType> triangle_texture;
 texture<float4, 1, cudaReadModeElementType> normals_texture;
 
 float4 *h_pixels;
+
+__device__
+class Atmosphere *d_atmosphere;
+
+__device__
+curandState *rand_state;
 
 __device__ __constant__
 class RKDTreeNodeGPU *d_tree;
@@ -35,7 +42,16 @@ __device__
 float4 *d_pixels;
 
 __device__
+float4 *d_shadow_map;
+
+__device__
+float4 *d_indirect_map;
+
+__device__
 struct HitResult *d_hit_result;
+
+__device__
+struct HitResult *d_shadow_hit_result;
 
 __device__ __constant__
 int *d_root_index;

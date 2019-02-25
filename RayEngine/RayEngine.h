@@ -9,8 +9,8 @@
 
 
 // settings
-const unsigned int SCR_WIDTH = 1000;
-const unsigned int SCR_HEIGHT = 500;
+const unsigned int SCR_WIDTH = 1024;
+const unsigned int SCR_HEIGHT = 512;
 
 enum Axis
 {

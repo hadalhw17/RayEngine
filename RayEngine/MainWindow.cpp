@@ -370,7 +370,7 @@ int main()
 
 	// glfw window creation
 	// --------------------
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "RayEngine", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(1900, 1000, "RayEngine", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;

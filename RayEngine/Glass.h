@@ -6,5 +6,7 @@ class AGlass :
 public:
 	AGlass();
 	~AGlass();
+
+	virtual void tick(float delta_time);
 };
 
