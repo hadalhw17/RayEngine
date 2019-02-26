@@ -155,8 +155,9 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_
 	this->root = build(1, num_faces, tri_indices, bbox);
 
 	// build rope structure
-	//KDNodeCPU* ropes[6] = { nullptr };
-	//buildRopeStructure();
+	KDNodeCPU* ropes[6] = { nullptr };
+	buildRopeStructure();
+
 
 }
 
@@ -423,13 +424,15 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 void RKDTreeCPU::buildRopeStructure(KDNodeCPU *curr_node, KDNodeCPU *ropes[], bool is_single_ray_case)
 {
 	// Base case.
-	if (curr_node->isLeaf) {
+	if (curr_node->isLeaf) 
+	{
 		//std::cout<<curr_node->id<<": "<<std::endl;
 		for (int i = 0; i < 6; ++i) {
 			curr_node->ropes[i] = ropes[i];
 		}
 	}
-	else {
+	else 
+	{
 		// Only optimize ropes on single ray case.
 		// It is not optimal to optimize on packet traversal case.
 		if (is_single_ray_case) {

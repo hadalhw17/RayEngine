@@ -366,7 +366,6 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 			float4 edge2 =	tex1Dfetch(triangle_texture, tri * 3 + 2);
 
 			float3 v0 = make_float3(v00.x, v00.y, v00.z);
-
 			float3 e1 = make_float3(edge1.x, edge1.y, edge1.z);
 			float3 e2 = make_float3(edge2.x, edge2.y, edge2.z);
 
@@ -399,20 +398,20 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 		else {
 			// This should never happen.
 			// If it does, then that means we're checking triangles in a node that the ray never intersects.
-			//break;
+			break;
 		}
 
 
-		//// Get neighboring node using ropes attached to current node.
-		//float3 p_exit = ray_o + (t_entry * ray_dir);
-		//int new_node_index = get_neighboring_node_index(curr_node, p_exit);
+		// Get neighboring node using ropes attached to current node.
+		float3 p_exit = hit_result.ray_o + scene_objs[curr_obj_count].location + (t_entry * hit_result.ray_dir);
+		int new_node_index = get_neighboring_node_index(curr_node, p_exit);
 
-		//// Break if neighboring node not found, meaning we've exited the kd-tree.
-		//if (new_node_index == -1) {
-		//	break;
-		//}
+		// Break if neighboring node not found, meaning we've exited the kd-tree.
+		if (new_node_index == -1 ) {
+			break;
+		}
 		
-		curr_node = node[root_index[curr_obj_count]];
+		curr_node = node[new_node_index];
 
 	}
 

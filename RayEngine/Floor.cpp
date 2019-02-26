@@ -4,7 +4,7 @@
 
 
 AFloor::AFloor()
-	:RSceneObject((char *)"Meshes/floor.obj")
+	:RSceneObject((char *)"Meshes/terrain.obj")
 {
 	Material material;
 	material.type = TILE;

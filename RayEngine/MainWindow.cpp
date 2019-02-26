@@ -194,6 +194,12 @@ void MainWindow::init_triangles()
 			t->GetNodes()[k].left_index += root_offset;
 			t->GetNodes()[k].right_index += root_offset;
 			t->GetNodes()[k].index_of_first_object += root_offset;
+
+			for (int i = 0; i < 6; ++i)
+			{
+				if(t->GetNodes()[k].neighbor_node_indices[i] != -1)
+					t->GetNodes()[k].neighbor_node_indices[i] += root_offset;
+			}
 		}
 		t->root_index += root_offset;
 		
@@ -370,7 +376,7 @@ int main()
 
 	// glfw window creation
 	// --------------------
-	GLFWwindow* window = glfwCreateWindow(1900, 1000, "RayEngine", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(1000, 500, "RayEngine", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
