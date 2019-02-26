@@ -13,6 +13,7 @@ RayEngine is a GPU accelerated ray-tracing gaming engine
   * Further develop game logic management
   * Implement collision detection ( possibly handle on CPU on different threads)
   * Implement anti-aliasing
+
   
 ## Implemented:
   * CPU Ray tracing
@@ -29,3 +30,5 @@ RayEngine is a GPU accelerated ray-tracing gaming engine
   * Complex scene structure
   * Multiple materials
   * Framework for game logic
+  * Sky sphere
+  * Camera collision tests
