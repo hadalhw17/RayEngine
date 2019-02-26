@@ -9,7 +9,7 @@
 
 RMovableCamera::RMovableCamera()
 {
-	position = make_float3(0,1,0);
+	position = make_float3(0,10,0);
 	yaw = 0;
 	pitch = 0.3;
 	radius = 4;

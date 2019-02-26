@@ -3,6 +3,7 @@
 #include <vector>
 #include "RayEngine.h"
 #include "RStaticMesh.h"
+#include "GPUBoundingBox.h"
 
 
 class RSceneObject
@@ -17,5 +18,6 @@ public:
 	RStaticMesh *root_component;
 
 	GPUSceneObject object_properties;
+	GPUBoundingBox collision_box;
 };
 

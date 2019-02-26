@@ -101,11 +101,14 @@ void RScene::build_gpu_structs()
 {
 	//objs = new GPUSceneObject[sceneObjects.size()];
 	int first_index = 0;
+	int i = 0;
 	for (auto obj : sceneObjects)
 	{
 		obj->object_properties.num_prims = obj->root_component->get_num_faces();
 		obj->object_properties.index_of_first_prim = first_index;
 		first_index += obj->root_component->get_num_faces();
+
+		++i;
 	}
 
 	//num_objs = sceneObjects.size();
@@ -182,6 +185,7 @@ void RScene::build_tree()
 			obj->root_component->get_norms(), obj->root_component->num_verts, obj->root_component->num_faces, obj->root_component->num_norms);
 
 		obj->object_properties.num_nodes = new_tree->numNodes;
+		obj->collision_box = GPUBoundingBox(&new_tree->root->box);
 		tree.push_back(new_tree);
 		auto finish = std::chrono::high_resolution_clock::now();
 		float elapsed_seconds = std::chrono::duration_cast<

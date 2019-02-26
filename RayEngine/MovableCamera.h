@@ -32,8 +32,8 @@ public:
 	float2 fov;
 	
 
-private:
 	float3 position;
+private:
 	float3 view_direction;
 
 	float yaw;

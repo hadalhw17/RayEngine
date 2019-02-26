@@ -430,6 +430,7 @@ void RKDTreeCPU::buildRopeStructure(KDNodeCPU *curr_node, KDNodeCPU *ropes[], bo
 		for (int i = 0; i < 6; ++i) {
 			curr_node->ropes[i] = ropes[i];
 		}
+		//curr_node->box = generateBox(curr_node->numFaces, curr_node->objIndeces);
 	}
 	else 
 	{
@@ -468,6 +469,7 @@ void RKDTreeCPU::buildRopeStructure(KDNodeCPU *curr_node, KDNodeCPU *ropes[], bo
 		// Recurse.
 		RS_right[SL] = curr_node->LeftNode;
 		buildRopeStructure(curr_node->RightNode, RS_right, is_single_ray_case);
+		curr_node->box = generateBox(curr_node->numFaces, curr_node->objIndeces);
 	}
 }
 

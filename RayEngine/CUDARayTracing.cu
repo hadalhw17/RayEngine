@@ -1122,7 +1122,7 @@ void generate_shadow_map(float3 *lights, size_t num_lights, RKDTreeNodeGPU *tree
 	if (!primary_hit_results[index].hits)
 	{
 		pixel_color = make_float4(0);
-		primary_hit_results[index].hit_color = pixel_color;
+		//primary_hit_results[index].hit_color = pixel_color;
 		pixels[index + stride] = pixel_color;
 		return;
 	}
@@ -1132,8 +1132,8 @@ void generate_shadow_map(float3 *lights, size_t num_lights, RKDTreeNodeGPU *tree
 
 	shade(lights, num_lights, pixel_color, tree, scene_objs, num_objs, root_index, indexList, primary_hit_results[index], shad_hit_result);
 
-	primary_hit_results[index] = shad_hit_result;
-	primary_hit_results[index].hit_color = pixel_color;
+	//primary_hit_results[index] = shad_hit_result;
+	//primary_hit_results[index].hit_color = pixel_color;
 
 	pixel_color = clip(pixel_color);
 	pixels[index + stride] = pixel_color;
@@ -1427,6 +1427,16 @@ void Craze(float3 *lights, float angle, Atmosphere *atmosphere)
 	atmosphere->sunDirection = make_float3(0, cosf(ang), sinf(ang));
 }
 
+__global__
+void copy_device(HitResult *dist, HitResult *source)
+{
+	int index = (threadIdx.x * gridDim.x) + blockIdx.x;
+	if (index > SCR_WIDTH * SCR_HEIGHT)
+		return;
+	
+	dist[index] = source[index];
+}
+
 ////////////////////////////////////////////////////
 // Main render function
 // All variables are initialized here
@@ -1469,10 +1479,9 @@ float4 *Render(RCamera sceneCam)
 
 	// Generate primary rays and cast them throught the scene.
 	trace_primary_rays << < blockSize, gridSize >> > ( d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index,  d_index_list, 0, d_hit_result);
-	cudaDeviceSynchronize();
-	cudaMemcpy(d_shadow_hit_result, d_hit_result, SCR_WIDTH * SCR_HEIGHT * sizeof(HitResult), cudaMemcpyDeviceToDevice);
+
 	// Generate primary shadow map
-	generate_shadow_map << < blockSize, gridSize >> > (d_light, num_light, d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list, d_shadow_map, d_shadow_hit_result, 0);
+	generate_shadow_map << < blockSize, gridSize >> > (d_light, num_light, d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list, d_shadow_map, d_hit_result, 0);
 	//for (int i = 0; i < 500; ++i)
 	//{
 	//	trace_secondary_shadow_rays << < blockSize, gridSize >> > (rand_state, d_light, num_light, d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list, d_indirect_map, d_shadow_hit_result, 0);

@@ -33,6 +33,7 @@ static void cursorPositionCallback(GLFWwindow *window, double xPos, double yPos)
 void cursorEnterCallback(GLFWwindow *widnow, int entered);
 void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+bool point_aabb_collision(const GPUBoundingBox& tBox, const float3& vecPoint);
 
 extern "C" void copy_memory(std::vector<RKDThreeGPU *> tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals, std::vector<GPUSceneObject> objs);
 extern "C" void free_memory();
@@ -101,27 +102,32 @@ void MainWindow::RenderFrame()
 // ---------------------------------------------------------------------------------------------------------
 void MainWindow::processInput(GLFWwindow *window)
 {
+	RMovableCamera *tmp_cam = new RMovableCamera();
+	memcpy(tmp_cam, movable_camera, sizeof(RMovableCamera));
+
+
+
 	float scale = .5f;
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
 	{
-		movable_camera->move_forward(scale);
+		tmp_cam->move_forward(scale);
 
 	}
 	else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
 	{
-		movable_camera->move_forward(-scale);
+		tmp_cam->move_forward(-scale);
 
 	}
 	else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
 	{
-		movable_camera->strafe(scale);
+		tmp_cam->strafe(scale);
 	}
 	else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
 	{
-		movable_camera->strafe(-scale);
+		tmp_cam->strafe(-scale);
 	}
 	else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 	{
@@ -144,6 +150,18 @@ void MainWindow::processInput(GLFWwindow *window)
 
 	}
 
+	bool overlaps = false;
+	for (int i = 0; i < main_window->CUDATree.size(); ++i)
+	{
+		if (point_aabb_collision(main_window->Scene->sceneObjects[i]->collision_box,  tmp_cam->position))
+			overlaps = true;
+	}
+	if (!overlaps)
+	{
+		memcpy(movable_camera, tmp_cam, sizeof(RMovableCamera));
+	}
+
+	delete tmp_cam;
 	//movable_camera->build_camera(SceneCam);
 }
 
@@ -355,7 +373,21 @@ void render_thread(MainWindow *main_window, float delta_time)
 	}
 	//main_window->init_triangles();
 }
+bool point_aabb_collision(const GPUBoundingBox& tBox, const float3& vecPoint)
+{
 
+	//Check if the point is less than max and greater than min
+	if (vecPoint.x > tBox.Min.x && vecPoint.x < tBox.Max.x &&
+		vecPoint.y > tBox.Min.y && vecPoint.y < tBox.Max.y &&
+		vecPoint.z > tBox.Min.z && vecPoint.z < tBox.Max.z)
+	{
+		return true;
+	}
+
+	//If not, then return false
+	return false;
+
+}
 
 
 int main()
@@ -544,9 +576,7 @@ int main()
 			lastFrame++;
 
 		}
-		// input
-		// -----
-		processInput(window);
+
 
 
 
@@ -587,6 +617,11 @@ int main()
 
 		main_window->RenderFrame();
 		render_thread(main_window, deltaTime);
+
+
+		// input
+		processInput(window);
+
 	}
 	free_memory();
 
