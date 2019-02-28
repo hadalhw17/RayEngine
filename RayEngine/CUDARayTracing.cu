@@ -29,6 +29,8 @@ float4 *dev_normals_p;
 #define PI_OVER_TWO 1.5707963267948966192313216916397514420985
 #define M_PI 3.14156265
 
+
+
 __device__
 void gray_scale(float4 &color)
 {
@@ -323,15 +325,51 @@ int get_neighboring_node_index(RKDTreeNodeGPU node, float3 p)
 __device__
 bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 	GPUSceneObject *scene_objs, int num_objs, int curr_obj_count,
-	int *root_index, int *indexList, HitResult &hit_result)
+	int *root_index, int *indexList, HitResult &hit_result, bool is_secondary)
 {
 	// Iterate ofer all of the individual trees in the scene.
 	RKDTreeNodeGPU curr_node = node[root_index[curr_obj_count]];
 
+	float siny = sinf(scene_objs[curr_obj_count].rotation.y);
+	float cosy = cosf(scene_objs[curr_obj_count].rotation.y);
+
+	float3 new_dir, new_o = make_float3(0);
+	new_dir.x = hit_result.ray_dir.x * cosy + hit_result.ray_dir.z * siny;
+	new_dir.y = hit_result.ray_dir.y;
+	new_dir.z = -hit_result.ray_dir.x * siny + hit_result.ray_dir.z * cosy;
+
+	if (!scene_objs[curr_obj_count].is_character)
+	{
+		new_o.x = hit_result.ray_o.x * cosy + hit_result.ray_o.z * siny;
+		new_o.y = hit_result.ray_o.y;
+		new_o.z = -hit_result.ray_o.x * siny + hit_result.ray_o.z * cosy;
+		new_o += scene_objs[curr_obj_count].location;
+	}
+	if (scene_objs[curr_obj_count].is_character && is_secondary )
+	{
+
+		siny = sinf(-scene_objs[curr_obj_count].rotation.y);
+		cosy = cosf(-scene_objs[curr_obj_count].rotation.y);
+		new_dir.x = hit_result.ray_dir.x * cosy + hit_result.ray_dir.z * siny;
+		new_dir.y = hit_result.ray_dir.y;
+		new_dir.z = -hit_result.ray_dir.x * siny + hit_result.ray_dir.z * cosy;
+
+		new_o.x = scene_objs[curr_obj_count].location.x * cosy + scene_objs[curr_obj_count].location.z * siny;
+		new_o.y = -scene_objs[curr_obj_count].location.y;
+		new_o.z = -scene_objs[curr_obj_count].location.x * siny + scene_objs[curr_obj_count].location.z * cosy;
+		//new_o += make_float3(-scene_objs[curr_obj_count].location.z, -scene_objs[curr_obj_count].location.y, -scene_objs[curr_obj_count].location.x);
+		//new_dir.x = hit_result.ray_dir.x;
+		//new_dir.y = hit_result.ray_dir.y;
+		//new_dir.z = hit_result.ray_dir.z;
+
+	}
+	
+	new_dir = normalize(new_dir);
+
 	// Perform ray/AABB intersection test.
 	float t_entry, t_exit;
 
-	bool intersects_root_node_bounding_box = gpu_ray_box_intersect(curr_node.box, hit_result.ray_o + scene_objs[curr_obj_count].location, hit_result.ray_dir, t_entry, t_exit);
+	bool intersects_root_node_bounding_box = gpu_ray_box_intersect(curr_node.box, new_o, new_dir, t_entry, t_exit);
 	
 
 	if (!intersects_root_node_bounding_box) {
@@ -349,7 +387,7 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 		t_entry_prev = t_entry;
 
 		// Down traversal - Working our way down to a leaf node.
-		float3 p_entry = hit_result.ray_o + scene_objs[curr_obj_count].location + (t_entry * hit_result.ray_dir);
+		float3 p_entry = new_o + (t_entry * new_dir);
 		while (!curr_node.is_leaf) {
 			curr_node = is_point_to_the_left_of_split(curr_node, p_entry) ? node[curr_node.left_index] : node[curr_node.right_index];
 		}
@@ -371,8 +409,8 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 
 			// Perform ray/triangle intersection test.
 			HitResult local_hit_result;
-			local_hit_result.ray_o = hit_result.ray_o + scene_objs[curr_obj_count].location;
-			local_hit_result.ray_dir = hit_result.ray_dir;
+			local_hit_result.ray_o = new_o;
+			local_hit_result.ray_dir = new_dir;
 
 			gpu_ray_tri_intersect(v0, e1, e2, tri, local_hit_result);
 
@@ -380,7 +418,8 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 				if (local_hit_result.t < t_exit) {
 					intersection_detected = true;
 					local_hit_result.obj_index = curr_obj_count;
-					local_hit_result.ray_o -= scene_objs[curr_obj_count].location;
+					local_hit_result.ray_o = hit_result.ray_o;
+					local_hit_result.ray_dir = hit_result.ray_dir;
 					tmp_hit_result = local_hit_result;
 
 					t_exit = tmp_hit_result.t;
@@ -390,7 +429,7 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 		// Compute distance along ray to exit current node.
 		float tmp_t_near, tmp_t_far;
 
-		bool intersects_curr_node_bounding_box = gpu_ray_box_intersect(curr_node.box, hit_result.ray_o + scene_objs[curr_obj_count].location, hit_result.ray_dir, tmp_t_near, tmp_t_far);
+		bool intersects_curr_node_bounding_box = gpu_ray_box_intersect(curr_node.box, new_o, new_dir, tmp_t_near, tmp_t_far);
 		if (intersects_curr_node_bounding_box) {
 			// Set t_entry to be the entrance point of the next (neighboring) node.
 			t_entry = tmp_t_far;
@@ -403,7 +442,7 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 
 
 		// Get neighboring node using ropes attached to current node.
-		float3 p_exit = hit_result.ray_o + scene_objs[curr_obj_count].location + (t_entry * hit_result.ray_dir);
+		float3 p_exit = new_o + (t_entry * new_dir);
 		int new_node_index = get_neighboring_node_index(curr_node, p_exit);
 
 		// Break if neighboring node not found, meaning we've exited the kd-tree.
@@ -437,7 +476,7 @@ float4 *device_trace_ray(RKDTreeNodeGPU *tree, float3 ray_o, float3 ray_dir,
 	float4 pixel_color;
 	for (int i = 0; i < num_objs; ++i)
 	{
-		if (stackless_kdtree_traversal(tree,scene_objs, num_objs, i, root_index, indexList, hit_result))
+		if (stackless_kdtree_traversal(tree,scene_objs, num_objs, i, root_index, indexList, hit_result, false))
 		{
 			pixel_color.y = (hit_result.normal.y < 0.0f) ? (hit_result.normal.y * -1.0f) : hit_result.normal.y;
 			pixel_color.z = (hit_result.normal.z < 0.0f) ? (hit_result.normal.z * -1.0f) : hit_result.normal.z;
@@ -650,7 +689,7 @@ void trace_shadow(RKDTreeNodeGPU *tree, GPUSceneObject *scene_objs, int num_objs
 	bool inter = false;
 	for (int i = 0; i < num_objs; ++i)
 	{
-		stackless_kdtree_traversal(tree, scene_objs, num_objs, i, root_index, index_list, hit_result);
+		stackless_kdtree_traversal(tree, scene_objs, num_objs, i, root_index, index_list, hit_result, true);
 	}
 
 }
@@ -1013,7 +1052,7 @@ void trace_scene(RKDTreeNodeGPU *tree,
 		tmp_hit_result.ray_dir = hit_result.ray_dir;
 		tmp_hit_result.ray_o = hit_result.ray_o;
 
-		bool hits = stackless_kdtree_traversal(tree, scene_objs, num_objs, i, root_index, indexList, tmp_hit_result);
+		bool hits = stackless_kdtree_traversal(tree, scene_objs, num_objs, i, root_index, indexList, tmp_hit_result, false);
 		if (hits) {
 			if (tmp_hit_result.t < hit_result.t) {
 				hit_result = tmp_hit_result;
@@ -1488,7 +1527,7 @@ float4 *Render(RCamera sceneCam)
 	//}
 	
 	// Generate secondary rays and evaluate scene colors from them.
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < 5; ++i)
 	{
 		trace_secondary_rays << < blockSize, gridSize >> > (d_light, num_light, d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list, d_pixels, d_hit_result,d_atmosphere, 0);
 	}

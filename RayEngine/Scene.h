@@ -33,10 +33,14 @@ public:
 	std::vector<RSceneObject *> sceneObjects;
 
 
+	class RCharacter *main_character;
+
 	size_t numFaces;
 
 
 	void Tick(float delta_time);
+
+	void update_camera(class RMovableCamera *camera);
 
 private:
 	void initialise_scene();

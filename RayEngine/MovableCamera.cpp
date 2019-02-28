@@ -12,7 +12,7 @@ RMovableCamera::RMovableCamera()
 	position = make_float3(0,10,0);
 	yaw = 0;
 	pitch = 0.3;
-	radius = 4;
+	radius = 0;
 	apertude_radius = .04f;
 	focial_distance = 4.f;
 

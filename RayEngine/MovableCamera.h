@@ -33,11 +33,12 @@ public:
 	
 
 	float3 position;
-private:
 	float3 view_direction;
-
 	float yaw;
 	float pitch;
+private:
+
+
 	float radius;
 	float apertude_radius;
 	float focial_distance;

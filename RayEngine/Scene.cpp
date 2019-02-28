@@ -8,6 +8,7 @@
 #include "Cow.h"
 #include "Floor.h"
 #include "Glass.h"
+#include "Character.h"
 
 #include <iostream>
 #include <vector>
@@ -25,6 +26,9 @@ RScene::RScene()
 
 	AGlass *glass = new AGlass;
 	sceneObjects.push_back(glass);
+
+	main_character = new RCharacter();
+	sceneObjects.push_back(main_character);
 
 	initialise_scene();
 }
@@ -50,6 +54,11 @@ void RScene::Tick(float delta_time)
 		tmp_objs.push_back(obj->object_properties);
 	}
 	update_objects(tmp_objs);
+}
+
+void RScene::update_camera(RMovableCamera *camera)
+{
+	main_character->camera = camera;
 }
 
 void RScene::initialise_scene()

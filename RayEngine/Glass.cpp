@@ -7,7 +7,7 @@ AGlass::AGlass()
 	:RSceneObject((char *)"Meshes/glass.obj")
 {
 	Material material;
-	material.type = REFRACT;
+	material.type = REFLECT;
 	material.color = make_float4(0, 0, 0, 0);
 	float3 location = make_float3(0);
 	object_properties.material = material;

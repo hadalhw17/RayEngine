@@ -25,6 +25,7 @@ double lastFrame;
 double deltaTime;
 
 MainWindow *main_window;
+RMovableCamera *movable_camera;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -60,7 +61,7 @@ MainWindow::~MainWindow()
 	delete[] pixels;
 }
 
-RMovableCamera *movable_camera;
+
 extern
 float4 *Render(RCamera sceneCam);
 
@@ -246,6 +247,7 @@ void MainWindow::build_scene()
 {
 	std::cout << "Building scene" << "\" .. " << std::endl;
 	Scene = new RScene;
+	Scene->update_camera(movable_camera);
 	int i = 0;
 	Tree = Scene->GetSceneTree();
 	for (auto t : Tree)

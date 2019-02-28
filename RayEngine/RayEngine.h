@@ -54,10 +54,12 @@ struct GPUSceneObject
 	size_t index_of_first_prim;
 	size_t num_prims;
 	float3 location;
+	float3 rotation;
 	size_t num_nodes;
 	size_t index_list_size;
 	size_t offset;
 	Material material;
+	bool is_character;
 
 	GPUSceneObject()
 	{
@@ -66,6 +68,7 @@ struct GPUSceneObject
 		num_nodes = 0;
 		index_list_size = 0;
 		offset = 0;
+		is_character = false;
 	}
 };
 

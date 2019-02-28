@@ -12,6 +12,7 @@ ACow::ACow()
 	float3 location = make_float3(0);
 	object_properties.material = material;
 	object_properties.location = location;
+	object_properties.is_character = false;
 }
 
 
@@ -23,5 +24,6 @@ void ACow::tick(float delta_time)
 {
 	RSceneObject::tick(delta_time);
 
-	object_properties.location.x += 0.001f;
+	object_properties.location.x += 0.01f;
+	object_properties.rotation.y += 10;
 }
