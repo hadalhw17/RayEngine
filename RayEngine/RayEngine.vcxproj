@@ -224,6 +224,7 @@
     <ClCompile Include="D:\CPPLibs\GLAD\src\glad.c" />
     <ClCompile Include="Floor.cpp" />
     <ClCompile Include="Glass.cpp" />
+    <ClCompile Include="jpeg.cpp" />
     <ClCompile Include="KDThreeGPU.cpp" />
     <ClCompile Include="KDTree.cpp" />
     <ClCompile Include="KDTreeGPUUtills.cpp" />
@@ -260,6 +261,8 @@
     <ClInclude Include="Glass.h" />
     <ClInclude Include="GPUBoundingBox.h" />
     <ClInclude Include="helper_math.h" />
+    <ClInclude Include="jpeg.h" />
+    <ClInclude Include="jpeglib.h" />
     <ClInclude Include="KDThreeGPU.h" />
     <ClInclude Include="KDTreeGPUUtills.h" />
     <ClInclude Include="MainWindow.h">

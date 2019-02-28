@@ -12,13 +12,15 @@
 
 #include <iostream>
 #include <vector>
-
-
+#include <fstream>
+#include "filesystem/resolver.h"
+#include <resolver.h>
+std::vector<float3> read_ppm(char *filename);
 
 
 RScene::RScene()
 {
-	
+	textures = std::vector<float3>(read_ppm((char *) "Meshes/1.ppm"));
 	ACow *cow = new ACow;
 	sceneObjects.push_back(cow);
 	AFloor *floor = new AFloor;
@@ -209,4 +211,42 @@ void RScene::build_tree()
 	//float elapsed_seconds = std::chrono::duration_cast<
 	//	std::chrono::duration<float>>(finish - start).count();
 	////std::cout << "Tree is constructed in " << elapsed_seconds << " seconds." << std::endl;
+}
+
+
+
+std::vector<float3> read_ppm(char *filename)
+{
+	std::ifstream is(filename);
+	std::vector<float3>imag;
+	std::string line_str;
+	std::getline(is, line_str);
+	if (line_str != "P3")
+		return imag;
+	std::getline(is, line_str); // Comment.
+	std::getline(is, line_str);
+	std::istringstream line(line_str);
+	int width, height;
+	line >> width >> height;
+	std::cout << width << height << std::endl;
+	std::getline(is, line_str); // Color.
+
+	int i = 0;
+	while (std::getline(is, line_str))
+	{
+		float3 img;
+		line = std::istringstream(line_str);
+		line >> img.x;
+		std::getline(is, line_str);
+		line = std::istringstream(line_str);
+		line >> img.y;
+		std::getline(is, line_str);
+		line = std::istringstream(line_str);
+		line >> img.z;
+		img = make_float3(img.x / 255.f, img.y / 255.f, img.z / 255.f);
+		imag.push_back(img);
+		++i;
+	}
+
+	return imag;
 }

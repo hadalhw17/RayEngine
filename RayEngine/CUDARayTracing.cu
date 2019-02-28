@@ -208,6 +208,7 @@ bool gpu_ray_tri_intersect(float3 v0, float3 e1, float3 e2, int tri_index, HitRe
 	if (hit_result.t > 1e-4) { // ray intersection
 		hit_result.normal = gpu_get_tri_normal(tri_index, u, v);
 		hit_result.hit_point = hit_result.ray_o + (hit_result.t * hit_result.ray_dir);
+		hit_result.uv = make_float2(u, v);
 		hit_result.hits = true;
 		return true;
 	}
@@ -1088,7 +1089,7 @@ void trace_primary_rays(RKDTreeNodeGPU *tree,
 __global__
 void trace_secondary_rays(float3 *lights, size_t num_lights, RKDTreeNodeGPU *tree,
 	RCamera *render_camera, GPUSceneObject *scene_objs, int num_objs,
-	int *root_index, int *indexList, float4 *pixels, HitResult *primary_hit_results, Atmosphere *atmosphere, int stride)
+	int *root_index, int *indexList, float4 *pixels, HitResult *primary_hit_results, Atmosphere *atmosphere, float3 *texture, size_t texture_size, int stride)
 {
 	float4 pixel_color = make_float4(0.f);
 	int index = (threadIdx.x * gridDim.x) + blockIdx.x;
@@ -1111,6 +1112,9 @@ void trace_secondary_rays(float3 *lights, size_t num_lights, RKDTreeNodeGPU *tre
 		{
 			int square = (int)floor(primary_hit_results[index].hit_point.x) + (int)floor(primary_hit_results[index].hit_point.z);
 			tile_pattern(pixel_color, square);
+			int tx = (int)(225 * primary_hit_results[index].uv.x), ty = (int)(225 * primary_hit_results[index].uv.y);
+			float3 *_texture = (225 * ty + tx) + texture;
+			pixel_color = make_float4(_texture->x, _texture->y, _texture->z, 0);
 		}
 		else if (hit_mat_type == PHONG)
 		{
@@ -1287,10 +1291,12 @@ void register_random(curandState *rand_state)
 }
 
 extern "C"
-void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<float4> triangles, std::vector<float4> normals, std::vector<GPUSceneObject> objs, bool bruteforce = false)
+void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<float4> triangles, std::vector<float4> normals, std::vector<GPUSceneObject> objs, std::vector<float3> textures, bool bruteforce = false)
 {
 	// --------------------------------Initialize host variables----------------------------------------------------
 	size_t num_objs = objs.size();
+	d_texture_size = textures.size();
+	size_t textures_size = textures.size() * sizeof(float3);
 	size_t image_size = SCR_WIDTH * SCR_HEIGHT;
 	angle = 0;
 	int size = image_size * sizeof(float4);
@@ -1354,6 +1360,7 @@ void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<f
 	cudaMalloc(&rand_state, image_size * sizeof(curandState));
 	cudaMalloc(&d_pixels, size);
 	cudaMalloc(&d_atmosphere, sizeof(Atmosphere));
+	cudaMalloc(&d_textures, textures_size);
 	cudaMalloc(&d_shadow_map, shadow_map_size);
 	cudaMalloc(&d_indirect_map, shadow_map_size);
 	cudaMalloc(&d_light, light_size * sizeof(float3));
@@ -1405,6 +1412,7 @@ void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<f
 	cudaMemcpy(d_render_camera, h_camera, sizeof(RCamera), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_tree, h_tree, size_kd_tree * sizeof(RKDTreeNodeGPU), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_index_list, kd_tree_tri_indics.data(), size_kd_tree_tri_indices, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_textures,textures.data(), textures_size, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_scene_objects, &objs[0], num_objs * sizeof(GPUSceneObject), cudaMemcpyHostToDevice);
 	cudaMemcpy(d_root_index, h_root_index.data(), num_objs * sizeof(int), cudaMemcpyHostToDevice);
 	d_object_number = num_objs;
@@ -1529,7 +1537,7 @@ float4 *Render(RCamera sceneCam)
 	// Generate secondary rays and evaluate scene colors from them.
 	for (int i = 0; i < 5; ++i)
 	{
-		trace_secondary_rays << < blockSize, gridSize >> > (d_light, num_light, d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list, d_pixels, d_hit_result,d_atmosphere, 0);
+		trace_secondary_rays << < blockSize, gridSize >> > (d_light, num_light, d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list, d_pixels, d_hit_result,d_atmosphere, d_textures, d_texture_size, 0);
 	}
 
 	//mix_direct_indirect_light << <blockSize, gridSize >> > (d_shadow_map, d_indirect_map);

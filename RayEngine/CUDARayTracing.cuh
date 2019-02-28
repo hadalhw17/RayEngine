@@ -62,6 +62,11 @@ RCamera *h_camera;
 __device__ __constant__
 struct GPUSceneObject *d_scene_objects;
 
+__device__  __constant__
+float3 *d_textures;
+
+size_t d_texture_size;
+
 __device__
 int d_object_number;
 

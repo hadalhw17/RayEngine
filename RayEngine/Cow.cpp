@@ -4,7 +4,7 @@
 
 
 ACow::ACow()
-	:RSceneObject((char *)"Meshes/cow.obj")
+	:RSceneObject((char *)"Meshes/predator.obj")
 {
 	Material material;
 	material.type = PHONG;
@@ -24,6 +24,6 @@ void ACow::tick(float delta_time)
 {
 	RSceneObject::tick(delta_time);
 
-	object_properties.location.x += 0.01f;
-	object_properties.rotation.y += 10;
+	//object_properties.location.x += 0.01f;
+	//object_properties.rotation.y += 10;
 }

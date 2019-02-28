@@ -79,6 +79,7 @@ struct HitResult
 	float3 hit_point;
 	float3 ray_dir;
 	float3 ray_o;
+	float2 uv;
 	bool hits;
 	int obj_index;
 	float4 hit_color;

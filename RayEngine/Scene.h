@@ -31,6 +31,7 @@ public:
 
 	std::vector<RKDTreeCPU *> tree;
 	std::vector<RSceneObject *> sceneObjects;
+	std::vector<float3> textures;
 
 
 	class RCharacter *main_character;

@@ -36,7 +36,7 @@ void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 bool point_aabb_collision(const GPUBoundingBox& tBox, const float3& vecPoint);
 
-extern "C" void copy_memory(std::vector<RKDThreeGPU *> tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals, std::vector<GPUSceneObject> objs);
+extern "C" void copy_memory(std::vector<RKDThreeGPU *> tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals, std::vector<GPUSceneObject> objs, std::vector<float3> textures);
 extern "C" void free_memory();
 
 MainWindow::MainWindow()
@@ -52,7 +52,7 @@ MainWindow::MainWindow()
 	{
 		tmp_objs.push_back(objs->object_properties);
 	}
-	copy_memory(CUDATree, *SceneCam, triangles, normals, tmp_objs);
+	copy_memory(CUDATree, *SceneCam, triangles, normals, tmp_objs, Scene->textures);
 }
 
 MainWindow::~MainWindow()
@@ -157,7 +157,7 @@ void MainWindow::processInput(GLFWwindow *window)
 		if (point_aabb_collision(main_window->Scene->sceneObjects[i]->collision_box,  tmp_cam->position))
 			overlaps = true;
 	}
-	if (!overlaps)
+	if (true)
 	{
 		memcpy(movable_camera, tmp_cam, sizeof(RMovableCamera));
 	}
