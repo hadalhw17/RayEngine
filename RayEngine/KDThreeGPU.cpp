@@ -15,6 +15,7 @@ RKDThreeGPU::RKDThreeGPU(RKDTreeCPU *CPUNode)
 	num_verts = CPUNode->num_verts;
 	num_norms = CPUNode->num_norms;
 	num_faces = CPUNode->num_faces;
+	num_uvs = CPUNode->num_uvs;
 
 	float3 *tmp_verts = CPUNode->verts;
 	verts = new float3[num_verts];
@@ -37,6 +38,13 @@ RKDThreeGPU::RKDThreeGPU(RKDTreeCPU *CPUNode)
 		normals[i] = tmp_norms[i];
 	}
 
+	float2 *tmp_uvs = CPUNode->uvs;
+	uvs = new float2[num_uvs];
+	for (int i = 0; i < num_uvs; ++i)
+	{
+		uvs[i] = tmp_uvs[i];
+	}
+
 	nodes = new RKDTreeNodeGPU[num_nodes];
 
 	obj_index_list = {};
@@ -56,6 +64,11 @@ RKDThreeGPU::~RKDThreeGPU()
 
 	if (num_faces > 0) {
 		delete[] faces;
+	}
+
+	if (num_uvs > 0)
+	{
+		delete[] uvs;
 	}
 
 	delete[] nodes;
@@ -86,6 +99,11 @@ float3 * RKDThreeGPU::get_normals() const
 	return normals;
 }
 
+inline float2 * RKDThreeGPU::get_uvs() const
+{
+	return uvs;
+}
+
 int RKDThreeGPU::GetNumNodes() const
 {
 	return num_nodes;
@@ -104,6 +122,11 @@ int RKDThreeGPU::get_num_faces() const
 int RKDThreeGPU::get_num_norms() const
 {
 	return num_norms;
+}
+
+inline int RKDThreeGPU::get_num_uvs() const
+{
+	return num_uvs;
 }
 
 int RKDThreeGPU::get_root_index() const

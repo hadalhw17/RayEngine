@@ -52,16 +52,13 @@ private:
 
 	void build_tree();
 
-	RStaticMesh *complexObject;
-	RStaticMesh *complexObject2;
-
-
-
 	float3 *arrv;
 	float3 *arrf;
 	float3 *normals;
+	float2 *uvs;
 	
 	size_t num_normals;
+	size_t num_uvs;
 	size_t numVerts;
 };
 

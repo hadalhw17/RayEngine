@@ -2,15 +2,17 @@
 #include "device_launch_parameters.h"
 
 
-#define kInfinity 1e20f
-#define kEpsilon 1e-4f
+#define K_INFINITY	1e20f					// Mathematical infinity
+#define K_EPSILON	1e-4f					// Error value
+#define M_PI		3.14159265358979323846  // pi
+#define M_PI_2		1.57079632679489661923  // pi/2
 
 #define HOST_DEVICE_FUNCTION __device__ __host__
 
 
 // settings
-const unsigned int SCR_WIDTH = 1024;
-const unsigned int SCR_HEIGHT = 512;
+#define SCR_WIDTH 1024
+#define SCR_HEIGHT 512
 
 enum Axis
 {
@@ -45,6 +47,8 @@ enum MaterialType
 
 struct Material
 {
+	bool uvs = false;
+	bool normals = true;
 	float4 color;
 	MaterialType type = COLOR;
 };
@@ -83,11 +87,12 @@ struct HitResult
 	bool hits;
 	int obj_index;
 	float4 hit_color;
+
 	HOST_DEVICE_FUNCTION
 	HitResult()
 	{
-		t = kInfinity;
+		t = K_INFINITY;
 		hits = false;
-		obj_index;
+		obj_index = -1;
 	}
 };

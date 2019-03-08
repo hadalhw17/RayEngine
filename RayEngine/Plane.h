@@ -1,7 +1,7 @@
 #pragma once
 #include "Object.h"
 
-#include "cutil_math.h"
+#include "helper_math.h"
 
 class RRay;
 struct float4;
@@ -34,15 +34,15 @@ public:
 	{
 		if (this->normal.x == 0 && this->normal.z == 0)
 		{
-			return make_float3(kInfinity, this->distance, kInfinity);
+			return make_float3(K_INFINITY, this->distance, K_INFINITY);
 		}
 		else if (this->normal.x == 0 && this->normal.y == 0)
 		{
-			return make_float3(kInfinity, kInfinity, this->distance);
+			return make_float3(K_INFINITY, K_INFINITY, this->distance);
 		}
 		else if (this->normal.y == 0 && this->normal.z == 0)
 		{
-			return make_float3(this->distance, kInfinity, kInfinity);
+			return make_float3(this->distance, K_INFINITY, K_INFINITY);
 		}
 		return make_float3(0, 0, 0);
 	}
@@ -51,15 +51,15 @@ public:
 	{
 		if (this->normal.x == 0 && this->normal.z == 0)
 		{
-			return make_float3(-kInfinity, this->distance, -kInfinity);
+			return make_float3(-K_INFINITY, this->distance, -K_INFINITY);
 		}
 		else if (this->normal.x == 0 && this->normal.y == 0)
 		{
-			return make_float3(-kInfinity, -kInfinity, this->distance);
+			return make_float3(-K_INFINITY, -K_INFINITY, this->distance);
 		}
 		else if (this->normal.y == 0 && this->normal.z == 0)
 		{
-			return make_float3(this->distance, -kInfinity, -kInfinity);
+			return make_float3(this->distance, -K_INFINITY, -K_INFINITY);
 		}
 		return make_float3(0, 0, 0);
 	}

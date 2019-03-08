@@ -79,20 +79,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\lib;D:\CPPLibs\OpenGL stuff\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\CPPLibs\OpenGL stuff\Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\RayEngine\RayEngine\includes;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\dev\RayEngine\RayEngine\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\lib;D:\CPPLibs\OpenGL stuff\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\CPPLibs\OpenGL stuff\Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\RayEngine\RayEngine\includes;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\dev\RayEngine\RayEngine\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>D:\CPPLibs\OpenGL stuff\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\CPPLibs\OpenGL stuff\Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\RayEngine\RayEngine\includes;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\dev\RayEngine\RayEngine\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>D:\CPPLibs\OpenGL stuff\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\CPPLibs\OpenGL stuff\Libraries;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\dev\RayEngine\RayEngine\includes;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\dev\RayEngine\RayEngine\libs;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Label="LLVM" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClangClAdditionalOptions>-O3 -fopenmp</ClangClAdditionalOptions>
@@ -135,7 +135,6 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\geron\Projects\RayEngine\RayEngine\freetype-windows-binaries-master\include;C:\Users\geron\Projects\RayEngine\RayEngine\glm-master;C:\Users\geron\Projects\RayEngine\RayEngine\filesystem;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <CudaCompile>
       <Optimization>Od</Optimization>
@@ -150,7 +149,6 @@
     </CudaCompile>
     <Link>
       <AdditionalDependencies>opengl32.lib;glfw3.lib;cudart.lib;cudart_static.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\geron\Projects\RayEngine\RayEngine\freetype-windows-binaries-master\win64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -189,7 +187,6 @@
       <ConformanceMode>true</ConformanceMode>
       <OpenMPSupport>true</OpenMPSupport>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <AdditionalIncludeDirectories>C:\Users\geron\Projects\RayEngine\RayEngine\glm-master;C:\Users\geron\Projects\RayEngine\RayEngine\freetype-windows-binaries-master\include;C:\Users\geron\Projects\RayEngine\RayEngine\filesystem;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -256,7 +253,6 @@
     <ClInclude Include="Character.h" />
     <ClInclude Include="Cow.h" />
     <ClInclude Include="CUDARayTracing.cuh" />
-    <ClInclude Include="cutil_math.h" />
     <ClInclude Include="Floor.h" />
     <ClInclude Include="Glass.h" />
     <ClInclude Include="GPUBoundingBox.h" />

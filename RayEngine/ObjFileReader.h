@@ -15,8 +15,7 @@
 */
 
 #include "RStaticMesh.h"
-#include "filesystem/resolver.h"
-#include <resolver.h>
+#include <filesystem/resolver.h>
 #include <unordered_map>
 #include <fstream>
 #include <functional>
@@ -149,9 +148,26 @@ unsigned int toUInt(const std::string &str) {
 			for (uint32_t i = 0; i < vertices.size(); ++i)
 				mesh->norms[i] = normals.at(vertices[i].n - 1);
 
+			if (texcoords.size() > 0)
+			{
+				mesh->uvs = new float2[vertices.size()];
+				for (uint32_t i = 0; i < vertices.size(); ++i)
+					mesh->uvs[i] = texcoords.at(vertices[i].uv - 1);
+				mesh->num_uvs = vertices.size();
+			}
+			else
+			{
+				mesh->uvs = new float2[vertices.size()];
+				for (uint32_t i = 0; i < vertices.size(); ++i)
+					mesh->uvs[i] = make_float2(0.f, 0.f);
+				mesh->num_uvs = vertices.size();
+			}
+
+
 			mesh->num_faces = indices.size() / 3;
 			mesh->num_verts = vertices.size();
 			mesh->num_norms = vertices.size();
+
 			return mesh;
 		}
 

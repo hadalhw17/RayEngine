@@ -22,15 +22,6 @@
 #include "RayEngine.h"
 
 
-
-float4 *dev_triangle_p;
-float4 *dev_normals_p;
-
-#define PI_OVER_TWO 1.5707963267948966192313216916397514420985
-#define M_PI 3.14156265
-
-
-
 __device__
 void gray_scale(float4 &color)
 {
@@ -160,13 +151,25 @@ float3 gpu_get_tri_normal(float3 &p1, float3 &u, float3 &v)
 // Compute normal of a triangle from texture array
 ////////////////////////////////////////////////////
 __device__
-float3 gpu_get_tri_normal(int tri_index, float u, float v)
+float3 gpu_get_tri_normal(const int tri_index, const float u, const float v)
 {
-	float4 n0 = tex1Dfetch(normals_texture, tri_index * 3);
-	float4 n1 = tex1Dfetch(normals_texture, tri_index * 3 + 1);
-	float4 n2 = tex1Dfetch(normals_texture, tri_index * 3 + 2);
+	const float w = 1.f - (u + v);
+	const float4 n0 = tex1Dfetch(normals_texture, tri_index * 3);
+	const float4 n1 = tex1Dfetch(normals_texture, tri_index * 3 + 1);
+	const float4 n2 = tex1Dfetch(normals_texture, tri_index * 3 + 2);
 
-	return normalize((1 - u - v) * make_float3(n0.x, n0.y, n0.z) + u * make_float3(n1.x, n1.y, n1.z) + v * make_float3(n2.x, n2.y, n2.z));
+	return normalize(w * make_float3(n0.x, n0.y, n0.z) + u * make_float3(n1.x, n1.y, n1.z) + v * make_float3(n2.x, n2.y, n2.z));
+}
+
+__device__
+float2 get_uvs(const int tri_index, const float u, const float v)
+{
+	const float w = 1.f - u - v;
+	const float2 uv0 = tex1Dfetch(uvs_texture, tri_index * 3);
+	const float2 uv1 = tex1Dfetch(uvs_texture, tri_index * 3 + 1);
+	const float2 uv2 = tex1Dfetch(uvs_texture, tri_index * 3 + 2);
+
+	return w * uv0 + u * uv1 + v * uv2;
 }
 
 
@@ -175,7 +178,7 @@ float3 gpu_get_tri_normal(int tri_index, float u, float v)
 // Between ray and triangle
 ////////////////////////////////////////////////////
 __device__
-bool gpu_ray_tri_intersect(float3 v0, float3 e1, float3 e2, int tri_index, HitResult &hit_result)
+bool gpu_ray_tri_intersect(float3 v0, float3 e1, float3 e2, int tri_index, GPUSceneObject curr_obj, HitResult &hit_result)
 {
 	float3 h, s, q;
 	float a, f, u, v;
@@ -183,7 +186,7 @@ bool gpu_ray_tri_intersect(float3 v0, float3 e1, float3 e2, int tri_index, HitRe
 	h = cross(hit_result.ray_dir, e2);
 	a = dot(e1, h);
 
-	if (a <  1e-4) {
+	if (a <  K_EPSILON) {
 		return false;
 	}
 
@@ -205,10 +208,19 @@ bool gpu_ray_tri_intersect(float3 v0, float3 e1, float3 e2, int tri_index, HitRe
 	// at this stage we can compute t to find out where the intersection point is on the line
 	hit_result.t = f * dot(e2, q);
 
-	if (hit_result.t > 1e-4) { // ray intersection
+	if (hit_result.t > K_EPSILON) { // ray intersection
 		hit_result.normal = gpu_get_tri_normal(tri_index, u, v);
+		//hit_result.normal = gpu_get_tri_normal(v0, e1, e2);
+
 		hit_result.hit_point = hit_result.ray_o + (hit_result.t * hit_result.ray_dir);
-		hit_result.uv = make_float2(u, v);
+		if (curr_obj.material.uvs)
+		{
+			hit_result.uv = get_uvs(tri_index, u, v);
+		}
+		else
+		{
+			hit_result.uv = make_float2(u, v);
+		}
 		hit_result.hits = true;
 		return true;
 	}
@@ -252,7 +264,7 @@ bool gpu_ray_box_intersect(GPUBoundingBox bbox, float3 ray_o, float3 ray_dir, fl
 	t_far = tmax;
 
 	if (t_near < 0) {
-		t_near = 1e-4;
+		t_near = K_EPSILON;
 	}
 
 	return true;
@@ -287,30 +299,28 @@ bool is_point_to_the_left_of_split(RKDTreeNodeGPU node, const float3 &p)
 __device__
 int get_neighboring_node_index(RKDTreeNodeGPU node, float3 p)
 {
-	const float GPU_KD_TREE_EPSILON = 1e-4;
-
 	// Check left face.
-	if (fabs(p.x - node.box.Min.x) < GPU_KD_TREE_EPSILON) {
+	if (fabs(p.x - node.box.Min.x) < K_EPSILON) {
 		return node.neighbor_node_indices[LEFT];
 	}
 	// Check front face.
-	else if (fabs(p.z - node.box.Max.z) < GPU_KD_TREE_EPSILON) {
+	else if (fabs(p.z - node.box.Max.z) < K_EPSILON) {
 		return node.neighbor_node_indices[FRONT];
 	}
 	// Check right face.
-	else if (fabs(p.x - node.box.Max.x) < GPU_KD_TREE_EPSILON) {
+	else if (fabs(p.x - node.box.Max.x) < K_EPSILON) {
 		return node.neighbor_node_indices[RIGHT];
 	}
 	// Check back face.
-	else if (fabs(p.z - node.box.Min.z) < GPU_KD_TREE_EPSILON) {
+	else if (fabs(p.z - node.box.Min.z) < K_EPSILON) {
 		return node.neighbor_node_indices[BACK];
 	}
 	// Check top face.
-	else if (fabs(p.y - node.box.Max.y) < GPU_KD_TREE_EPSILON) {
+	else if (fabs(p.y - node.box.Max.y) < K_EPSILON) {
 		return node.neighbor_node_indices[TOP];
 	}
 	// Check bottom face.
-	else if (fabs(p.y - node.box.Min.y) < GPU_KD_TREE_EPSILON) {
+	else if (fabs(p.y - node.box.Min.y) < K_EPSILON) {
 		return node.neighbor_node_indices[BOTTOM];
 	}
 	// p should be a point on one of the faces of this node's bounding box, but in this case, it isn't.
@@ -381,11 +391,9 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 	HitResult tmp_hit_result;
 	bool intersection_detected = false;
 	int limit = 0;
-	float t_entry_prev = -kInfinity;
 
 	while (t_entry < t_exit && limit < 50) {
 		++limit;
-		t_entry_prev = t_entry;
 
 		// Down traversal - Working our way down to a leaf node.
 		float3 p_entry = new_o + (t_entry * new_dir);
@@ -395,8 +403,6 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 
 		// We've reached a leaf node.
 		// Check intersection with triangles contained in current leaf node.
-		
-
 		for (size_t i = curr_node.index_of_first_object; i < curr_node.index_of_first_object + curr_node.num_objs; ++i)
 		{
 			int tri = indexList[i + scene_objs[curr_obj_count].offset];
@@ -413,7 +419,7 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU *node,
 			local_hit_result.ray_o = new_o;
 			local_hit_result.ray_dir = new_dir;
 
-			gpu_ray_tri_intersect(v0, e1, e2, tri, local_hit_result);
+			gpu_ray_tri_intersect(v0, e1, e2, tri,scene_objs[curr_obj_count], local_hit_result);
 
 			if (local_hit_result.hits) {
 				if (local_hit_result.t < t_exit) {
@@ -687,7 +693,6 @@ __device__
 void trace_shadow(RKDTreeNodeGPU *tree, GPUSceneObject *scene_objs, int num_objs,
 	int *root_index, int *index_list, HitResult &hit_result)
 {
-	bool inter = false;
 	for (int i = 0; i < num_objs; ++i)
 	{
 		stackless_kdtree_traversal(tree, scene_objs, num_objs, i, root_index, index_list, hit_result, true);
@@ -779,13 +784,13 @@ __device__
 void phong_light(float3 *lights,size_t num_lights, float4 &finalColor, RKDTreeNodeGPU *tree,
 	GPUSceneObject *scene_objs, int num_objs, int *root_index, int *index_list, HitResult &hit_result, HitResult &shadow_hit_result)
 {
-	float3 bias = hit_result.normal * make_float3(-1e-4);
+	float3 bias = hit_result.normal * make_float3(-K_EPSILON);
 	for (int i = 0; i < num_lights; ++i)
 	{
 		float4 diffuse = make_float4(0), specular = make_float4(0);
 		float3 lightpos = lights[i], lightDir;
 		float4 lightInt;
-		float t = kInfinity;
+		float t = K_INFINITY;
 		illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, t);
 
 		shadow_hit_result.ray_o = hit_result.hit_point + bias;
@@ -810,13 +815,13 @@ __device__
 void shade(float3 *lights, size_t num_lights, float4 &finalColor, RKDTreeNodeGPU *tree, GPUSceneObject *scene_objs, int num_objs,
 	int *root_index, int *index_list, HitResult &hit_result, HitResult &shading_hit_result)
 {
-	float3 bias = hit_result.normal* make_float3(1e-4);
+	float3 bias = hit_result.normal* make_float3(K_EPSILON);
 	for (int i = 0; i < num_lights; ++i)
 	{
 		float3 lightpos = lights[i], lightDir;
 		float4 lightInt;
 		float4 lightColor = make_float4(1, 0, 0, 0);
-		float t = kInfinity;
+		float t = K_INFINITY;
 		illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, t);
 
 		shading_hit_result.ray_o = hit_result.hit_point + bias;
@@ -842,7 +847,7 @@ void reflect_refract(float4 &finalColor, RKDTreeNodeGPU *tree, GPUSceneObject *s
 	if (kr < 1)
 	{
 		float3 refractionDirection = refract(direct, hit_result.normal, ior);
-		float3 refractionRayOrig = outside ? hit_result.hit_point - hit_result.normal * make_float3(1e-4) : hit_result.hit_point + hit_result.normal * make_float3(1e-4);
+		float3 refractionRayOrig = outside ? hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON);
 		HitResult refraction_result;
 		refraction_result.ray_dir = refractionDirection;
 		refraction_result.ray_o = refractionRayOrig;
@@ -858,7 +863,7 @@ void reflect_refract(float4 &finalColor, RKDTreeNodeGPU *tree, GPUSceneObject *s
 	}
 	HitResult reflection_result;
 	float3 reflectionDirection = reflect(direct, hit_result.normal);
-	float3 reflectionRayOrig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(1e-4) : hit_result.hit_point - hit_result.normal * make_float3(1e-4);
+	float3 reflectionRayOrig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON);
 	reflection_result.ray_dir = reflectionDirection;
 	reflection_result.ray_o = reflectionRayOrig;
 	trace_shadow(tree, scene_objs, num_objs, root_index, index_list, reflection_result);
@@ -885,7 +890,7 @@ void refract_light(float4 &finalColor, RKDTreeNodeGPU *tree, GPUSceneObject *sce
 	if (kr < 1)
 	{
 		float3 refractionDirection = refract(direct, hit_result.normal, ior);
-		float3 refractionRayOrig = outside ? hit_result.hit_point - hit_result.normal * make_float3(1e-4) : hit_result.hit_point + hit_result.normal * make_float3(1e-4);
+		float3 refractionRayOrig = outside ? hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON);
 		HitResult refraction_result;
 		refraction_result.ray_dir = refractionDirection;
 		refraction_result.ray_o = refractionRayOrig;
@@ -901,7 +906,7 @@ void refract_light(float4 &finalColor, RKDTreeNodeGPU *tree, GPUSceneObject *sce
 	}
 	HitResult reflection_result;
 	float3 reflectionDirection = reflect(direct, hit_result.normal);
-	float3 reflectionRayOrig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(1e-4) : hit_result.hit_point - hit_result.normal * make_float3(1e-4);
+	float3 reflectionRayOrig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON);
 	reflection_result.ray_dir = reflectionDirection;
 	reflection_result.ray_o = reflectionRayOrig;
 	trace_shadow(tree, scene_objs, num_objs, root_index, index_list, reflection_result);
@@ -922,7 +927,7 @@ void reflect(float4 &finalColor, RKDTreeNodeGPU *tree, GPUSceneObject *scene_obj
 	float3 direct = hit_result.ray_dir;
 	bool outside = dot(direct, hit_result.normal) < 0;
 	float3 dir = reflect(direct, hit_result.normal);
-	float3 orig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(1e-4) : hit_result.hit_point - hit_result.normal * make_float3(1e-4);
+	float3 orig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON);
 	HitResult reflection_hit_result;
 	reflection_hit_result.ray_dir = dir;
 	reflection_hit_result.ray_o = orig;
@@ -941,7 +946,7 @@ void reflect_light(float4 &finalColor, RKDTreeNodeGPU *tree, GPUSceneObject *sce
 	float3 direct = hit_result.ray_dir;
 	bool outside = dot(direct, hit_result.normal) < 0;
 	float3 dir = reflect(direct, hit_result.normal);
-	float3 orig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(1e-4) : hit_result.hit_point - hit_result.normal * make_float3(1e-4);
+	float3 orig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON);
 	HitResult reflection_hit_result;
 	reflection_hit_result.ray_dir = dir;
 	reflection_hit_result.ray_o = orig;
@@ -990,7 +995,7 @@ void gpu_bruteforce_ray_cast(float4 *image_buffer,
 			// Perform ray-triangle intersection test.
 			HitResult tmp_hit_result;
 			bool intersects_tri = gpu_ray_tri_intersect(make_float3(v0.x, v0.y, v0.z), make_float3(edge1.x, edge1.y, edge1.z),
-				make_float3(edge2.x, edge2.y, edge2.z), i, tmp_hit_result);
+				make_float3(edge2.x, edge2.y, edge2.z), i, scene_objs[0], tmp_hit_result);
 
 			if (intersects_tri) 
 			{
@@ -1041,6 +1046,20 @@ void bind_normals_tro_texture(float4 *dev_normals_p, unsigned int number_of_norm
 	cudaBindTexture(0, (const textureReference *)&normals_texture, (const void *)dev_normals_p, channelDesc, size);
 }
 
+////////////////////////////////////////////////////
+// Bind uvs to texture memory
+////////////////////////////////////////////////////
+void bind_uvs_to_texture(float2 *dev_uvs_p, unsigned int number_of_uvs)
+{
+	uvs_texture.normalized = false;                      // access with normalized texture coordinates
+	uvs_texture.filterMode = cudaFilterModePoint;        // Point mode, so no 
+	uvs_texture.addressMode[0] = cudaAddressModeWrap;    // wrap texture coordinates
+
+	size_t size = sizeof(float2)*number_of_uvs;
+	const cudaChannelFormatDesc *channelDesc = &cudaCreateChannelDesc<float2>();
+	cudaBindTexture(0, (const textureReference *)&uvs_texture, (const void *)dev_uvs_p, channelDesc, size);
+}
+
 __device__ 
 void trace_scene(RKDTreeNodeGPU *tree,
 	RCamera *render_camera, GPUSceneObject *scene_objs, int num_objs,
@@ -1086,6 +1105,37 @@ void trace_primary_rays(RKDTreeNodeGPU *tree,
 }
 
 
+__device__
+float4 bilinear_filter(HitResult primary_hit_results, float3 *texture)
+{
+	float u = (primary_hit_results.uv.x * 1000.f) - 0.5f;
+	float v = (primary_hit_results.uv.y * 1000.f) - 0.5f;
+
+	int x = floor(u);
+	int y = floor(v);
+	int xy = x + 1000 * y;
+	int x1y = (x + 1) + 1000 * y;
+	int xy1 = x + 1000 * (y + 1);
+	int x1y1 = (x + 1) + 1000 * (y + 1);
+
+	float u_ratio = u - (float)x;
+	float v_ratio = v - (float)y;
+	float u_opposite = 1.f - u_ratio;
+	float v_opposite = 1.f - v_ratio;
+	float3 result = (texture[xy] * u_opposite + texture[x1y] * u_ratio) * v_opposite +
+		(texture[xy1] * u_opposite + texture[x1y1] * u_ratio) * v_ratio;
+	return make_float4(result);
+}
+
+__device__
+float4 newarest_neightbour_filter(HitResult primary_hit_results, float3 *texture)
+{
+	int tx = (int)(1000 * primary_hit_results.uv.x), ty = (int)(1000 * primary_hit_results.uv.y);
+	float3 *_texture = (1000 * ty + tx) + texture;
+
+	return make_float4(*_texture);
+}
+
 __global__
 void trace_secondary_rays(float3 *lights, size_t num_lights, RKDTreeNodeGPU *tree,
 	RCamera *render_camera, GPUSceneObject *scene_objs, int num_objs,
@@ -1096,12 +1146,6 @@ void trace_secondary_rays(float3 *lights, size_t num_lights, RKDTreeNodeGPU *tre
 	if (index > SCR_WIDTH * SCR_HEIGHT)
 		return;
 
-	int x = index % SCR_WIDTH;
-	int y = index / SCR_WIDTH;
-
-	float sx = (float)x / (SCR_WIDTH - 1.0f);
-	float sy = 1.0f - ((float)y / (SCR_HEIGHT - 1.0f));
-
 	HitResult shad_hit_result;
 	if (primary_hit_results[index].hits)
 	{
@@ -1110,11 +1154,11 @@ void trace_secondary_rays(float3 *lights, size_t num_lights, RKDTreeNodeGPU *tre
 		pixel_color = scene_objs[primary_hit_results[index].obj_index].material.color;
 		if (hit_mat_type == TILE)
 		{
-			int square = (int)floor(primary_hit_results[index].hit_point.x) + (int)floor(primary_hit_results[index].hit_point.z);
-			tile_pattern(pixel_color, square);
-			int tx = (int)(225 * primary_hit_results[index].uv.x), ty = (int)(225 * primary_hit_results[index].uv.y);
-			float3 *_texture = (225 * ty + tx) + texture;
-			pixel_color = make_float4(_texture->x, _texture->y, _texture->z, 0);
+			//int square = floor(primary_hit_results[index].hit_point.x) + floor(primary_hit_results[index].hit_point.z);
+			//tile_pattern(pixel_color, square);
+
+			
+			pixel_color = bilinear_filter(primary_hit_results[index], texture);
 		}
 		else if (hit_mat_type == PHONG)
 		{
@@ -1135,7 +1179,7 @@ void trace_secondary_rays(float3 *lights, size_t num_lights, RKDTreeNodeGPU *tre
 	{
 		// if ray missed draw sky there.
 		//sky_mat(pixel_color, primary_hit_results[index].ray_dir);
-		float t_min = 0, t1 = kInfinity, t_max = kInfinity;
+		float t_max = K_INFINITY;
 		pixel_color = make_float4(compute_incident_light(atmosphere, make_float3(0, atmosphere->earthRadius + 10000, 300000), primary_hit_results[index].ray_dir, 0, t_max),0);
 
 		pixel_color.x = pixel_color.x < 1.413f ? powf(pixel_color.x * 0.38317f, 1.0f / 2.2f) : 1.0f - exp(-pixel_color.x);
@@ -1222,7 +1266,7 @@ void trace_secondary_shadow_rays(curandState *rand_state, float3 *lights, size_t
 					sample.x * Nb.y + sample.y * primary_hit_results[index].normal.y + sample.z * Nt.y,
 					sample.x * Nb.z + sample.y * primary_hit_results[index].normal.z + sample.z * Nt.z);
 				// don't forget to divide by PDF and multiply by cos(theta)
-				local_hit_result.ray_o = primary_hit_results[index].hit_point + sample_world * make_float3(1e-4);
+				local_hit_result.ray_o = primary_hit_results[index].hit_point + sample_world * make_float3(K_EPSILON);
 				local_hit_result.ray_dir = sample_world;
 				trace_scene(tree, render_camera, scene_objs, num_objs, root_index, indexList, stride, local_hit_result);
 				indirectLigthing += r1 *local_hit_result.hit_color / pdf;
@@ -1291,7 +1335,7 @@ void register_random(curandState *rand_state)
 }
 
 extern "C"
-void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<float4> triangles, std::vector<float4> normals, std::vector<GPUSceneObject> objs, std::vector<float3> textures, bool bruteforce = false)
+void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<float4> triangles, std::vector<float4> normals,std::vector<float2> uvs, std::vector<GPUSceneObject> objs, std::vector<float3> textures, bool bruteforce = false)
 {
 	// --------------------------------Initialize host variables----------------------------------------------------
 	size_t num_objs = objs.size();
@@ -1312,9 +1356,9 @@ void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<f
 	}
 
 	RKDTreeNodeGPU *h_tree = new RKDTreeNodeGPU[size_kd_tree];
-	for (int k = 0, int i = 0; i < num_objs; i++)
+	for (int k = 0, i = 0; i < num_objs; ++i)
 	{
-		for (int n = 0; n < tree[i]->GetNumNodes(); n++, k++)
+		for (int n = 0; n < tree[i]->GetNumNodes(); ++n, ++k)
 		{
 			h_tree[k] = tree[i]->GetNodes()[n];
 		}
@@ -1378,6 +1422,19 @@ void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<f
 
 	// calculate total number of normals in the scene
 	size_t normals_size = normals.size() * sizeof(float4);
+	size_t uvs_size = uvs.size() * sizeof(float2);
+
+	if (uvs_size > 0)
+	{
+		// allocate memory for the triangle meshes on the GPU
+		cudaMalloc((void **)&dev_uvs_p, uvs_size);
+
+		// copy triangle data to GPU
+		cudaMemcpy(dev_uvs_p, uvs.data(), uvs_size, cudaMemcpyHostToDevice);
+
+		// load triangle data into a CUDA texture
+		bind_uvs_to_texture(dev_uvs_p, uvs_size);
+	}
 
 	if (num_objs > 0)
 	{
@@ -1385,7 +1442,7 @@ void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<f
 		cudaMalloc((void **)&dev_triangle_p, triangle_size);
 
 		// copy triangle data to GPU
-		cudaMemcpy(dev_triangle_p, &triangles[0], triangle_size, cudaMemcpyHostToDevice);
+		cudaMemcpy(dev_triangle_p, triangles.data(), triangle_size, cudaMemcpyHostToDevice);
 
 		// load triangle data into a CUDA texture
 		bind_triangles_tro_texture(dev_triangle_p, total_num_triangles);
@@ -1394,7 +1451,7 @@ void copy_memory(std::vector<RKDThreeGPU *>tree, RCamera sceneCam, std::vector<f
 		cudaMalloc((void **)&dev_normals_p, normals_size);
 
 		// copy triangle data to GPU
-		cudaMemcpy(dev_normals_p, &normals[0], normals_size, cudaMemcpyHostToDevice);
+		cudaMemcpy(dev_normals_p, normals.data(), normals_size, cudaMemcpyHostToDevice);
 
 		// load triangle data into a CUDA texture
 		bind_normals_tro_texture(dev_normals_p, normals_size);

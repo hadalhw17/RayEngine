@@ -9,7 +9,7 @@
 #include "KDThreeGPU.h"
 #include "SceneObject.h"
 
-#include "cutil_math.h"
+#include "helper_math.h"
 
 #include <iostream>
 #include <vector>
@@ -36,7 +36,7 @@ void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 bool point_aabb_collision(const GPUBoundingBox& tBox, const float3& vecPoint);
 
-extern "C" void copy_memory(std::vector<RKDThreeGPU *> tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals, std::vector<GPUSceneObject> objs, std::vector<float3> textures);
+extern "C" void copy_memory(std::vector<RKDThreeGPU *> tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals, std::vector<float2> h_uvs, std::vector<GPUSceneObject> objs, std::vector<float3> textures);
 extern "C" void free_memory();
 
 MainWindow::MainWindow()
@@ -52,7 +52,7 @@ MainWindow::MainWindow()
 	{
 		tmp_objs.push_back(objs->object_properties);
 	}
-	copy_memory(CUDATree, *SceneCam, triangles, normals, tmp_objs, Scene->textures);
+	copy_memory(CUDATree, *SceneCam, triangles, normals, uvs, tmp_objs, Scene->textures);
 }
 
 MainWindow::~MainWindow()
@@ -172,6 +172,7 @@ void MainWindow::init_triangles()
 	std::cout << "Initialising triangle buffer" << "\" .. " << std::endl;
 	triangles = {};
 	normals = {};
+	uvs = {};
 	int count = 0;
 	size_t offset = 0;
 	size_t root_offset = 0;
@@ -182,6 +183,7 @@ void MainWindow::init_triangles()
 		float3 *verts = t->get_verts();
 		float3 *faces = t->get_faces();
 		float3 *norms = t->get_normals();
+		float2 *uv = t->uvs;
 
 		for (size_t i = 0; i < t->get_num_faces(); ++i)
 		{
@@ -204,6 +206,16 @@ void MainWindow::init_triangles()
 			normals.push_back(make_float4(n0.x, n0.y, n0.z, 0));
 			normals.push_back(make_float4(n1.x, n1.y, n1.z, 0));
 			normals.push_back(make_float4(n2.x, n2.y, n2.z, 0));
+
+			if (t->num_uvs > 0)
+			{
+				float2 uv0 = uv[(size_t)tri.x];
+				float2 uv1 = uv[(size_t)tri.y];
+				float2 uv2 = uv[(size_t)tri.z];
+				uvs.push_back(make_float2(uv0.x, uv0.y));
+				uvs.push_back(make_float2(uv0.x, uv0.y));
+				uvs.push_back(make_float2(uv0.x, uv0.y));
+			}
 			//t->GetIndexList()[i] += offset;
 		}
 		std::cout << "Old root index: " << t->root_index << std::endl;

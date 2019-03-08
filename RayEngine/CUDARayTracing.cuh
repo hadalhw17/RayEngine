@@ -16,6 +16,8 @@ texture<float4, 1, cudaReadModeElementType> triangle_texture;
 
 texture<float4, 1, cudaReadModeElementType> normals_texture;
 
+texture<float2, 1, cudaReadModeElementType> uvs_texture;
+
 float4 *h_pixels;
 
 __device__
@@ -69,6 +71,15 @@ size_t d_texture_size;
 
 __device__
 int d_object_number;
+
+__device__
+float4 *dev_triangle_p;
+
+__device__
+float4 *dev_normals_p;
+
+__device__
+float2 *dev_uvs_p;
 
 float angle;
 

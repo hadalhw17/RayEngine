@@ -19,10 +19,12 @@ public:
 	float3 *get_verts() const;
 	float3 *get_faces() const;
 	float3 *get_normals() const;
+	float2 *get_uvs() const;
 	int GetNumNodes() const;
 	int get_num_verts() const;
 	int get_num_faces() const;
 	int get_num_norms() const;
+	int get_num_uvs() const;
 	int get_root_index() const;
 	
 
@@ -30,6 +32,8 @@ public:
 
 	std::vector<int> obj_index_list;
 	int root_index;
+	float2 *uvs;
+	size_t num_uvs;
 
 private:
 	RKDTreeNodeGPU *nodes;
@@ -37,10 +41,12 @@ private:
 
 	float3 *verts, *faces, *normals;
 
+
 	size_t num_nodes;
 	size_t num_faces;
 	size_t num_verts;
 	size_t num_norms;
+
 
 	void buildTree(class KDNodeCPU *CPUNode);
 };

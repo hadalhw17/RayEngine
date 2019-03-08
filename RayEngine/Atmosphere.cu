@@ -2,7 +2,6 @@
 
 #include "RayEngine.h"
 
-#define M_PI 3.14156265
 
 template <typename T>
 __device__ __host__

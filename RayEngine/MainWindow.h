@@ -33,6 +33,7 @@ public:
 	std::vector<RKDThreeGPU *> CUDATree;
 	std::vector<float4> triangles;
 	std::vector<float4> normals;
+	std::vector<float2> uvs;
 	float4 *pixels;
 
 	double x_pos = 0;

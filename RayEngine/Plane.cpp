@@ -20,17 +20,17 @@ RPlane::RPlane(float3 normalValue, float distanceValue, float4 ColorValue)
 
 bool RPlane::FindIntersection(RRay * ray, float & t, float & u, float & v)
 {
-	//float3 ray_direction = ray->getRayDirection();
-	//float a = normal.DotProduct(ray_direction);
+	float3 ray_direction = ray->getRayDirection();
+	float a = dot(normal, ray_direction);
 
-	//if (fabs(a) == 1e-6) {
-	//	// ray is parallel to the plane
-	//	return false;
-	//}
-	//else {
-	//	float b = ray->getRayOrigin().VectorAdd(normal.VectorMult(distance).Negative()).DotProduct(normal);
-	//	t = -1 * b / a;
-	//	return (t >= 1e-6);
-	//}
+	if (fabs(a) == K_EPSILON) {
+		// ray is parallel to the plane
+		return false;
+	}
+	else {
+		float b = dot(ray->getRayOrigin() + (normal * (-distance)), normal);
+		t = -1 * b / a;
+		return (t >= K_EPSILON);
+	}
 	return false;
 }

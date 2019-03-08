@@ -164,9 +164,6 @@
     <ClInclude Include="KDThreeGPU.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cutil_math.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="helper_math.h">
       <Filter>Header Files</Filter>
     </ClInclude>

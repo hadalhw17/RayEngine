@@ -4,9 +4,6 @@
 
 struct RCamera;
 
-#define PI_OVER_TWO 1.5707963267948966192313216916397514420985f
-#define M_PI 3.14156265f
-
 
 class RMovableCamera
 {

@@ -53,12 +53,16 @@ public:
 	float3 *get_verts() { return verts; }
 	float3 *get_faces() { return faces; }
 	float3 *get_norms() { return norms; }
+	float2 *get_uvs() { return uvs; }
 	size_t get_num_verts() { return num_verts; }
 	size_t get_num_faces() { return num_faces; }
+	size_t get_num_norms() { return num_norms; }
+	size_t get_num_uvs() { return num_uvs; }
 	float3 *verts;
 	float3 *faces;
 	float3 *norms;
-	size_t num_verts, num_faces, num_norms;
+	float2 *uvs;
+	size_t num_verts, num_faces, num_norms, num_uvs;
 private:
 
 

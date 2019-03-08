@@ -58,7 +58,8 @@ public:
 
 	RBoundingVolume box;
 	float3 *verts, *faces, *norms;
-	size_t num_verts, num_faces, num_norms;
+	float2 *uvs;
+	size_t num_verts, num_faces, num_norms, num_uvs;
 	bool isLeaf = false;
 
 	HOST_DEVICE_FUNCTION RKDTreeCPU();
@@ -67,7 +68,7 @@ public:
 	RKDTreeCPU(RKDTreeCPU* node, RBoundingVolume b, float3 lb, float3 ub, int depth);
 
 	HOST_DEVICE_FUNCTION 
-	RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms, int numVerts, int numFaces, int num_norms);
+	RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms, float2 *uvs, int numVerts, int numFaces, int num_norms, int num_uvs);
 
 	~RKDTreeCPU();
 
@@ -76,6 +77,10 @@ public:
 	float getMinTriValue(int tri_index, Axis axis);
 
 	float getMaxTriValue(int tri_index, Axis axis);
+
+	float _getMinTriValue(int tri_index, Axis axis);
+
+	float _getMaxTriValue(int tri_index, Axis axis);
 
 
 	HOST_DEVICE_FUNCTION 

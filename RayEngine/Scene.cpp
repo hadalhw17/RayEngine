@@ -13,21 +13,22 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-#include "filesystem/resolver.h"
-#include <resolver.h>
+#include <filesystem/resolver.h>
 std::vector<float3> read_ppm(char *filename);
 
 
 RScene::RScene()
 {
 	textures = std::vector<float3>(read_ppm((char *) "Meshes/1.ppm"));
-	ACow *cow = new ACow;
-	sceneObjects.push_back(cow);
 	AFloor *floor = new AFloor;
 	sceneObjects.push_back(floor);
 
+	ACow *cow = new ACow;
+	sceneObjects.push_back(cow);
+
+
 	AGlass *glass = new AGlass;
-	sceneObjects.push_back(glass);
+	//sceneObjects.push_back(glass);
 
 	main_character = new RCharacter();
 	sceneObjects.push_back(main_character);
@@ -129,21 +130,11 @@ std::pair<size_t, size_t> RScene::merge_meshes()
 {
 	size_t numFaces = 0;
 	size_t numVerts = 0;
-	
-	//for (size_t i = 0; i < sceneObjects[0]->get_num_verts(); i++)
-	//{
-	//	sceneObjects[0]->verts[i].y -= 0.01f;
-	//}
-
-
-	//for (int i = 0; i < sceneObjects[1]->get_num_verts(); i++)
-	//{
-	//	sceneObjects[1]->verts[i].z += 0.01;
-	//}
 
 	std::vector<float3> tmp_faces = {};
 	std::vector<float3> tmp_verts = {};
 	std::vector<float3> tmp_norms = {};
+	std::vector<float2> tmp_uvs = {};
 	size_t stride = 0;
 	for (int counter = 0; counter < sceneObjects.size(); counter++)
 	{
@@ -159,10 +150,16 @@ std::pair<size_t, size_t> RScene::merge_meshes()
 			sceneObjects.at(counter)->root_component->get_verts()[i] = tmp_verts[i];
 		}
 
-		for (size_t i = 0; i < sceneObjects.at(counter)->root_component->get_num_verts(); i++)
+		for (size_t i = 0; i < sceneObjects.at(counter)->root_component->get_num_norms(); i++)
 		{
-			tmp_norms.push_back(sceneObjects.at(counter)->root_component->norms[i]);
-			sceneObjects.at(counter)->root_component->norms[i] = tmp_norms[i];
+			tmp_norms.push_back(sceneObjects.at(counter)->root_component->get_norms()[i]);
+			sceneObjects.at(counter)->root_component->get_norms()[i] = tmp_norms[i];
+		}
+
+		for (size_t i = 0; i < sceneObjects.at(counter)->root_component->get_num_uvs(); i++)
+		{
+			tmp_uvs.push_back(sceneObjects.at(counter)->root_component->get_uvs()[i]);
+			sceneObjects.at(counter)->root_component->get_uvs()[i] = tmp_uvs[i];
 		}
 
 		stride += sceneObjects.at(counter)->root_component->get_num_verts();
@@ -171,16 +168,20 @@ std::pair<size_t, size_t> RScene::merge_meshes()
 	numFaces = tmp_faces.size();
 	numVerts = tmp_verts.size();
 	num_normals = tmp_norms.size();
+	num_uvs = tmp_uvs.size();
 
 	arrv = new float3[numVerts];
 	arrf = new float3[numFaces];
 	normals = new float3[num_normals];
+	uvs = new float2[num_uvs];
 
 	std::copy(tmp_verts.begin(), tmp_verts.end(), arrv);
 
 	std::copy(tmp_faces.begin(), tmp_faces.end(), arrf);
 	
 	std::copy(tmp_norms.begin(), tmp_norms.end(), normals);
+
+	std::copy(tmp_uvs.begin(), tmp_uvs.end(), uvs);
 
 	return std::pair<size_t, size_t>(numFaces, numVerts);
 }
@@ -193,7 +194,7 @@ void RScene::build_tree()
 		std::cout << "Constructing tree" << "\" .. " << std::endl;
 		auto start = std::chrono::high_resolution_clock::now();
 		RKDTreeCPU *new_tree = new RKDTreeCPU(obj->root_component->get_verts(), obj->root_component->get_faces(), 
-			obj->root_component->get_norms(), obj->root_component->num_verts, obj->root_component->num_faces, obj->root_component->num_norms);
+			obj->root_component->get_norms(), obj->root_component->get_uvs(), obj->root_component->num_verts, obj->root_component->num_faces, obj->root_component->num_norms, obj->root_component->num_uvs);
 
 		obj->object_properties.num_nodes = new_tree->numNodes;
 		obj->collision_box = GPUBoundingBox(&new_tree->root->box);

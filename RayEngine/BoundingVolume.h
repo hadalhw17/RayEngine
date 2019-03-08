@@ -26,7 +26,7 @@ public:
 	int triangleAmount = 0;
 	int numRayRBoundingVolumeTests = 0;
 	float3 splitPos;
-	float3 bounds[2] = { kInfinity, -kInfinity };
+	float3 bounds[2] = { K_INFINITY, -K_INFINITY };
 
 	
 	RBoundingVolume() {}
@@ -162,7 +162,6 @@ public:
 		else {
 			return false;
 		}
-		return false;
 	}
 
 	

@@ -3,7 +3,7 @@
 #include "Triangle.h"
 
 #include "cuda_runtime.h"
-#include "cutil_math.h"
+#include "helper_math.h"
 
 
 #include <memory>
@@ -12,7 +12,7 @@
 const int MAX_DEPTH = 41;
 const  int OBJECTS_IN_LEAF = 20;
 const int  MAX_SPLITS_OF_VOXEL = 5;
-const int SPLIT_COST = 5;
+const int SPLIT_COST = 0.132;
 
 KDNodeCPU::KDNodeCPU()
 {
@@ -49,7 +49,7 @@ void KDNodeCPU::PrintDebugString()
 	std::cout << "bounding box max: ( " << box.bounds[1].x << ", " << box.bounds[1].y << ", " << box.bounds[1].z << " )" << std::endl;
 	std::cout << "num_tris: " << numFaces << std::endl;
 	std::cout << "id: " << vid << std::endl;
-
+	
 	// Print split plane axis.
 	if (axis == X_Axis) {
 		std::cout << "split plane axis: X_AXIS" << std::endl;
@@ -97,8 +97,8 @@ RKDTreeCPU::RKDTreeCPU()
 	numLevels = 0;
 	numLeaves = 0;
 	depth = 0;
-	lowerBound = make_float3(kInfinity);
-	upperBound = make_float3(-kInfinity);
+	lowerBound = make_float3(K_INFINITY);
+	upperBound = make_float3(-K_INFINITY);
 }
 
 RKDTreeCPU::RKDTreeCPU(RKDTreeCPU * node, RBoundingVolume b, float3 lb, float3 ub, int d)
@@ -114,11 +114,12 @@ RKDTreeCPU::RKDTreeCPU(RKDTreeCPU * node, RBoundingVolume b, float3 lb, float3 u
 
 
 
-RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_verts, int num_faces, int num_norms)
+RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms, float2 *_uvs,  int num_verts, int num_faces, int num_norms, int num_uvs)
 {
 	this->num_verts = num_verts;
 	this->num_faces = num_faces;
 	this->num_norms = num_norms;
+	this->num_uvs = num_uvs;
 
 	this->numNodes = 0;
 	this->numLevels = 0;
@@ -142,6 +143,16 @@ RKDTreeCPU::RKDTreeCPU(float3 *_verts, float3 *_faces, float3 *_norms,  int num_
 	for (int i = 0; i < num_norms; ++i)
 	{
 		this->norms[i] = _norms[i];
+	}
+
+	if (num_uvs > 0)
+	{
+		this->uvs = new float2[num_uvs];
+
+		for (int i = 0; i < num_uvs; ++i)
+		{
+			this->uvs[i] = _uvs[i];
+		}
 	}
 
 	// Create list of triangle indices for first level of kd-tree.
@@ -205,6 +216,30 @@ float RKDTreeCPU::getMinTriValue(int tri_index, Axis axis)
 	}
 }
 
+
+float RKDTreeCPU::_getMinTriValue(int tri_index, Axis axis)
+{
+	float3 tri = faces[tri_index];
+	float3 v0 = verts[(int)tri.x];
+	float3 v1 = verts[(int)tri.y];
+	float3 v2 = verts[(int)tri.z];
+	RBoundingVolume box;
+	box.extendBy(v0);
+	box.extendBy(v1);
+	box.extendBy(v2);
+
+	if (axis == X_Axis) {
+		return box.bounds[0].x;
+	}
+	else if (axis == Y_Axis) {
+		return box.bounds[0].y;
+	}
+	else {
+		return box.bounds[0].z;
+	}
+}
+
+
 float RKDTreeCPU::getMaxTriValue(int tri_index, Axis axis)
 {
 	float3 tri = faces[tri_index];
@@ -223,6 +258,28 @@ float RKDTreeCPU::getMaxTriValue(int tri_index, Axis axis)
 	}
 }
 
+
+float RKDTreeCPU::_getMaxTriValue(int tri_index, Axis axis)
+{
+	float3 tri = faces[tri_index];
+	float3 v0 = verts[(int)tri.x];
+	float3 v1 = verts[(int)tri.y];
+	float3 v2 = verts[(int)tri.z];
+	RBoundingVolume box;
+	box.extendBy(v0);
+	box.extendBy(v1);
+	box.extendBy(v2);
+
+	if (axis == X_Axis) {
+		return box.bounds[1].x;
+	}
+	else if (axis == Y_Axis) {
+		return box.bounds[1].y;
+	}
+	else {
+		return box.bounds[1].z;
+	}
+}
 bool KDNodeCPU::isPointToLeftOfSplittingPlane(const float3 &p) const
 {
 	if (axis == X_Axis) {
@@ -245,27 +302,27 @@ KDNodeCPU* KDNodeCPU::getNeighboringNode(float3 p)
 {
 
 	// Check left face.
-	if (fabs(p.x - box.bounds[0].x) < kEpsilon) {
+	if (fabs(p.x - box.bounds[0].x) < K_EPSILON) {
 		return ropes[LEFT];
 	}
 	// Check front face.
-	else if (fabs(p.z - box.bounds[1].z) < kEpsilon) {
+	else if (fabs(p.z - box.bounds[1].z) < K_EPSILON) {
 		return ropes[FRONT];
 	}
 	// Check right face.
-	else if (fabs(p.x - box.bounds[1].x) < kEpsilon) {
+	else if (fabs(p.x - box.bounds[1].x) < K_EPSILON) {
 		return ropes[RIGHT];
 	}
 	// Check back face.
-	else if (fabs(p.z - box.bounds[0].z) < kEpsilon) {
+	else if (fabs(p.z - box.bounds[0].z) < K_EPSILON) {
 		return ropes[BACK];
 	}
 	// Check top face.
-	else if (fabs(p.y - box.bounds[1].y) < kEpsilon) {
+	else if (fabs(p.y - box.bounds[1].y) < K_EPSILON) {
 		return ropes[TOP];
 	}
 	// Check bottom face.
-	else if (fabs(p.y - box.bounds[0].y) < kEpsilon) {
+	else if (fabs(p.y - box.bounds[0].y) < K_EPSILON) {
 		return ropes[BOTTOM];
 	}
 	// p should be a point on one of the faces of this node's bounding box, but in this case, it isn't.
@@ -290,7 +347,6 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 	if (objCount <= OBJECTS_IN_LEAF || dep >= MAX_DEPTH)
 	{
 		node->isLeaf = true;
-
 		if (dep > numLevels)
 		{
 			numLevels = dep;
@@ -298,9 +354,7 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 
 		node->vid = numNodes;
 		++numNodes;
-
 		++numLeaves;
-
 		return node;
 	}
 
@@ -309,33 +363,191 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 	RBoundingVolume rightBBox = bbox;
 
 
-	// Average midpoint of the bounding box.
+	//// Average midpoint of the bounding box.
 	float midp = 0;
 	Axis split_axis = getLongestBoundingBoxSide(make_float3(bbox.bounds[0].x, bbox.bounds[0].y, bbox.bounds[0].z),
 		make_float3(bbox.bounds[1].x, bbox.bounds[1].y, bbox.bounds[1].z));
-	node->axis = split_axis;
+
 
 	// Update boxes boundaries according to split axis and mid point.
 	switch (split_axis) {
 	case X_Axis:		//X_Axis
 		midp = bbox.bounds[0].x + ((bbox.bounds[1].x - bbox.bounds[0].x) / (2.f));
-		leftBBox.bounds[1].x = midp + kEpsilon;
-		rightBBox.bounds[0].x = midp - kEpsilon;
+		leftBBox.bounds[1].x = midp + K_EPSILON;
+		rightBBox.bounds[0].x = midp - K_EPSILON;
 		break;
 	case Y_Axis:		//Y_Axis
 		midp = bbox.bounds[0].y + ((bbox.bounds[1].y - bbox.bounds[0].y) / (2.f));
-		leftBBox.bounds[1].y = midp + kEpsilon;
-		rightBBox.bounds[0].y = midp - kEpsilon;
+		leftBBox.bounds[1].y = midp + K_EPSILON;
+		rightBBox.bounds[0].y = midp - K_EPSILON;
 		break;
 	case Z_Axis:		//Z_Axis
 		midp = bbox.bounds[0].z + ((bbox.bounds[1].z - bbox.bounds[0].z) / (2.f));
-		leftBBox.bounds[1].z = midp + kEpsilon;
-		rightBBox.bounds[0].z = midp - kEpsilon;
+		leftBBox.bounds[1].z = midp + K_EPSILON;
+		rightBBox.bounds[0].z = midp - K_EPSILON;
 		break;
 	}
 
-	node->split_val = midp;
 
+	//float min_sah = K_INFINITY;
+	//for (int axis = 0; axis < 3; ++axis)
+	//{
+	//	// sort primitives belong to current axis and min bounds
+	//	std::vector<int> tmp_indecies;
+	//	tmp_indecies.assign(tri_indecies, tri_indecies + objCount);
+	//	std::sort(std::begin(tmp_indecies), std::end(tmp_indecies), [axis, this](int a, int b)
+	//	{
+	//		float min_a = getMinTriValue(a, (Axis)axis);
+	//		float min_b = getMinTriValue(b, (Axis)axis);
+
+	//		return min_a > min_b;
+	//		
+	//	});
+
+
+	//	for (int i = 1; i < objCount; i++)
+	//	{
+	//		int onLeftSide = i;
+
+	//		int onRightSide = objCount - i;
+
+	//		float split = getMinTriValue(tmp_indecies[i], (Axis)axis);
+
+
+	//		if (axis == X_Axis && split == bbox.bounds[0].x)
+	//			continue;
+	//		else if (axis == Y_Axis && split == bbox.bounds[0].y)
+	//			continue;
+	//		else if (axis == Z_Axis && split == bbox.bounds[0].z)
+	//			continue;
+
+	//		// evaluate SAH
+
+	//		RBoundingVolume box_left = bbox;
+	//		RBoundingVolume box_right = bbox;
+
+	//		if (axis == X_Axis)
+	//		{
+	//			box_left.bounds[1].x = split;
+	//			box_right.bounds[0].x = split;
+	//		}
+	//		else if (axis == Y_Axis)
+	//		{
+	//			box_left.bounds[1].y = split;
+	//			box_right.bounds[0].y = split;
+	//		}
+	//		else if (axis == Z_Axis)
+	//		{
+	//			box_left.bounds[1].z = split;
+	//			box_right.bounds[0].z = split;
+	//		}
+	//		else
+	//			break;
+
+	//		float sah = SPLIT_COST + onLeftSide * box_left.getSA() + onRightSide * box_right.getSA();
+
+	//		if (sah < min_sah)
+	//		{
+	//			min_sah = sah;
+	//			midp = split;
+	//			split_axis = (Axis)axis;
+	//			if (axis == X_Axis)
+	//			{
+	//				leftBBox.bounds[1].x = split;
+	//				rightBBox.bounds[0].x = split;
+	//			}
+	//			else if (axis == Y_Axis)
+	//			{
+	//				leftBBox.bounds[1].y = split;
+	//				rightBBox.bounds[0].y = split;
+	//			}
+	//			else if (axis == Z_Axis)
+	//			{
+	//				leftBBox.bounds[1].z = split;
+	//				rightBBox.bounds[0].z = split;
+	//			}
+	//		}
+	//	}
+
+	//	// sort primitives belong to current axis and max bounds
+	//	//std::vector<int> tmp_indecies_max;
+	//	//tmp_indecies.assign(tri_indecies, tri_indecies + objCount);
+	//	std::sort(std::begin(tmp_indecies), std::end(tmp_indecies), [axis, this](int a, int b)
+	//	{
+	//		float min_a = getMaxTriValue(a, (Axis)axis);
+	//		float min_b = getMaxTriValue(b, (Axis)axis);
+
+	//		return min_a > min_b;
+
+	//	});
+
+	//	for (int i = objCount - 2; i >= 0; i--)
+	//	{
+	//		int onLeftSide = i + 1;
+
+	//		int onRightSide = objCount - i - 1;
+
+	//		float split = getMaxTriValue(tmp_indecies[i], (Axis)axis);
+
+	//		if (axis == X_Axis && split == bbox.bounds[1].x)
+	//			continue;
+	//		else if (axis == Y_Axis && split == bbox.bounds[1].y)
+	//			continue;
+	//		else if (axis == Z_Axis && split == bbox.bounds[1].z)
+	//			continue;
+	//		else
+	//			break;
+
+	//		// evaluate SAH
+
+	//		RBoundingVolume box_left = bbox;
+	//		RBoundingVolume box_right = bbox;
+
+	//		if (axis == X_Axis)
+	//		{
+	//			box_left.bounds[1].x = split;
+	//			box_right.bounds[0].x = split;
+	//		}
+	//		else if (axis == Y_Axis)
+	//		{
+	//			box_left.bounds[1].y = split;
+	//			box_right.bounds[0].y = split;
+	//		}
+	//		else if (axis == Z_Axis)
+	//		{
+	//			box_left.bounds[1].z = split;
+	//			box_right.bounds[0].z = split;
+	//		}
+
+	//		float sah = SPLIT_COST + onLeftSide * box_left.getSA() + onRightSide * box_right.getSA();
+
+
+	//		if (sah < min_sah)
+	//		{
+	//			min_sah = sah;
+	//			midp = split;
+	//			split_axis = (Axis)axis;
+	//			if (axis == X_Axis)
+	//			{
+	//				leftBBox.bounds[1].x = split;
+	//				rightBBox.bounds[0].x = split;
+	//			}
+	//			else if (axis == Y_Axis)
+	//			{
+	//				leftBBox.bounds[1].y = split;
+	//				rightBBox.bounds[0].y = split;
+	//			}
+	//			else if (axis == Z_Axis)
+	//			{
+	//				leftBBox.bounds[1].z = split;
+	//				rightBBox.bounds[0].z = split;
+	//			}
+	//		}
+	//	}
+	//}
+
+	node->axis = split_axis;
+	node->split_val = midp;
 
 	// Allocate and initialize memory for temporary buffers to hold triangle indices for left and right subtrees.
 	int *temp_left_tri_indices = new int[objCount];
@@ -625,8 +837,8 @@ void RKDTreeCPU::optimizeRopes(KDNodeCPU *ropes[], RBoundingVolume bbox)
 RBoundingVolume RKDTreeCPU::generateBox(float3 *verts, int num_verts)
 {
 	// Compute bounding box for input mesh.
-	float3 max = make_float3(-kInfinity, -kInfinity, -kInfinity);
-	float3 min = make_float3(kInfinity, kInfinity, kInfinity);
+	float3 max = make_float3(-K_INFINITY, -K_INFINITY, -K_INFINITY);
+	float3 min = make_float3(K_INFINITY, K_INFINITY, K_INFINITY);
 
 	for (int i = 0; i < num_verts; ++i) {
 		if (verts[i].x < min.x) {
@@ -751,7 +963,7 @@ bool RKDTreeCPU::intersect(KDNodeCPU * node, RRay r, float & t, float3 &normal)
 		}
 		else
 		{
-			float tNearObject = kInfinity;
+			float tNearObject = K_INFINITY;
 
 			for (int i = 0; i < node->numFaces; ++i)
 			{
@@ -835,7 +1047,7 @@ bool RKDTreeCPU::singleRayStacklessIntersect(KDNodeCPU *node, float3 ray_o, floa
 bool RKDTreeCPU::singleRayStacklessIntersect(RRay ray, float & t, float3 & normal)
 {
 	// Perform ray/AABB intersection test.
-	t = kInfinity;
+	t = K_INFINITY;
 	float t_near, t_far;
 	float3 ray_o = ray.getRayOrigin();
 	float3 ray_dir = ray.getRayDirection();
@@ -849,6 +1061,7 @@ bool RKDTreeCPU::singleRayStacklessIntersect(RRay ray, float & t, float3 & norma
 
 bool RKDTreeCPU::intersect(RRay r, float &t, float3 &normal)
 {
-	t = kInfinity;
+	t = K_INFINITY;
 	return intersect(root, r, t, normal);
 }
+

@@ -1,7 +1,7 @@
 #include "MovableCamera.h"
 
 #include "cuda_runtime_api.h"
-#include "cutil_math.h"
+#include "helper_math.h"
 
 #include "RayEngine.h"
 #include "Camera.h"
@@ -144,7 +144,7 @@ void RMovableCamera::fix_yaw()
 void RMovableCamera::fix_pitch()
 {
 	float padding = 0.05f;
-	pitch = clamp2(pitch, -PI_OVER_TWO + padding, PI_OVER_TWO - padding); // Limit the pitch.
+	pitch = clamp2(pitch, -M_PI_2 + padding, M_PI_2 - padding); // Limit the pitch.
 }
 
 void RMovableCamera::fix_radius()

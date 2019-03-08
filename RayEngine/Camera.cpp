@@ -1,6 +1,6 @@
 #include "Camera.h"
 
-#include "cutil_math.h"
+#include "helper_math.h"
 
 RCamera::RCamera() :
 	campos(make_float3(0)),

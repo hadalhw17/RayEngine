@@ -4,7 +4,7 @@
 
 #include <memory>
 #include <thrust/swap.h>
-#include "cutil_math.h"
+#include "helper_math.h"
 
 
 

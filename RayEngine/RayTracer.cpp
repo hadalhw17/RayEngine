@@ -18,8 +18,7 @@
 #include <memory>
 
 #include "cuda_runtime_api.h"
-#include "cutil_math.h"
-#define M_PI 3.14156265
+#include "helper_math.h"
 
 
 RRayTracer::RRayTracer()
@@ -114,7 +113,7 @@ float4 RRayTracer::castRay(RRay ray, int depth, RKDTreeCPU *node)
 {
 	float4 finalRColor = make_float4(0, 0, 0, 0);
 	if (depth > 2) return make_float4(0, 0, 0, 0);
-	float tNear = kInfinity;
+	float tNear = K_INFINITY;
 	float3 tmp_normal;
 
 	//distance to the intersection and bariocentric coordinates
@@ -128,7 +127,7 @@ float4 RRayTracer::castRay(RRay ray, int depth, RKDTreeCPU *node)
 	//	float3 intersectionPosition = ray->getRayOrigin() + (ray->getRayDirection() * tNear);
 	//	float3 intersectingRayDirection = ray->getRayDirection();
 	//	float3 normal = hitObject->GetNormalAt(intersectionPosition);
-	//	float3 bias = normal * (1e-4);
+	//	float3 bias = normal * (1eK_EPSILON4);
 
 	//	//if object has tile pattern
 	//	if (hitObject->GetColor().w == 2)

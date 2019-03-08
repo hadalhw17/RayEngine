@@ -1,6 +1,6 @@
 #include "Triangle.h"
 #include "BoundingVolume.h"
-#include "cutil_math.h"
+#include "helper_math.h"
 #include "cuda_runtime_api.h"
 
 RTriangle::RTriangle(float3 c0, float3 c1, float3 c2, float4 c)
@@ -59,7 +59,7 @@ bool RTriangle::FindIntersection(RRay * ray, float & t, float & u, float & v)
 	//float det = v0v1.DotProduct(pvec);
 
 	//// ray and triangle are parallel if det is close to 0
-	//if (fabs(det) < -kEpsilon) return false;
+	//if (fabs(det) < -K_EPSILON) return false;
 
 	//float invDet = 1 / det;
 
@@ -73,7 +73,7 @@ bool RTriangle::FindIntersection(RRay * ray, float & t, float & u, float & v)
 
 	//t = v0v2.DotProduct(qvec) * invDet;
 
-	return (t > kEpsilon) ? true : false;
+	return (t > K_EPSILON) ? true : false;
 }
 
 float3 RTriangle::GetNormalAt(float3 intersection_position)
