@@ -7,7 +7,7 @@ ACow::ACow()
 	:RSceneObject((char *)"Meshes/cow.obj")
 {
 	Material material;
-	material.type = TILE;
+	material.type = PHONG;
 	material.color = make_float4(0, 0, 0.2, 0);
 	material.uvs = true;
 	float3 location = make_float3(0);
@@ -26,5 +26,5 @@ void ACow::tick(float delta_time)
 	RSceneObject::tick(delta_time);
 
 	//object_properties.location.x += 0.01f;
-	//object_properties.rotation.y += 10;
+	//object_properties.rotation.y += 0.01f;
 }

@@ -111,23 +111,23 @@ inline float modulo(const float &f)
 
 float4 RRayTracer::castRay(RRay ray, int depth, RKDTreeCPU *node)
 {
-	float4 finalRColor = make_float4(0, 0, 0, 0);
-	if (depth > 2) return make_float4(0, 0, 0, 0);
-	float tNear = K_INFINITY;
-	float3 tmp_normal;
+	//float4 finalRColor = make_float4(0, 0, 0, 0);
+	//if (depth > 2) return make_float4(0, 0, 0, 0);
+	//float tNear = K_INFINITY;
+	//float3 tmp_normal;
 
-	//distance to the intersection and bariocentric coordinates
-	if (traceShadow(ray, tNear, tmp_normal, node))
-	{
-		//qDebug() << node->intersectionAmount;
-		//simple_shade(finalRColor, tmp_normal, ray->getRayDirection());
-		finalRColor.x = (tmp_normal.x < 0.0f) ? (tmp_normal.x * -1.0f) : tmp_normal.x;
-		finalRColor.y = (tmp_normal.y < 0.0f) ? (tmp_normal.y * -1.0f) : tmp_normal.y;
-		finalRColor.z = (tmp_normal.z < 0.0f) ? (tmp_normal.z * -1.0f) : tmp_normal.z;
-	//	float3 intersectionPosition = ray->getRayOrigin() + (ray->getRayDirection() * tNear);
-	//	float3 intersectingRayDirection = ray->getRayDirection();
-	//	float3 normal = hitObject->GetNormalAt(intersectionPosition);
-	//	float3 bias = normal * (1eK_EPSILON4);
+	////distance to the intersection and bariocentric coordinates
+	//if (traceShadow(ray, tNear, tmp_normal, node))
+	//{
+	//	//qDebug() << node->intersectionAmount;
+	//	//simple_shade(finalRColor, tmp_normal, ray->getRayDirection());
+	//	finalRColor.x = (tmp_normal.x < 0.0f) ? (tmp_normal.x * -1.0f) : tmp_normal.x;
+	//	finalRColor.y = (tmp_normal.y < 0.0f) ? (tmp_normal.y * -1.0f) : tmp_normal.y;
+	//	finalRColor.z = (tmp_normal.z < 0.0f) ? (tmp_normal.z * -1.0f) : tmp_normal.z;
+	//	float3 intersectionPosition = ray.getRayOrigin() + (ray.getRayDirection() * tNear);
+	//	float3 intersectingRayDirection = ray.getRayDirection();
+	//	float3 normal = hitObjectGetNormalAt(intersectionPosition);
+	//	float3 bias = normal * (K_EPSILON);
 
 	//	//if object has tile pattern
 	//	if (hitObject->GetColor().w == 2)
@@ -148,14 +148,14 @@ float4 RRayTracer::castRay(RRay ray, int depth, RKDTreeCPU *node)
 	//			lightSources[i]->Illuminate(intersectionPosition, lightDir, lightInt, tShadowed);
 	//			RObject *intObj;
 
-	//			RRay *difRay = new RRay(intersectionPosition + (normal), -lightDir);
+	//			RRay difRay(intersectionPosition + (normal), -lightDir);
 
 	//			bool vis = traceShadow(difRay, tShadowed, &intObj, node);
 
 	//			diffuse = diffuse + (lightInt * (vis * 0.18) * (std::max(0.0, (double)dot(normal,(-lightDir)))));
 
 	//			float3 R = reflect(lightDir, normal);
-	//			float3 dir = ray->getRayDirection();
+	//			float3 dir = ray.getRayDirection();
 	//			specular = specular + (lightInt * (vis) * (std::pow(std::max(0.0, (double)dot(R, -dir)), 10)));
 	//		}
 	//		 finalRColor = finalRColor + (diffuse * (0.8)) + (specular * (0.2));
@@ -165,19 +165,19 @@ float4 RRayTracer::castRay(RRay ray, int depth, RKDTreeCPU *node)
 	//	{
 	//		float4 refractionRColor, reflectionRColor;
 	//		float kr = 0, ior = 1.5;
-	//		float3 direct = ray->getRayDirection();
+	//		float3 direct = ray.getRayDirection();
 	//		fresnel(direct, normal, ior, kr);
 	//		if (kr < 1)
 	//		{
 	//			float3 refractionDirection = normalize(refract(direct, normal, ior));
 	//			float3 refractionRayOrig = dot(refractionDirection, normal) < 0 ? intersectionPosition  - (bias) : intersectionPosition + (bias);
-	//			RRay *refractionRay = new RRay(refractionRayOrig, refractionDirection);
+	//			RRay refractionRay(refractionRayOrig, refractionDirection);
 	//			refractionRColor = castRay(refractionRay, depth + 1, node);
 	//		}
 
 	//		float3 reflectionDirection = normalize(reflect(direct, normal));
 	//		float3 reflectionRayOrig = dot(reflectionDirection, normal) < 0 ? intersectionPosition + (bias) : intersectionPosition -(bias);
-	//		RRay *reflectionRay = new RRay(reflectionRayOrig, reflectionDirection);
+	//		RRay reflectionRay(reflectionRayOrig, reflectionDirection);
 	//		reflectionRColor = castRay(reflectionRay, depth + 1, node);
 
 	//		// mix the two
@@ -192,14 +192,14 @@ float4 RRayTracer::castRay(RRay ray, int depth, RKDTreeCPU *node)
 	//		float tShad;
 	//		RObject *shadObject;
 	//		lightSources[i]->Illuminate(intersectionPosition, lightDir, lightIntensity, tShad);
-	//		RRay *shadowRay = new RRay(intersectionPosition + (bias), -lightDir);
+	//		RRay shadowRay(intersectionPosition + (bias), -lightDir);
 	//		bool vis = !traceShadow(shadowRay, tShad, &shadObject, node);
 	//		if (vis)
 	//			finalRColor = finalRColor + (lightIntensity * (std::max(0.0, (double)dot(normal,-lightDir))) * (0.099));
 
 	//	}
-	}
-	return finalRColor;
+	//}
+	//return finalRColor;
 }
 
 void RRayTracer::tilePattern(float4 &color, int square)
@@ -285,3 +285,65 @@ void RRayTracer::simple_shade(float4 &color, float3 normal, float3 ray_dir)
 	color = make_float4(max(0.f, dot(normal, -ray_dir))); // facing ratio 
 }
 
+//void trace(std::vector<RObject> scene_objects, double xCamPos, double zCamPos, double xLookAt, double yLookAt, double zLookAt)
+//{
+//	size_t width = 500;
+//	size_t height = 500;
+//	float3 Y = make_float3(0, 1, 0);
+//
+//	double aspectratio = width / (double)height;
+//
+//	float3 cam_pos = make_float3(xCamPos, 0.3, zCamPos);
+//
+//	// Where camera looks at.
+//	float3 look_at = make_float3(xLookAt, yLookAt, zLookAt);
+//
+//	// Vector between camera and the point where to look at.
+//	float3 diff_btw = cam_pos - look_at;
+//
+//	// Compute variables that define camera.
+//	float3 camDir = normalize(-diff_btw);
+//	float3 camDown = normalize(cross(Y, camDir));
+//	float3 camRight = cross(camDown, camDir);
+//
+//	// Create camera.
+//	RCamera sceneCam(cam_pos, camDir, camDown, camRight);
+//
+//	// Rendered image.
+//	RGBType *pixels = new RGBType[width * height * sizeof(RGBType)];
+//
+//	// Loop over all if the pixels of the image.
+//	for (size_t i = 0; i < width; i++)
+//	{
+//		for (size_t j = 0; j < height; j++)
+//		{
+//			int flatIndex = j * width + i;
+//
+//			// Find position of pixels for perspective projection.
+//			double x = (i + 0.5) / width;
+//			double y = ((height - j) + 0.5) / height;
+//
+//			// Initialise variables that define ray.
+//			float3 cam_ray_origin = sceneCam.getCameraPosition();
+//			float3 cam_ray_direction = normalize(camDir + camDown * x + camRight * y);
+//			RRay cam_ray(cam_ray_origin, cam_ray_direction, t_hit);
+//
+//			float t_hit;
+//			float t_min = K_INFINITY;
+//			
+//			// Loops over all of the scene objects and test for the intersection with each of them.
+//			if (find_intersection(cam_ray, scene_objects)
+//			{
+//				if (t_hit < t_min)
+//				{
+//					// If intersection is found, then paint the pixel.
+//					t_min = t_hit;
+//					float4 finalColor = castRay(cam_ray, 0, scene_objects);
+//					pixels[flatIndex].r = finalColor.x;
+//					pixels[flatIndex].g = finalColor.y;
+//					pixels[flatIndex].b = finalColor.z;
+//				}
+//			}
+//		}
+//	}
+//}

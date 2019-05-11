@@ -9,6 +9,8 @@
 #include <memory>
 #include <iostream>
 
+#include"RayEngine.h"
+
 const int MAX_DEPTH = 41;
 const  int OBJECTS_IN_LEAF = 20;
 const int  MAX_SPLITS_OF_VOXEL = 5;
@@ -558,7 +560,7 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 	// Decide whether primitive goes to the right or to the left node.
 	float minVal, maxVal;
 
-	for (size_t i = 0; i < objCount; i++)
+	for (int i = 0; i < objCount; i++)
 	{
 		// Split objects based on their midpoints size of average in axises.
 		switch (split_axis) {
@@ -607,7 +609,7 @@ KDNodeCPU * RKDTreeCPU::build(int dep, int objCount, int *tri_indecies, RBoundin
 	// Filter indecies between right and left by removing the one that have -1.
 	int left_index = 0, right_index = 0;
 
-	for (size_t i = 0; i < objCount; ++i) {
+	for (int i = 0; i < objCount; ++i) {
 		if (temp_left_tri_indices[i] != -1) {
 			left_tri_indices[left_index] = temp_left_tri_indices[i];
 			++left_index;
@@ -1014,7 +1016,7 @@ bool RKDTreeCPU::singleRayStacklessIntersect(KDNodeCPU *node, float3 ray_o, floa
 				float3 n2 = norms[(int)tri.z];
 
 				// Perform ray/triangle intersection test.
-				float tmp_t = INFINITY;
+				float tmp_t = K_INFINITY;
 				float3 tmp_normal = make_float3(0.0f, 0.0f, 0.0f);
 				bool intersects_tri = triIntersect(ray.getRayOrigin(), ray.getRayDirection(), v0, v1, v2, tmp_t, tmp_normal, n0, n1, n2);
 

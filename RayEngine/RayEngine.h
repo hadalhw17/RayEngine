@@ -1,7 +1,6 @@
 #pragma once
 #include "device_launch_parameters.h"
 
-
 #define K_INFINITY	1e20f					// Mathematical infinity
 #define K_EPSILON	1e-4f					// Error value
 #define M_PI		3.14159265358979323846  // pi

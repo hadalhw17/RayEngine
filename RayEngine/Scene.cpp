@@ -28,7 +28,7 @@ RScene::RScene()
 
 
 	AGlass *glass = new AGlass;
-	//sceneObjects.push_back(glass);
+	sceneObjects.push_back(glass);
 
 	main_character = new RCharacter();
 	sceneObjects.push_back(main_character);
