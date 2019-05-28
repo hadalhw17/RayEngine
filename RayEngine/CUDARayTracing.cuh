@@ -82,3 +82,5 @@ __device__
 float2 *dev_uvs_p;
 
 float angle;
+
+bool should_shade;

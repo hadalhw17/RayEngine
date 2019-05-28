@@ -21,7 +21,12 @@
 
 using edge = std::pair<int, int>;
 
-
+enum TerrainBrushType
+{
+	ADD = 0,
+	SUBTRACT = 1,
+	INTERSECT = 2
+};
 
 struct GPUVolumeObjectInstance
 {

@@ -23,7 +23,8 @@
  
 extern uchar4* render_frame(RCamera sceneCam);
 extern "C" void initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf);
-extern void spawn_obj(RCamera pos);
+extern void spawn_obj(RCamera pos, TerrainBrushType brush_type);
+extern void toggle_shadow();
 extern "C" void copy_memory(std::vector<RKDThreeGPU*> tree, RCamera _sceneCam, std::vector<float4> h_triangles,
 	std::vector<float4> h_normals, std::vector<float2> h_uvs, std::vector<GPUSceneObject> objs, std::vector<float3> textures, Grid* grid);
 extern void free_memory();
@@ -39,6 +40,7 @@ RMovableCamera *movable_camera;
 GLuint pbo = 0;     // OpenGL pixel buffer object
 GLuint tex = 0;     // OpenGL texture object
 struct cudaGraphicsResource* cuda_pbo_resource; // CUDA Graphics Resource (to transfer PBO)
+TerrainBrushType brush_type;
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -152,13 +154,14 @@ void MainWindow::processInput(float delta_time, GLFWwindow *window)
 	{
 		tmp_cam->strafe(-scale);
 	}
-	else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+	else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS && click_timer > 10.f)
 	{
-		x_look_at -= 10.f;
+		click_timer = 0.f;
+		toggle_shadow();
 	}
 	else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
 	{
-		x_look_at += 10.f;
+		
 
 	}
 	else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
@@ -176,6 +179,13 @@ void MainWindow::processInput(float delta_time, GLFWwindow *window)
 	{
 		click_timer = 0.f;
 		should_spawn = true;
+		brush_type = TerrainBrushType::ADD;
+	}
+	else if (!should_spawn && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_2) == GLFW_PRESS && click_timer > 10.f)
+	{
+		click_timer = 0.f;
+		should_spawn = true;
+		brush_type = TerrainBrushType::SUBTRACT;
 	}
 
 	bool overlaps = false;
@@ -676,7 +686,7 @@ int main()
 		if (should_spawn)
 		{
 		
-			spawn_obj(*main_window->SceneCam);
+			spawn_obj(*main_window->SceneCam, brush_type);
 			should_spawn = false;
 		}
 
