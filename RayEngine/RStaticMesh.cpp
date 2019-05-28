@@ -218,3 +218,24 @@ std::vector<float> RStaticMesh::Intersect(RRay * r)
 	}
 	return intersections;
 }
+
+void RStaticMesh::generate_face_normals()
+{
+	for (size_t i = 0; i < num_faces; ++i)
+	{
+		// Get triangle.
+		float3 tri = faces[i];
+
+		float3 v0 = verts[(size_t)tri.x];
+		float3 v1 = verts[(size_t)tri.y];
+		float3 v2 = verts[(size_t)tri.z];
+
+		float3 e0 = v0 - v1;
+		float3 e1 = v1 - v2;
+		float3 e2 = v2 - v0;
+
+		float3 nor = cross(e0, e2);
+		face_normals.push_back(nor);
+
+	}
+}

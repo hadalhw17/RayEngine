@@ -11,7 +11,7 @@
 
 #include"RayEngine.h"
 
-const int MAX_DEPTH = 41;
+const int MAX_DEPTH = 1;
 const  int OBJECTS_IN_LEAF = 20;
 const int  MAX_SPLITS_OF_VOXEL = 5;
 const int SPLIT_COST = 0.132;

@@ -16,19 +16,28 @@
 #include "MainWindow.h"
 #include "MovableCamera.h"
 #include <thread>
+#include "Grid.h"
+#include <cuda_gl_interop.h>
 
-//#include "CUDARayTracing.cuh"
 
+ 
+extern uchar4* render_frame(RCamera sceneCam);
+extern "C" void initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf);
+extern void spawn_obj(RCamera pos);
+extern "C" void copy_memory(std::vector<RKDThreeGPU*> tree, RCamera _sceneCam, std::vector<float4> h_triangles,
+	std::vector<float4> h_normals, std::vector<float2> h_uvs, std::vector<GPUSceneObject> objs, std::vector<float3> textures, Grid* grid);
+extern void free_memory();
 
 double currentFrame;
 double lastFrame;
 double deltaTime;
+float click_timer;
 
 MainWindow *main_window;
 RMovableCamera *movable_camera;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow *window);
+void processInput(float delta_dime, GLFWwindow *window);
 
 static void cursorPositionCallback(GLFWwindow *window, double xPos, double yPos);
 void cursorEnterCallback(GLFWwindow *widnow, int entered);
@@ -36,15 +45,16 @@ void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 bool point_aabb_collision(const GPUBoundingBox& tBox, const float3& vecPoint);
 
-extern "C" void copy_memory(std::vector<RKDThreeGPU *> tree, RCamera _sceneCam, std::vector<float4> h_triangles, std::vector<float4> h_normals, std::vector<float2> h_uvs, std::vector<GPUSceneObject> objs, std::vector<float3> textures);
-extern "C" void free_memory();
 
+GLubyte* image;
 MainWindow::MainWindow()
 {
+	image = new GLubyte[4 * SCR_WIDTH * SCR_HEIGHT];
 	setup_camera();
+	click_timer = 0.f;
 
 	build_scene();
-	
+#ifdef ray_tracing
 	init_triangles();
 
 	std::vector<GPUSceneObject> tmp_objs;
@@ -52,56 +62,57 @@ MainWindow::MainWindow()
 	{
 		tmp_objs.push_back(objs->object_properties);
 	}
-	copy_memory(CUDATree, *SceneCam, triangles, normals, uvs, tmp_objs, Scene->textures);
+	copy_memory(CUDATree, *SceneCam, triangles, normals, uvs, tmp_objs, Scene->textures, distance_field);
+#endif
+
+#ifdef sphere_tracing
+	distance_field = new Grid[1];
+	distance_field[0] = Grid(std::string(PATH_TO_VOLUMES) + std::string("terrain250.rsdf"));
+	//distance_field[1] = Grid(std::string(PATH_TO_VOLUMES) + std::string("cat250.rsdf"));
+
+	initialize_volume_render(*SceneCam, distance_field, 1);
+#endif
 }
 
 MainWindow::~MainWindow()
 {
 	delete Scene, SceneCam;
-	delete[] pixels;
+	//if(pixels)
+	delete[] pixels, image, distance_field;
 }
 
-
-extern
-float4 *Render(RCamera sceneCam);
 
 void MainWindow::RenderFrame()
 {
 	//Text->RenderText("Hello World!!", 5.0f, 5.0f, 1.0f);
-	//RRayTracer *tracer = new RRayTracer();
+	RRayTracer *tracer = new RRayTracer();
 	movable_camera->build_camera(SceneCam);
-	pixels = Render(*SceneCam);
-	//pixels = tracer->trace(Tree[0],SceneCam);
+	pixels = render_frame(*SceneCam);
+
+	//pixels = tracer->sphere_trace(distance_field,SceneCam);
 	// create some image data
-	GLubyte *image = new GLubyte[4 * SCR_WIDTH * SCR_HEIGHT];
+	
 	for (int j = 0; j < SCR_HEIGHT; ++j) {
 		size_t indexY = j * SCR_WIDTH;
 		for (int i = 0; i < SCR_WIDTH; ++i) {
 			size_t index = indexY + i;
-			image[4 * index + 0] = 0xFF * pixels[index].x; // R
-			image[4 * index + 1] = 0xFF * pixels[index].y; // G
-			image[4 * index + 2] = 0xFF * pixels[index].z; // B
-			image[4 * index + 3] = 0xFF;
+			image[4 * index + 0] = pixels[index].x; // R
+			image[4 * index + 1] = pixels[index].y; // G
+			image[4 * index + 2] = pixels[index].z; // B
+			//image[4 * index + 3] = 0xFF;
 		}
 	}
-
-	// set texture parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
 	// set texture content
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, &image[0]);
-
 	//delete[] pixels;
-	delete[] image;
+	//delete[] image;
 }
 
 
+bool should_spawn = false;
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void MainWindow::processInput(GLFWwindow *window)
+void MainWindow::processInput(float delta_time, GLFWwindow *window)
 {
 	RMovableCamera *tmp_cam = new RMovableCamera();
 	memcpy(tmp_cam, movable_camera, sizeof(RMovableCamera));
@@ -150,6 +161,11 @@ void MainWindow::processInput(GLFWwindow *window)
 		yDelta--;
 
 	}
+	if (!should_spawn && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS && click_timer > 10.f)
+	{
+		click_timer = 0.f;
+		should_spawn = true;
+	}
 
 	bool overlaps = false;
 	for (int i = 0; i < main_window->CUDATree.size(); ++i)
@@ -157,13 +173,11 @@ void MainWindow::processInput(GLFWwindow *window)
 		if (point_aabb_collision(main_window->Scene->sceneObjects[i]->collision_box,  tmp_cam->position))
 			overlaps = true;
 	}
-	if (true)
-	{
-		memcpy(movable_camera, tmp_cam, sizeof(RMovableCamera));
-	}
 
+	click_timer += delta_time;
+
+	memcpy(movable_camera, tmp_cam, sizeof(RMovableCamera));
 	delete tmp_cam;
-	//movable_camera->build_camera(SceneCam);
 }
 
 
@@ -313,9 +327,9 @@ bool check_program_link_status(GLuint obj) {
 }
 
 
-void processInput(GLFWwindow *window)
+void processInput(float delta_time, GLFWwindow *window)
 {
-	main_window->processInput(window);
+	main_window->processInput(delta_time, window);
 }
 
 
@@ -408,6 +422,7 @@ int main()
 {
 	main_window = new MainWindow();
 
+
 	// glfw: initialize and configure
 // ------------------------------
 	glfwInit();
@@ -422,7 +437,7 @@ int main()
 
 	// glfw window creation
 	// --------------------
-	GLFWwindow* window = glfwCreateWindow(1000, 500, "RayEngine", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(1920, 1080, "RayEngine", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -571,6 +586,19 @@ int main()
 
 	// bind the texture
 	glBindTexture(GL_TEXTURE_2D, texture);
+	// set texture parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	GLuint bufferID;
+	glGenBuffers(1, &bufferID);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, bufferID);
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, SCR_HEIGHT * SCR_WIDTH * sizeof(GLubyte) * 4, NULL, GL_STREAM_DRAW);
+
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
 	std::cout << "Welcome" << "\" .. " << std::endl;
 	currentFrame = glfwGetTime();
 	lastFrame = currentFrame;
@@ -634,7 +662,13 @@ int main()
 
 
 		// input
-		processInput(window);
+		processInput(deltaTime, window);
+		if (should_spawn)
+		{
+		
+			spawn_obj(*main_window->SceneCam);
+			should_spawn = false;
+		}
 
 	}
 	free_memory();

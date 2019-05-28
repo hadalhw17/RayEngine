@@ -20,7 +20,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
-
+#include "MeshAdjacencyTable.h"
 
 /// Tokenize a string into a list by splitting at 'delim'
 std::vector<std::string> tokenize(const std::string &string, const std::string &delim, bool includeEmpty)
@@ -168,6 +168,8 @@ unsigned int toUInt(const std::string &str) {
 			mesh->num_verts = vertices.size();
 			mesh->num_norms = vertices.size();
 
+			mesh->adjacency_table = new RMeshAdjacencyTable();
+			mesh->adjacency_table->build_table(mesh);
 			return mesh;
 		}
 

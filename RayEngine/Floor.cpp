@@ -4,7 +4,7 @@
 
 
 AFloor::AFloor()
-	:RSceneObject((char *)"Meshes/terrain.obj")
+	:RSceneObject((char *)"Meshes/cat.obj")
 {
 	Material material;
 	material.uvs = true;

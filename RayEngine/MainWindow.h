@@ -12,6 +12,7 @@ struct float4;
 struct GLFWwindow;
 class TextRenderer;
 class RMovableCamera;
+class Grid;
 
 class MainWindow
 {
@@ -21,12 +22,13 @@ public:
 	~MainWindow();
 
 	void RenderFrame();
-	void processInput(GLFWwindow *window);
+	void processInput(float delta_time, GLFWwindow *window);
 
 
 	RRayTracer *RayTracer;
 	RScene *Scene;
 	std::vector<RKDTreeCPU *>Tree;
+	Grid* distance_field;
 	RCamera *SceneCam;
 	TextRenderer  *Text;
 
@@ -34,7 +36,7 @@ public:
 	std::vector<float4> triangles;
 	std::vector<float4> normals;
 	std::vector<float2> uvs;
-	float4 *pixels;
+	uchar4 *pixels;
 
 	double x_pos = 0;
 	double y_pos;

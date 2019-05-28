@@ -19,7 +19,27 @@
 
 #include "cuda_runtime_api.h"
 #include "helper_math.h"
+#include "Grid.h"
 
+float4 _clip(float4 color)
+{
+	float Red = color.x, Green = color.y, Blue = color.z, special = color.w;
+	float alllight = color.x + color.y + color.z;
+	float excesslight = alllight - 3;
+	if (excesslight > 0) {
+		Red = Red + excesslight * (Red / alllight);
+		Green = Green + excesslight * (Green / alllight);
+		Blue = Blue + excesslight * (Blue / alllight);
+	}
+	if (Red > 1) { Red = 1; }
+	if (Green > 1) { Green = 1; }
+	if (Blue > 1) { Blue = 1; }
+	if (Red < 0) { Red = 0; }
+	if (Green < 0) { Green = 0; }
+	if (Blue < 0) { Blue = 0; }
+
+	return make_float4(Red, Green, Blue, special);
+}
 
 RRayTracer::RRayTracer()
 {
@@ -33,6 +53,96 @@ RRayTracer::RRayTracer()
 	//Set of light sources(can be several)
 	lightSources.push_back(std::shared_ptr<RSource>(&sceneLight));
 }
+
+float4* RRayTracer::sphere_trace(Grid* sdf, RCamera* scene_camera)
+{
+	float aspectratio = SCR_WIDTH / (float)SCR_HEIGHT;
+
+	size_t size = SCR_WIDTH * SCR_HEIGHT * sizeof(float4);
+
+	float4* pixels = new float4[size];
+
+	auto start = std::chrono::system_clock::now();
+
+	std::cout << "Starting rendering on CPU" << std::endl;
+
+#pragma omp distribute parallel for schedule(dynamic)
+	{
+		for (int i = 0; i < SCR_WIDTH; i++)
+		{
+			for (int j = 0; j < SCR_HEIGHT; j++)
+			{
+				int flatIndex = j * SCR_WIDTH + i;
+
+				float sx = (float)i / (SCR_WIDTH - 1.0f);
+				float sy = 1.0f - ((float)j / (SCR_HEIGHT - 1.0f));
+
+				float3 rendercampos = scene_camera->campos;
+
+				// compute primary ray direction
+				// use camera view of current frame (transformed on CPU side) to create local orthonormal basis
+				float3 rendercamview = scene_camera->view; rendercamview = normalize(rendercamview); // view is already supposed to be normalized, but normalize it explicitly just in case.
+				float3 rendercamup = scene_camera->camdown; rendercamup = normalize(rendercamup);
+				float3 horizontalAxis = cross(rendercamview, rendercamup); horizontalAxis = normalize(horizontalAxis); // Important to normalize!
+				float3 verticalAxis = cross(horizontalAxis, rendercamview); verticalAxis = normalize(verticalAxis); // verticalAxis is normalized by default, but normalize it explicitly just for good measure.
+
+				float3 middle = rendercampos + rendercamview;
+				float3 horizontal = horizontalAxis * tanf(scene_camera->fov.x * 0.5 * (M_PI / 180)); // Treating FOV as the full FOV, not half, so multiplied by 0.5
+				float3 vertical = verticalAxis * tanf(scene_camera->fov.y * 0.5 * (M_PI / 180)); // Treating FOV as the full FOV, not half, so multiplied by 0.5
+
+				// compute pixel on screen
+				float3 pointOnPlaneOneUnitAwayFromEye = middle + (horizontal * ((2 * sx) - 1)) + (vertical * ((2 * sy) - 1));
+				float3 pointOnImagePlane = rendercampos + ((pointOnPlaneOneUnitAwayFromEye - rendercampos) * scene_camera->focial_distance); // Important for depth of field!		
+
+				float3 aperturePoint = rendercampos;
+
+				// calculate ray direction of next ray in path
+				float3 apertureToImagePlane = pointOnImagePlane - aperturePoint;
+				apertureToImagePlane = normalize(apertureToImagePlane); // ray direction needs to be normalised
+
+				// ray direction
+				float3 rayInWorldSpace = apertureToImagePlane;
+				float3 ray_dir = normalize(rayInWorldSpace);
+
+				// ray origin
+				float3 ray_o = rendercampos;
+				RRay cam_ray = RRay(ray_o, ray_dir);
+				float t = 0;
+				int step_count = 0;
+				while (t < 100)
+				{
+					float min_distance = K_INFINITY;
+					float3 from = ray_o + t * ray_dir;
+					//min_distance = sdf->get_distance(from);
+
+					if (min_distance <= 10e-6 * t)
+					{
+						float4 finalRColor = make_float4(t/step_count);
+						pixels[flatIndex].x = finalRColor.x;
+						pixels[flatIndex].y = finalRColor.y;
+						pixels[flatIndex].z = finalRColor.z;
+
+						_clip(pixels[flatIndex]);
+						break;
+					}
+					t += min_distance;
+					step_count++;
+				}
+
+
+			}
+		}
+	}
+
+	auto end = std::chrono::system_clock::now();
+
+	float elapsed = std::chrono::duration_cast<
+		std::chrono::duration<float>>(end - start).count();
+	std::cout << elapsed << " seconds took rendering of a frame on a CPU" << std::endl;
+	return pixels;
+}
+
+
 
 
 float4 *RRayTracer::trace(RKDTreeCPU *tree, RCamera *scene_camera)
@@ -200,6 +310,7 @@ float4 RRayTracer::castRay(RRay ray, int depth, RKDTreeCPU *node)
 	//	}
 	//}
 	//return finalRColor;
+	return make_float4(0);
 }
 
 void RRayTracer::tilePattern(float4 &color, int square)

@@ -1,5 +1,7 @@
 #pragma once
 #include "device_launch_parameters.h"
+#define sphere_tracing
+#include <utility>
 
 #define K_INFINITY	1e20f					// Mathematical infinity
 #define K_EPSILON	1e-4f					// Error value
@@ -10,8 +12,56 @@
 
 
 // settings
-#define SCR_WIDTH 1024
-#define SCR_HEIGHT 512
+#define SCR_WIDTH 1280
+#define SCR_HEIGHT 720
+
+#define PATH_TO_VOLUMES "C://dev/SDFGenerator/SDFGenerator/SDFs/"
+
+using edge = std::pair<int, int>;
+
+
+
+struct GPUVolumeObjectInstance
+{
+	int index;
+	float3 location;
+	float3 rotation;
+
+	HOST_DEVICE_FUNCTION
+	GPUVolumeObjectInstance()
+	{
+		index = -1;
+		location = float3();
+		rotation = float3();
+	}
+
+	HOST_DEVICE_FUNCTION
+	GPUVolumeObjectInstance(int _index, float3 _location, float3 _roatation)
+	{
+		index = _index;
+		location = _location;
+		rotation = _roatation;
+	}
+};
+
+
+enum DistanceType
+{
+	FACE = 0,		// Hit in the face.
+	EDGE1 = 1,		// Hit on the first edge.
+	EDGE2 = 2,		// Hit on the second edge.
+	EDGE3 = 3,		// Hit on the third edge.
+	VERT1 = 4,		// Hit on the first vertex.
+	VERT2 = 5,		// Hit on the second vertex.
+	VERT3 = 6		// Hit on the third vertex.
+};
+
+struct TriangleDistanceResult
+{
+	float distance;
+	DistanceType hit_type;
+	float3 hit_point;
+};
 
 enum Axis
 {

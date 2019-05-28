@@ -22,7 +22,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{30DCE1B6-A900-4F55-A04E-818185C82A18}</ProjectGuid>
     <RootNamespace>RayEngine</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
     <CudaToolkitCustomDir>
     </CudaToolkitCustomDir>
   </PropertyGroup>
@@ -49,7 +49,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -148,7 +148,7 @@
       <FastMath>true</FastMath>
     </CudaCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;cudart.lib;cudart_static.lib;freetype.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;cudart.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -188,6 +188,7 @@
       <OpenMPSupport>false</OpenMPSupport>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -223,6 +224,7 @@
     <ClCompile Include="D:\CPPLibs\GLAD\src\glad.c" />
     <ClCompile Include="Floor.cpp" />
     <ClCompile Include="Glass.cpp" />
+    <ClCompile Include="Grid.cpp" />
     <ClCompile Include="jpeg.cpp" />
     <ClCompile Include="KDThreeGPU.cpp" />
     <ClCompile Include="KDTree.cpp" />
@@ -231,6 +233,7 @@
     <ClCompile Include="MainWindow.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="MeshAdjacencyTable.cpp" />
     <ClCompile Include="MovableCamera.cpp" />
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="ObjectComponent.cpp" />
@@ -252,22 +255,30 @@
     <CudaCompile Include="Atmosphere.cuh" />
     <ClInclude Include="BoundingVolume.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="cuda_memory_functions.cuh" />
+    <ClInclude Include="material_functions.cuh" />
+    <ClInclude Include="sdf_functions.cuh" />
     <ClInclude Include="Character.h" />
     <ClInclude Include="Cow.h" />
     <ClInclude Include="CUDARayTracing.cuh" />
+    <ClInclude Include="cuda_helper_functions.h" />
+    <CudaCompile Include="filter_functions.cuh" />
     <ClInclude Include="Floor.h" />
     <ClInclude Include="Glass.h" />
     <ClInclude Include="GPUBoundingBox.h" />
+    <ClInclude Include="Grid.h" />
     <ClInclude Include="helper_math.h" />
     <ClInclude Include="jpeg.h" />
     <ClInclude Include="jpeglib.h" />
     <ClInclude Include="KDThreeGPU.h" />
     <ClInclude Include="KDTreeGPUUtills.h" />
+    <ClInclude Include="kd_tree_functions.cuh" />
     <ClInclude Include="MainWindow.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="KDTree.h" />
     <ClInclude Include="Light.h" />
+    <ClInclude Include="MeshAdjacencyTable.h" />
     <ClInclude Include="MovableCamera.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="ObjectComponent.h" />
@@ -278,19 +289,21 @@
     <ClInclude Include="Ray.h" />
     <ClInclude Include="RayEngine.h" />
     <ClInclude Include="RayTracer.h" />
+    <ClInclude Include="ray_functions.cuh" />
     <ClInclude Include="rplyfile.h" />
     <ClInclude Include="RStaticMesh.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="SceneObject.h" />
     <ClInclude Include="Source.h" />
     <ClInclude Include="Sphere.h" />
+    <ClInclude Include="sphere_tracing.cuh" />
     <ClInclude Include="Triangle.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Atmosphere.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </CudaCompile>
-    <CudaCompile Include="CUDARayTracing.cu">
+    <CudaCompile Include="renderer.cu">
       <FileType>Document</FileType>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Od</Optimization>
       <Runtime Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MT</Runtime>
@@ -306,6 +319,7 @@
       <Warning Condition="'$(Configuration)|$(Platform)'=='Release|x64'">W0</Warning>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
       <HostDebugInfo Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</HostDebugInfo>
+      <CudaRuntime Condition="'$(Configuration)|$(Platform)'=='Release|x64'">None</CudaRuntime>
     </CudaCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

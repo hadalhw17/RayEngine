@@ -50,6 +50,8 @@ public:
 	HOST_DEVICE_FUNCTION
 	size_t GetVertexN() { return RStaticMesh::xCoordinates.size(); }
 
+	void generate_face_normals();
+
 	float3 *get_verts() { return verts; }
 	float3 *get_faces() { return faces; }
 	float3 *get_norms() { return norms; }
@@ -62,6 +64,11 @@ public:
 	float3 *faces;
 	float3 *norms;
 	float2 *uvs;
+
+	std::vector<float3> face_normals;
+
+	class RMeshAdjacencyTable* adjacency_table;
+
 	size_t num_verts, num_faces, num_norms, num_uvs;
 private:
 

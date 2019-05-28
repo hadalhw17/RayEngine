@@ -12,6 +12,7 @@ class float3;
 class RSource;
 class RTriangle;
 class RRay;
+class Grid;
 
 class RRayTracer
 {
@@ -20,6 +21,7 @@ public:
 	std::vector<std::shared_ptr<RSource>> lightSources;
 	RRayTracer();
 
+	float4* sphere_trace(Grid* sdf, class RCamera* scene_cam);
 
 	float4 *trace(RKDTreeCPU *tree, class RCamera *scene_cam);
 

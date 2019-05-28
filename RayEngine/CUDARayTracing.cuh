@@ -18,7 +18,7 @@ texture<float4, 1, cudaReadModeElementType> normals_texture;
 
 texture<float2, 1, cudaReadModeElementType> uvs_texture;
 
-float4 *h_pixels;
+uchar4 *h_pixels;
 
 __device__
 class Atmosphere *d_atmosphere;
@@ -41,7 +41,7 @@ __device__ __constant__
 int *d_index_list;
 
 __device__
-float4 *d_pixels;
+uchar4 *d_pixels;
 
 __device__
 float4 *d_shadow_map;
@@ -82,10 +82,3 @@ __device__
 float2 *dev_uvs_p;
 
 float angle;
-
-float4 *Render(class RCamera sceneCam);
-class CUDARenderer
-{
-
-public:
-};

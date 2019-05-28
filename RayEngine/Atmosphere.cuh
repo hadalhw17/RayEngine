@@ -1,6 +1,7 @@
 #pragma once
 #include "helper_math.h"
 
+
 class Atmosphere
 {
 public:

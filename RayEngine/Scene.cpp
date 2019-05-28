@@ -194,7 +194,8 @@ void RScene::build_tree()
 		std::cout << "Constructing tree" << "\" .. " << std::endl;
 		auto start = std::chrono::high_resolution_clock::now();
 		RKDTreeCPU *new_tree = new RKDTreeCPU(obj->root_component->get_verts(), obj->root_component->get_faces(), 
-			obj->root_component->get_norms(), obj->root_component->get_uvs(), obj->root_component->num_verts, obj->root_component->num_faces, obj->root_component->num_norms, obj->root_component->num_uvs);
+			obj->root_component->get_norms(), obj->root_component->get_uvs(), obj->root_component->num_verts,
+			obj->root_component->num_faces, obj->root_component->num_norms, obj->root_component->num_uvs);
 
 		obj->object_properties.num_nodes = new_tree->numNodes;
 		obj->collision_box = GPUBoundingBox(&new_tree->root->box);
