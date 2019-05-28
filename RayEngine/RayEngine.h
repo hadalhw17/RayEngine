@@ -16,6 +16,8 @@
 #define SCR_HEIGHT 720
 
 #define PATH_TO_VOLUMES "C://dev/SDFGenerator/SDFGenerator/SDFs/"
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+
 
 using edge = std::pair<int, int>;
 

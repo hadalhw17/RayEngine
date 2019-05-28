@@ -3,6 +3,7 @@
 #include "helper_math.h"
 
 #include <vector>
+#include <string>
 
 class RMeshAdjacencyTable;
 class RKDTreeCPU;

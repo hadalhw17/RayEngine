@@ -6,9 +6,10 @@
 #include "ray_functions.cuh"
 #include "sphere_tracing.cuh"
 
-texture<float, cudaTextureType3D, cudaReadModeElementType> sdf_texture;
-
 texture<float2, cudaTextureType3D, cudaReadModeElementType> scene_texture;
+
+cudaArray* d_volumeArray = 0;
+cudaTextureObject_t	texObject; // For 3D texture
 
 struct GPUScene
 {
@@ -51,7 +52,7 @@ float bspline(float t)
 }
 
 __device__
-float cubicTex3DSimple(float3 coord)
+float cubicTex3DSimple(cudaTextureObject_t	tex, float3 coord)
 {
 	// transform the coordinate from [0,extent] to [-0.5, extent-0.5]
 	const float3 coord_grid = coord - 0.5f;
@@ -72,7 +73,7 @@ float cubicTex3DSimple(float3 coord)
 			{
 				float bsplineXYZ = bspline(x - fraction.x) * bsplineYZ;
 				float u = index.x + x;
-				result += bsplineXYZ * tex3D(sdf_texture, u, v, w);
+				result += bsplineXYZ * tex3D<float>(tex, u, v, w);
 			}
 		}
 	}
@@ -127,7 +128,7 @@ void bspline_weights(T fraction, T & w0, T & w1, T & w2, T & w3)
 
 
 __device__
-float CUBICTEX3D(float3 coord)
+float CUBICTEX3D(cudaTextureObject_t tex, float3 coord)
 {
 	// shift the coordinate from [0,extent] to [-0.5, extent-0.5]
 	const float3 coord_grid = coord - 0.5f;
@@ -143,18 +144,18 @@ float CUBICTEX3D(float3 coord)
 
 	// fetch the eight linear interpolations
 	// weighting and fetching is interleaved for performance and stability reasons
-	float tex000 = tex3D(sdf_texture, h0.x, h0.y, h0.z);
-	float tex100 = tex3D(sdf_texture, h1.x, h0.y, h0.z);
+	float tex000 = tex3D<float>(tex, h0.x, h0.y, h0.z);
+	float tex100 = tex3D<float>(tex, h1.x, h0.y, h0.z);
 	tex000 = g0.x * tex000 + g1.x * tex100;  //weigh along the x-direction
-	float tex010 = tex3D(sdf_texture, h0.x, h1.y, h0.z);
-	float tex110 = tex3D(sdf_texture, h1.x, h1.y, h0.z);
+	float tex010 = tex3D<float>(tex, h0.x, h1.y, h0.z);
+	float tex110 = tex3D<float>(tex, h1.x, h1.y, h0.z);
 	tex010 = g0.x * tex010 + g1.x * tex110;  //weigh along the x-direction
 	tex000 = g0.y * tex000 + g1.y * tex010;  //weigh along the y-direction
-	float tex001 = tex3D(sdf_texture, h0.x, h0.y, h1.z);
-	float tex101 = tex3D(sdf_texture, h1.x, h0.y, h1.z);
+	float tex001 = tex3D<float>(tex, h0.x, h0.y, h1.z);
+	float tex101 = tex3D<float>(tex, h1.x, h0.y, h1.z);
 	tex001 = g0.x * tex001 + g1.x * tex101;  //weigh along the x-direction
-	float tex011 = tex3D(sdf_texture, h0.x, h1.y, h1.z);
-	float tex111 = tex3D(sdf_texture, h1.x, h1.y, h1.z);
+	float tex011 = tex3D<float>(tex, h0.x, h1.y, h1.z);
+	float tex111 = tex3D<float>(tex, h1.x, h1.y, h1.z);
 	tex011 = g0.x * tex011 + g1.x * tex111;  //weigh along the x-direction
 	tex001 = g0.y * tex001 + g1.y * tex011;  //weigh along the y-direction
 
@@ -164,10 +165,10 @@ float CUBICTEX3D(float3 coord)
 
 __device__
 __forceinline__
-float get_distance(float3 r_orig, float3* step, int3* dim, GPUVolumeObjectInstance instance)
+float get_distance(cudaTextureObject_t tex,  float3 r_orig, float3* step, int3* dim, GPUVolumeObjectInstance instance)
 {
 	int offset = (instance.index * (dim[instance.index].x - 1));
-	float dist = cubicTex3DSimple(make_float3(offset + ((float)r_orig.x / (float)step[instance.index].x),
+	float dist = cubicTex3DSimple(tex, make_float3(offset + ((float)r_orig.x / (float)step[instance.index].x),
 		(float)r_orig.y / (float)step[instance.index].y,
 		(float)r_orig.z / (float)step[instance.index].z));
 	//if(dist < 0.f)
@@ -248,7 +249,7 @@ float2 get_scene_sdf(GPUScene scene, float3 from, HitResult hit_result, float cu
 }
 
 __device__
-float get_distance_to_sdf(GPUScene scene, GPUBoundingBox box, float3 from, HitResult hit_result, float3 * step, int3 * dim, GPUVolumeObjectInstance instance, float curr_t)
+float get_distance_to_sdf(cudaTextureObject_t tex, GPUScene scene, GPUBoundingBox box, float3 from, HitResult hit_result, float3 * step, int3 * dim, GPUVolumeObjectInstance instance, float curr_t)
 {
 	float min_dist = K_INFINITY;
 	float t_near = K_INFINITY, t_far;
@@ -260,7 +261,7 @@ float get_distance_to_sdf(GPUScene scene, GPUBoundingBox box, float3 from, HitRe
 	if (intersect_box)
 	{
 
-		float min_dist_to_sdf = get_distance(from, step, dim, instance);
+		float min_dist_to_sdf = get_distance(tex, from, step, dim, instance);
 		min_dist = t_near + min_dist_to_sdf;
 	}
 	else

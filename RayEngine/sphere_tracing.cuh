@@ -50,7 +50,7 @@ int d_num_sdf;
 
 
 __device__
-void sphere_trace_shadow(struct GPUScene scene, GPUVolumeObjectInstance* instances, float3 p_hit, float3 normal, GPUBoundingBox* volumes, int num_sdf, float3* step, int3* dim,
+void sphere_trace_shadow(cudaTextureObject_t tex, struct GPUScene scene, GPUVolumeObjectInstance* instances, float3 p_hit, float3 normal, GPUBoundingBox* volumes, int num_sdf, float3* step, int3* dim,
 	float3* sdf_max, float3 light, float4& final_colour, int shape)
 {
 	float4 pixel_color = make_float4(0.f);
@@ -112,7 +112,7 @@ void sphere_trace_shadow(struct GPUScene scene, GPUVolumeObjectInstance* instanc
 			}
 			else
 			{
-				d = get_distance_to_sdf(scene, volumes[curr_obj.index], transformed_from, transformed_hit_result, step, dim, curr_obj, t);
+				d = get_distance_to_sdf(tex, scene, volumes[curr_obj.index], transformed_from, transformed_hit_result, step, dim, curr_obj, t);
 			}
 
 			if (d < min_dist)
@@ -139,7 +139,7 @@ void sphere_trace_shadow(struct GPUScene scene, GPUVolumeObjectInstance* instanc
 
 
 __device__
-void sphere_trace_shade(GPUScene scene, float3 * lights, int num_lights, HitResult hit_result, GPUVolumeObjectInstance * instance, float t, GPUBoundingBox * volumes,
+void sphere_trace_shade(cudaTextureObject_t tex, GPUScene scene, float3 * lights, int num_lights, HitResult hit_result, GPUVolumeObjectInstance * instance, float t, GPUBoundingBox * volumes,
  int num_sdf, float3 * step, int3 * dim, int curr_sdf, float4 & final_colour, int step_count)
 {
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
@@ -154,9 +154,9 @@ void sphere_trace_shade(GPUScene scene, float3 * lights, int num_lights, HitResu
 	hit_result.ray_o = p_hit;
 	float delta = 10e-5;
 	float3 n = normalize(make_float3(
-		get_distance(p_hit + make_float3(delta, 0, 0), step, dim, curr_obj) - get_distance(p_hit + make_float3(-delta, 0, 0), step, dim, curr_obj),
-		get_distance(p_hit + make_float3(0, delta, 0), step, dim, curr_obj) - get_distance(p_hit + make_float3(0, -delta, 0), step, dim, curr_obj),
-		get_distance(p_hit + make_float3(0, 0, delta), step, dim, curr_obj) - get_distance(p_hit + make_float3(0, 0, -delta), step, dim, curr_obj)));
+		get_distance(tex, p_hit + make_float3(delta, 0, 0), step, dim, curr_obj) - get_distance(tex, p_hit + make_float3(-delta, 0, 0), step, dim, curr_obj),
+		get_distance(tex, p_hit + make_float3(0, delta, 0), step, dim, curr_obj) - get_distance(tex, p_hit + make_float3(0, -delta, 0), step, dim, curr_obj),
+		get_distance(tex, p_hit + make_float3(0, 0, delta), step, dim, curr_obj) - get_distance(tex, p_hit + make_float3(0, 0, -delta), step, dim, curr_obj)));
 
 	if (p_hit.y <= volumes[curr_obj.index].Max.y * 0.3) final_colour = make_float4(0.11, 0.16, 0.62, 0.f);
 	else if (p_hit.y > volumes[curr_obj.index].Max.y * 0.3 && p_hit.y < volumes[curr_obj.index].Max.y * 0.6) final_colour = make_float4(0.59, 0.29, 0.f, 0.f);
@@ -179,7 +179,26 @@ void sphere_trace_shade(GPUScene scene, float3 * lights, int num_lights, HitResu
 ////////////////////////////////////////////////////
 void bind_sdf_to_texture(float* dev_sdf_p, int3 dim, int num_sdf)
 {
+	cudaChannelFormatDesc* arr_channelDesc = &cudaCreateChannelDesc<float>();
+	cudaMalloc3DArray(&d_volumeArray, arr_channelDesc, make_cudaExtent(num_sdf * dim.x * sizeof(float), dim.y, dim.z), 0);
+
+	cudaMemcpy3DParms copyParams = { 0 };
+
+	//Array creation
+	copyParams.srcPtr = make_cudaPitchedPtr(dev_sdf_p, num_sdf * dim.x * sizeof(float), dim.y, dim.z);
+	copyParams.dstArray = d_volumeArray;
+	copyParams.extent = make_cudaExtent(num_sdf * dim.x, dim.y, dim.z);
+	copyParams.kind = cudaMemcpyDeviceToDevice;
+	cudaMemcpy3D(&copyParams);
+	//Array creation End
+
+	cudaResourceDesc res_desc;
+	memset(&res_desc, 0, sizeof(cudaResourceDesc));
+	res_desc.resType = cudaResourceTypeArray;
+	res_desc.res.array.array = d_volumeArray;
+
 	cudaTextureDesc tex_desc;
+	memset(&tex_desc, 0, sizeof(cudaTextureDesc));
 
 	tex_desc.normalizedCoords = false;                      // access with normalized texture coordinates
 	tex_desc.filterMode = cudaFilterModeLinear;        // Point mode, so no 
@@ -188,36 +207,11 @@ void bind_sdf_to_texture(float* dev_sdf_p, int3 dim, int num_sdf)
 	tex_desc.addressMode[2] = cudaAddressModeBorder;    // wrap texture coordinates
 	tex_desc.readMode = cudaReadModeElementType;
 
-	//cudaMemset(&tex_desc, 0, sizeof(tex_desc));
-	sdf_texture.normalized = false;                      // access with normalized texture coordinates
-	sdf_texture.filterMode = cudaFilterModeLinear;        // Point mode, so no 
-	sdf_texture.addressMode[0] = cudaAddressModeBorder;    // wrap texture coordinates
-	sdf_texture.addressMode[1] = cudaAddressModeBorder;    // wrap texture coordinates
-	sdf_texture.addressMode[2] = cudaAddressModeBorder;    // wrap texture coordinates
-	cudaArray* d_sdf_array;
 
-	cudaChannelFormatDesc* arr_channelDesc = &cudaCreateChannelDesc<float>();
-	cudaMalloc3DArray(&d_sdf_array, arr_channelDesc, make_cudaExtent(num_sdf * dim.x * sizeof(float), dim.y, dim.z), 0);
-
-	cudaMemcpy3DParms copyParams = { 0 };
-
-	//Array creation
-	copyParams.srcPtr = make_cudaPitchedPtr(dev_sdf_p, num_sdf * dim.x * sizeof(float), dim.y, dim.z);
-	copyParams.dstArray = d_sdf_array;
-	copyParams.extent = make_cudaExtent(num_sdf * dim.x, dim.y, dim.z);
-	copyParams.kind = cudaMemcpyDeviceToDevice;
-	cudaMemcpy3D(&copyParams);
-	//Array creation End
-	cudaResourceDesc res_desc;
-	//cudaMemset(&res_desc, 0, sizeof(cudaResourceDesc));
-	res_desc.resType = cudaResourceTypeArray;
-	res_desc.res.array.array = d_sdf_array;
 	cudaChannelFormatDesc* channelDesc = &cudaCreateChannelDesc<float>();
 	channelDesc->f = cudaChannelFormatKindFloat;
-	cudaBindTextureToArray((const textureReference*)& sdf_texture, d_sdf_array, channelDesc);
-	//cudaCreateTextureObject(tex_sdf, &res_desc, &tex_desc, NULL);
 
-	//cudaBindTexture(0, (const textureReference*)& sdf_texture, (const void*)dev_sdf_p, channelDesc, size);
+	gpuErrchk(cudaCreateTextureObject(&texObject, &res_desc, &tex_desc, NULL));
 }
 
 
@@ -267,6 +261,36 @@ void bind_scene_to_texture(float2* dev_sdf_p, int3 dim)
 	//cudaBindTexture(0, (const textureReference*)& sdf_texture, (const void*)dev_sdf_p, channelDesc, size);
 
 }
+
+extern "C"
+void setTextureFilterMode(bool bLinearFilter)
+{
+	if (texObject)
+	{
+		gpuErrchk(cudaDestroyTextureObject(texObject));
+	}
+	cudaResourceDesc            texRes;
+	memset(&texRes, 0, sizeof(cudaResourceDesc));
+
+	texRes.resType = cudaResourceTypeArray;
+	texRes.res.array.array = d_volumeArray;
+
+	cudaTextureDesc             texDescr;
+	memset(&texDescr, 0, sizeof(cudaTextureDesc));
+
+	texDescr.normalizedCoords = true;
+	texDescr.filterMode = bLinearFilter ? cudaFilterModeLinear : cudaFilterModePoint;
+
+	texDescr.addressMode[0] = cudaAddressModeWrap;
+	texDescr.addressMode[1] = cudaAddressModeWrap;
+	texDescr.addressMode[2] = cudaAddressModeWrap;
+
+	texDescr.readMode = cudaReadModeNormalizedFloat;
+
+	gpuErrchk(cudaCreateTextureObject(&texObject, &texRes, &texDescr, NULL));
+
+}
+
 
 extern "C"
 uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf)

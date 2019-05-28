@@ -48,7 +48,7 @@ void insert_sphere_to_texture(float3 sphere_pos, float *sdf_texute, GPUBoundingB
 
 __global__
 void render_sphere_trace(RCamera render_camera, const GPUScene scene, float3* lights, const int num_lights, GPUVolumeObjectInstance* instances, const int num_instances,
-	GPUBoundingBox* volumes,  float3* step, int3* dim, uchar4 *pixels, int num_sdf)
+	GPUBoundingBox* volumes,  float3* step, int3* dim, uchar4 *pixels, int num_sdf, cudaTextureObject_t	tex)
 {
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
@@ -113,11 +113,12 @@ void render_sphere_trace(RCamera render_camera, const GPUScene scene, float3* li
 			}
 			else
 			{
-				min_dist = get_distance(from, step, dim, curr_obj);
+				//min_dist = get_distance(from, step, dim, curr_obj);
+				min_dist = tex3D<float>(tex, from.x / step[0].x, from.y / step[0].y, from.z / step[0].z);
 			}
 			if (min_dist <= K_EPSILON * t)
 			{
-				sphere_trace_shade(scene, lights, num_lights, hit_result, instances, t, volumes,
+				sphere_trace_shade(tex, scene, lights, num_lights, hit_result, instances, t, volumes,
 				 num_instances, step, dim, nearest_shape, pixel_colour, 0);
 				pixels[index] = make_uchar4(0xFF * 1, 0xFF * pixel_colour.y, 0xFF * pixel_colour.z, 0xFF * pixel_colour.w);
 				return;
@@ -571,7 +572,7 @@ uchar4* render_frame(RCamera sceneCam)
 #endif
 #ifdef sphere_tracing
 	// Generate primary rays and cast them throught the scene.
-	render_sphere_trace << < primaryRaysGridDim, primaryRaysBlockDim >> > (sceneCam, scene, d_light, num_light, d_volume_instances, d_num_instances, d_sdf_volumes, d_sdf_steps, d_sdf_dim, d_pixels, d_num_sdf);
+	render_sphere_trace << < primaryRaysGridDim, primaryRaysBlockDim >> > (sceneCam, scene, d_light, num_light, d_volume_instances, d_num_instances, d_sdf_volumes, d_sdf_steps, d_sdf_dim, d_pixels, d_num_sdf, texObject);
 
 #endif
 	gpuErrchk(cudaDeviceSynchronize());

@@ -18,7 +18,7 @@
 #include <thread>
 #include "Grid.h"
 #include <cuda_gl_interop.h>
-
+#include <helper_gl.h>
 
  
 extern uchar4* render_frame(RCamera sceneCam);
@@ -36,6 +36,11 @@ float click_timer;
 MainWindow *main_window;
 RMovableCamera *movable_camera;
 
+GLuint pbo = 0;     // OpenGL pixel buffer object
+GLuint tex = 0;     // OpenGL texture object
+struct cudaGraphicsResource* cuda_pbo_resource; // CUDA Graphics Resource (to transfer PBO)
+
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(float delta_dime, GLFWwindow *window);
 
@@ -46,7 +51,11 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 bool point_aabb_collision(const GPUBoundingBox& tBox, const float3& vecPoint);
 
 
+
+
 GLubyte* image;
+int frame_counter = 0;
+
 MainWindow::MainWindow()
 {
 	image = new GLubyte[4 * SCR_WIDTH * SCR_HEIGHT];
@@ -72,6 +81,8 @@ MainWindow::MainWindow()
 
 	initialize_volume_render(*SceneCam, distance_field, 1);
 #endif
+	currentFrame = glfwGetTime();
+	lastFrame = currentFrame;
 }
 
 MainWindow::~MainWindow()
@@ -293,6 +304,7 @@ void MainWindow::build_scene()
 	}
 	std::cout << "Done building scene" << std::endl;
 }
+
 
 
 // helper to check and display for shader compiler errors
@@ -600,9 +612,7 @@ int main()
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
 	std::cout << "Welcome" << "\" .. " << std::endl;
-	currentFrame = glfwGetTime();
-	lastFrame = currentFrame;
-	int frame_counter = 0;
+
 	// Main render loop
 	// -----------
 	while (!glfwWindowShouldClose(window))
