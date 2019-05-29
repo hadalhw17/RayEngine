@@ -12,8 +12,8 @@
 
 
 // settings
-#define SCR_WIDTH 1280
-#define SCR_HEIGHT 720
+#define SCR_WIDTH 1920
+#define SCR_HEIGHT 1080
 
 #define PATH_TO_VOLUMES "C://dev/SDFGenerator/SDFGenerator/SDFs/"
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }

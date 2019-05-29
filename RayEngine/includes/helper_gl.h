@@ -13,6 +13,19 @@
 #ifndef HELPER_GL_H
 #define HELPER_GL_H
 
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+    #include <GL/glew.h>
+#endif
+
+#if defined(__APPLE__) || defined(MACOSX)
+    #include <OpenGL/gl.h>
+#else
+    #include <GL/gl.h>
+    #ifdef __linux__
+    #include <GL/glx.h>
+    #endif /* __linux__ */
+#endif
+
 #include <iostream>
 #include <cstdio>
 #include <string>
@@ -155,7 +168,13 @@ namespace __HelperGL {
 
     static int isGLVersionSupported(unsigned reqMajor, unsigned reqMinor)
     {
-
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+        if (glewInit() != GLEW_OK)
+        {
+            std::cerr << "glewInit() failed!" << std::endl;
+            return 0;
+        }
+#endif
         std::string version ((const char *) glGetString (GL_VERSION));
         std::stringstream stream (version);
         unsigned major, minor;

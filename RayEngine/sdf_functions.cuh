@@ -6,8 +6,7 @@
 #include "ray_functions.cuh"
 #include "sphere_tracing.cuh"
 
-cudaArray* d_volumeArray = 0;
-cudaTextureObject_t	texObject; // For 3D texture
+
 
 struct GPUScene
 {
@@ -20,6 +19,65 @@ struct GPUScene
 
 	}
 };
+
+template<typename T>
+__device__
+T bilinear(
+	const float& tx,
+	const float& ty,
+	const T& c00,
+	const T& c10,
+	const T& c01,
+	const T& c11)
+{
+#if 1 
+	T a = c00 * (1.f - tx) + c10 * tx;
+	T b = c01 * (1.f - tx) + c11 * tx;
+	return a * (1.f - ty) + b * ty;
+#else 
+	return (1 - tx) * (1 - ty) * c00 +
+		tx * (1 - ty) * c10 +
+		(1.f - tx) * ty * c01 +
+		tx * ty * c11;
+#endif 
+}
+
+
+template<typename T>
+__device__
+T interpolate(cudaTextureObject_t tex, const float3& location)
+{
+	float gx, gy, gz, tx, ty, tz;
+	unsigned gxi, gyi, gzi;
+	// remap point coordinates to grid coordinates
+	gx = location.x; gxi = int(gx); tx = gx - gxi;
+	gy = location.y; gyi = int(gy); ty = gy - gyi;
+	gz = location.z; gzi = int(gz); tz = gz - gzi;
+	const T c000 = tex3D<T>(tex, gxi, gyi, gzi);
+	const T c100 = tex3D<T>(tex, gxi + 1, gyi, gzi);
+	const T c010 = tex3D<T>(tex, gxi, gyi + 1, gzi);
+	const T c110 = tex3D<T>(tex, gxi + 1, gyi + 1, gzi);
+	const T c001 = tex3D<T>(tex, gxi, gyi, gzi + 1);
+	const T c101 = tex3D<T>(tex, gxi + 1, gyi, gzi + 1);
+	const T c011 = tex3D<T>(tex, gxi, gyi + 1, gzi + 1);
+	const T c111 = tex3D<T>(tex, gxi + 1, gyi + 1, gzi + 1);
+#if 1
+	T e = bilinear<T>(tx, ty, c000, c100, c010, c110);
+	T f = bilinear<T>(tx, ty, c001, c101, c011, c111);
+	return e * (1 - tz) + f * tz;
+#else 
+	return
+		(T(1) - tx) * (T(1) - ty) * (T(1) - tz) * c000 +
+		tx * (T(1) - ty) * (T(1) - tz) * c100 +
+		(T(1) - tx) * ty * (T(1) - tz) * c010 +
+		tx * ty * (T(1) - tz) * c110 +
+		(T(1) - tx) * (T(1) - ty) * tz * c001 +
+		tx * (T(1) - ty) * tz * c101 +
+		(T(1) - tx) * ty * tz * c011 +
+		tx * ty * tz * c111;
+#endif 
+}
+
 
 __device__
 GPUScene* d_scene;
@@ -135,7 +193,7 @@ __device__
 __forceinline__
 float get_distance(cudaTextureObject_t tex,  float3 r_orig, float3* step, GPUVolumeObjectInstance instance)
 {
-	float dist = cubicTex3DSimple(tex, r_orig / step[instance.index]);
+	float dist = interpolate<float>(tex, r_orig / step[instance.index]);
 	return dist;
 }
 
@@ -149,7 +207,7 @@ float sphere_distance(float3 p, float radius)
 
 HOST_DEVICE_FUNCTION
 __forceinline__
-float aabb_distance(float3 p, float3 c, float3 s)
+float aabb_distance(float3 p,  float3 s)
 {
 	float3 d = fabs(p) - s;
 	return length(max(d, make_float3(0.0)))

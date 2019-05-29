@@ -89,6 +89,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\dev\RayEngine\RayEngine\includes;$(IncludePath)</IncludePath>
     <LibraryPath>C:\dev\RayEngine\RayEngine\libs;$(LibraryPath)</LibraryPath>
+    <ExecutablePath>C:\dev\RayEngine\bin\win64\Release;C:\dev\RayEngine\bin;$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>C:\dev\RayEngine\RayEngine\includes;$(IncludePath)</IncludePath>
@@ -189,11 +190,12 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <AdditionalIncludeDirectories>$(CudaToolkitDir)/include;C:\dev\RayEngine\RayEngine\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>glew64.lib;opengl32.lib;glfw3.lib;cudart.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;glew64.lib;cudart.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
@@ -225,6 +227,7 @@
     <ClCompile Include="D:\CPPLibs\GLAD\src\glad.c" />
     <ClCompile Include="Floor.cpp" />
     <ClCompile Include="Glass.cpp" />
+    <ClCompile Include="gl_window.cpp" />
     <ClCompile Include="Grid.cpp" />
     <ClCompile Include="jpeg.cpp" />
     <ClCompile Include="KDThreeGPU.cpp" />

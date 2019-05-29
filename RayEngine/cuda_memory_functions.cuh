@@ -45,19 +45,6 @@ void bind_uvs_to_texture(float2* dev_uvs_p, unsigned int number_of_uvs)
 	cudaBindTexture(0, (const textureReference*)& uvs_texture, (const void*)dev_uvs_p, channelDesc, size);
 }
 
-extern
-void free_memory()
-{
-	//// Release device memory.
-	//cudaFree(d_pixels);
- //	cudaFree(d_tree);
-	//cudaFree(d_index_list);
-	//cudaFree(dev_triangle_p);
-	//cudaFree(dev_normals_p);
-	//cudaFree(d_render_camera);
-
-	cudaDeviceReset();
-}
 
 extern "C"
 void update_objects(std::vector<GPUSceneObject> objs)

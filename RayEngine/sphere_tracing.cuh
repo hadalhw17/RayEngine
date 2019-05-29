@@ -10,11 +10,11 @@
 #include "helper_math.h"
 #include "sdf_functions.cuh"
 
+texture<float4, cudaTextureType2D, cudaReadModeElementType> d_texture;
 
-__device__
-float2* scene_sdf;
+cudaArray* d_volumeArray = 0;
+cudaTextureObject_t	texObject; // For 3D texture
 
-static cudaTextureObject_t tex_sdf[10];
 
 __device__ __constant__
 struct GPUBoundingBox* d_sdf_volumes;
@@ -25,9 +25,6 @@ struct GPUVolumeObjectInstance* volume_objs;
 
 __device__
 float* d_sdf;
-
-__device__
-float3* d_max_sdf;
 
 __device__ __constant__
 float* dev_sdf_p;
@@ -47,7 +44,65 @@ int d_num_instances;
 __device__
 int d_num_sdf;
 
+__device__
+float4* dev_tex_p;
 
+
+__device__
+float4 nearest_neightbour_filter(float x, float y,  float4 * texture)
+{
+	int tx = (int)(1000 * x), ty = (int)(1000 * y);
+	float4* _texture = (1000 * ty + tx) + texture;
+
+	return *_texture;
+}
+
+__device__
+float4 bilinear_filter(float ix, float iy, float4* texture)
+{
+	float u = (ix * 1000.f) - 0.5f;
+	float v = (iy * 1000.f) - 0.5f;
+
+	int x = floor(u);
+	int y = floor(v);
+	int xy = x + 1000 * y;
+	int x1y = (x + 1) + 1000 * y;
+	int xy1 = x + 1000 * (y + 1);
+	int x1y1 = (x + 1) + 1000 * (y + 1);
+
+	float u_ratio = u - (float)x;
+	float v_ratio = v - (float)y;
+	float u_opposite = 1.f - u_ratio;
+	float v_opposite = 1.f - v_ratio;
+	float4 result = (texture[xy] * u_opposite + texture[x1y] * u_ratio) * v_opposite +
+		(texture[xy1] * u_opposite + texture[x1y1] * u_ratio) * v_ratio;
+	return result;
+}
+
+////////////////////////////////////////////////////
+// Bind normals to texture memory
+////////////////////////////////////////////////////
+void bind_texture(float4* dev_texture, unsigned int tex_size)
+{
+	d_texture.normalized = false;                      // access with normalized texture coordinates
+	d_texture.filterMode = cudaFilterModeLinear;        // Point mode, so no 
+	d_texture.addressMode[0] = cudaAddressModeWrap;    // wrap texture coordinates
+	d_texture.addressMode[1] = cudaAddressModeWrap;
+
+	cudaArray *d_tex_array = 0;
+	cudaChannelFormatDesc arr_channelDesc = cudaCreateChannelDesc<float4>();
+	cudaMallocArray(&d_tex_array, &arr_channelDesc, 1000, 1000);
+
+	cudaMemcpy2DToArray(d_tex_array, 0, 0, dev_texture, sizeof(float4) * 1000, sizeof(float4) * 1000, 1000, cudaMemcpyDeviceToDevice);
+
+
+	size_t size = sizeof(float4) * tex_size;
+	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float4>();
+	channelDesc.f = cudaChannelFormatKindFloat;
+
+	//gpuErrchk(cudaBindTexture2D(0, (const textureReference*)&d_texture, (const void*)dev_texture, channelDesc, 1000, 1000, 1000 * sizeof(float4)));
+	cudaBindTextureToArray(d_texture, d_tex_array);
+}
 
 __device__
 bool single_ray_sphere_trace(cudaTextureObject_t tex, HitResult hit_result, GPUVolumeObjectInstance* instances,
@@ -89,9 +144,10 @@ void sphere_trace_shadow(cudaTextureObject_t tex, GPUVolumeObjectInstance* insta
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int index = imageX * SCR_HEIGHT + imageY;
-	if (index > (SCR_WIDTH - 1) * (SCR_HEIGHT - 1))
+	if (imageX >= SCR_WIDTH || imageY >= SCR_HEIGHT)
 		return;
+
+	int index = imageX * SCR_HEIGHT + imageY;
 
 	float light_dst = K_INFINITY;
 	float3 lightpos = light, lightDir;
@@ -107,7 +163,6 @@ void sphere_trace_shadow(cudaTextureObject_t tex, GPUVolumeObjectInstance* insta
 		return;
 	}
 
-
 	float res = 1.f;
 
 	float t = 0;
@@ -119,17 +174,40 @@ void sphere_trace_shadow(cudaTextureObject_t tex, GPUVolumeObjectInstance* insta
 	return;
 }
 
+__device__
+float4 triplanar_mapping(float3 norm, float3 p_hit, float4 *texture)
+{
+	// in wNorm is the world-space normal of the fragment
+	float3 blending = fabs(norm);
+	blending = normalize(fmaxf(blending, make_float3(0.00001))); // Force weights to sum to 1.0
+	float b = (blending.x + blending.y + blending.z);
+	blending /= make_float3(b);
+
+	float4 xaxis = bilinear_filter( p_hit.y, p_hit.z, texture);
+	float4 yaxis = bilinear_filter( p_hit.z, p_hit.x, texture);
+	float4 zaxis = bilinear_filter( p_hit.x, p_hit.y, texture);
+
+	//float4 xaxis = tex2D(d_texture, p_hit.y, p_hit.z);
+	//float4 yaxis = tex2D(d_texture, p_hit.z, p_hit.x);
+	//float4 zaxis = tex2D(d_texture, p_hit.x, p_hit.y);
+
+	
+	// blend the results of the 3 planar projections.
+	float4 tex = blending.x * xaxis + blending.y * yaxis + blending.z * zaxis;
+	return tex;
+}
 
 __device__
 void sphere_trace_shade(cudaTextureObject_t tex, GPUScene scene, float3 * lights, int num_lights, HitResult hit_result, GPUVolumeObjectInstance * instance, float t, GPUBoundingBox * volumes,
- int num_sdf, float3 * step, int3 * dim, int curr_sdf, float4 & final_colour, int step_count, bool shade)
+ int num_sdf, float3 * step, int3 * dim, int curr_sdf, float4 & final_colour, int step_count, bool shade, float4 *texture)
 {
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int index = imageX * SCR_HEIGHT + imageY;
-	if (index > (SCR_WIDTH - 1) * (SCR_HEIGHT - 1))
+	if (imageX >= SCR_WIDTH || imageY >= SCR_HEIGHT)
 		return;
+
+	int index = imageX * SCR_HEIGHT + imageY;
 
 	GPUVolumeObjectInstance curr_obj = instance[curr_sdf];
 	float3 p_hit = hit_result.ray_o + (t)* hit_result.ray_dir;
@@ -146,7 +224,7 @@ void sphere_trace_shade(cudaTextureObject_t tex, GPUScene scene, float3 * lights
 	/*int square = floor(p_hit.x) + floor(p_hit.z);
 	tile_pattern(final_colour, square);*/
 
-
+	//final_colour = triplanar_mapping(n, normalize(fabs(p_hit / step[0]) / 250), texture);
 	if (curr_obj.index != -1 && shade)
 	{
 		for (int i = 0; i < num_lights; ++i)
@@ -199,45 +277,12 @@ void bind_sdf_to_texture(float* dev_sdf_p, int3 dim, int num_sdf)
 	tex_desc.addressMode[2] = cudaAddressModeBorder;    // wrap texture coordinates
 	tex_desc.readMode = cudaReadModeElementType;
 
-
-	cudaChannelFormatDesc* channelDesc = &cudaCreateChannelDesc<float>();
-	channelDesc->f = cudaChannelFormatKindFloat;
-
 	gpuErrchk(cudaCreateTextureObject(&texObject, &res_desc, &tex_desc, NULL));
 }
 
-extern "C"
-void setTextureFilterMode(bool bLinearFilter)
-{
-	if (texObject)
-	{
-		gpuErrchk(cudaDestroyTextureObject(texObject));
-	}
-	cudaResourceDesc            texRes;
-	memset(&texRes, 0, sizeof(cudaResourceDesc));
-
-	texRes.resType = cudaResourceTypeArray;
-	texRes.res.array.array = d_volumeArray;
-
-	cudaTextureDesc             texDescr;
-	memset(&texDescr, 0, sizeof(cudaTextureDesc));
-
-	texDescr.normalizedCoords = true;
-	texDescr.filterMode = bLinearFilter ? cudaFilterModeLinear : cudaFilterModePoint;
-
-	texDescr.addressMode[0] = cudaAddressModeWrap;
-	texDescr.addressMode[1] = cudaAddressModeWrap;
-	texDescr.addressMode[2] = cudaAddressModeWrap;
-
-	texDescr.readMode = cudaReadModeElementType;
-
-	gpuErrchk(cudaCreateTextureObject(&texObject, &texRes, &texDescr, NULL));
-
-}
-
 
 extern "C"
-uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf)
+uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::vector<float4> textures)
 {
 	float size_sdf = num_sdf * sdf->voxels.size() * sizeof(float);
 	size_t image_size = SCR_WIDTH * SCR_HEIGHT;
@@ -252,6 +297,7 @@ uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf)
 	h_lights[0] = make_float3(0, 25, 0);
 	//h_lights[1] = make_float3(3, 15, 10);
 	Atmosphere* h_atmosphere = new Atmosphere();
+	size_t textures_size = textures.size() * sizeof(float4);
 	float3* h_sdf_steps = new float3[num_sdf];
 	int3* h_sdf_dim = new int3[num_sdf];
 	float3* h_max_sdf = new float3[num_sdf];
@@ -300,43 +346,58 @@ uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf)
 	scene.spacing.z = scene.volume.dz() / ((float)scene.dim.z - 1.f);
 
 	// allocate memory for the triangle meshes on the GPU
-	cudaMalloc((void**)& d_sdf, size_sdf);
-	cudaMalloc(&d_pixels, size);
-	cudaMalloc(&d_render_camera, sizeof(RCamera));
-	cudaMalloc(&d_light, num_light * sizeof(float3));
-	cudaMalloc(&d_sdf_steps, num_sdf * sizeof(float3));
-	cudaMalloc(&d_sdf_dim, num_sdf * sizeof(int3));
-	cudaMalloc(&d_max_sdf, num_sdf * sizeof(float3));
-	cudaMalloc(&d_atmosphere, sizeof(Atmosphere));
-	cudaMalloc(&d_sdf_volumes, num_sdf * sizeof(GPUBoundingBox));
-	cudaMalloc(&d_volume_instances, 200 * sizeof(GPUVolumeObjectInstance));
-	cudaMalloc(&scene_sdf, scene.dim.x * scene.dim.x * scene.dim.x * sizeof(float2));
+	gpuErrchk(cudaMalloc((void**)& d_sdf, size_sdf));
+	gpuErrchk(cudaMalloc(&d_pixels, size));
+	gpuErrchk(cudaMalloc(&d_render_camera, sizeof(RCamera)));
+	gpuErrchk(cudaMalloc(&d_light, num_light * sizeof(float3)));
+	gpuErrchk(cudaMalloc(&d_sdf_steps, num_sdf * sizeof(float3)));
+	gpuErrchk(cudaMalloc(&d_sdf_dim, num_sdf * sizeof(int3)));
+	gpuErrchk(cudaMalloc(&d_atmosphere, sizeof(Atmosphere)));
+	gpuErrchk(cudaMalloc(&d_sdf_volumes, num_sdf * sizeof(GPUBoundingBox)));
+	gpuErrchk(cudaMalloc(&d_volume_instances, 200 * sizeof(GPUVolumeObjectInstance)));
 
 	// copy triangle data to GPU
-	cudaMemcpy(d_sdf, h_grid, size_sdf, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_pixels, h_pixels, image_size, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_render_camera, h_camera, sizeof(RCamera), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_light, h_lights, num_light * sizeof(float3), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_sdf_steps, h_sdf_steps, num_sdf * sizeof(float3), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_sdf_dim, h_sdf_dim, num_sdf * sizeof(int3), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_max_sdf, h_max_sdf, num_sdf * sizeof(float3), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_sdf_volumes, h_volumes, num_sdf * sizeof(GPUBoundingBox), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_atmosphere, h_atmosphere, sizeof(Atmosphere), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_volume_instances, volume_objs, 2 * sizeof(GPUVolumeObjectInstance), cudaMemcpyHostToDevice);
-	cudaMemset(scene_sdf, -1, scene.dim.x * scene.dim.x * scene.dim.x * sizeof(float2));
+	gpuErrchk(cudaMemcpy(d_sdf, h_grid, size_sdf, cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(d_pixels, h_pixels, image_size, cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(d_render_camera, h_camera, sizeof(RCamera), cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(d_light, h_lights, num_light * sizeof(float3), cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(d_sdf_steps, h_sdf_steps, num_sdf * sizeof(float3), cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(d_sdf_dim, h_sdf_dim, num_sdf * sizeof(int3), cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(d_sdf_volumes, h_volumes, num_sdf * sizeof(GPUBoundingBox), cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(d_atmosphere, h_atmosphere, sizeof(Atmosphere), cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(d_volume_instances, volume_objs, 2 * sizeof(GPUVolumeObjectInstance), cudaMemcpyHostToDevice));
 	d_num_sdf = num_sdf;
 
 	// load triangle data into a CUDA texture
 	bind_sdf_to_texture(d_sdf, sdf[0].sdf_dim, num_sdf);
 
-	dim3 threadsPerBlock(2, 2, 2);
-	dim3 blocksPerGrid(50, 50, 50);
+	if (textures_size > 0)
+	{
+		// allocate memory for the triangle meshes on the GPU
+		gpuErrchk(cudaMalloc((void**)& dev_tex_p, textures_size));
 
-	//cudaDeviceSynchronize();
-	//update_global_field << <blocksPerGrid, threadsPerBlock >> > (scene, scene_sdf, d_sdf_steps, d_sdf_volumes, d_volume_instances, d_num_instances);
-	//cudaDeviceSynchronize();
 
-	//bind_scene_to_texture(scene_sdf, scene.dim);
+		// copy triangle data to GPU
+		gpuErrchk(cudaMemcpy(dev_tex_p, textures.data(), textures_size, cudaMemcpyHostToDevice));
+
+		// load triangle data into a CUDA texture
+		bind_texture(dev_tex_p, textures_size);
+	}
 
 	return d_pixels;
+}
+
+extern
+void free_memory()
+{
+	gpuErrchk(cudaDestroyTextureObject(texObject));
+	gpuErrchk(cudaFreeArray(d_volumeArray));
+	gpuErrchk(cudaFree(d_atmosphere));
+	gpuErrchk(cudaFree(d_sdf));
+	gpuErrchk(cudaFree(d_sdf_volumes));
+	gpuErrchk(cudaFree(d_render_camera));
+	gpuErrchk(cudaFree(d_sdf_steps));
+	gpuErrchk(cudaFree(d_sdf_dim));
+	gpuErrchk(cudaFree(d_volume_instances));
+	gpuErrchk(cudaFree(dev_tex_p));
 }

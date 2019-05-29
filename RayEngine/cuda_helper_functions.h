@@ -21,6 +21,15 @@ inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort =
 	}
 }
 
+__device__ uint rgbaFloatToInt(float4 rgba)
+{
+	rgba.x = __saturatef(rgba.x);   // clamp to [0.0, 1.0]
+	rgba.y = __saturatef(rgba.y);
+	rgba.z = __saturatef(rgba.z);
+	rgba.w = __saturatef(rgba.w);
+	return (uint(rgba.w * 255) << 24) | (uint(rgba.z * 255) << 16) | (uint(rgba.y * 255) << 8) | uint(rgba.x * 255);
+}
+
 ////////////////////////////////////////////////////
 // Compute light intensity
 ////////////////////////////////////////////////////
@@ -36,7 +45,7 @@ void illuminate(float3& P, float3 light_pos, float3& lightDir, float4& lightInte
 	float r2 = light_pos.x * light_pos.x + light_pos.y * light_pos.y + light_pos.z * light_pos.z;
 	distance = sqrtf(r2);
 	lightDir.x /= distance, lightDir.y /= distance, lightDir.z /= distance;
-	lightIntensity = make_float4(0.86, 0.80, 0.45, 1) * 2500 / (4 * M_PI * r2);
+	lightIntensity = make_float4(0.86, 0.80, 0.45, 1) * 20000 / (4 * M_PI * r2);
 }
 
 

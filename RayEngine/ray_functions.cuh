@@ -13,17 +13,18 @@
 ////////////////////////////////////////////////////
 __device__
 void generate_ray(float3& ray_o, float3& ray_dir,
-	const RCamera render_camera, int stride)
+	const RCamera render_camera, uint width, uint heigth)
 {
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int index = ((imageY * SCR_WIDTH) + imageX) + stride;
-	if (index > (SCR_WIDTH - 1) * (SCR_HEIGHT - 1))
+	if (imageX >= width || imageY >= heigth)
 		return;
 
-	float sx = (float)imageX / (SCR_WIDTH - 1.0f);
-	float sy = 1.0f - ((float)imageY / (SCR_HEIGHT - 1.0f));
+	int index = (imageY * width) + imageX;
+
+	float sx = (float)imageX / (width - 1.0f);
+	float sy = 1.0f - ((float)imageY / (heigth - 1.0f));
 
 	float3 rendercampos = render_camera.campos;
 
@@ -434,12 +435,12 @@ float4* device_trace_ray(RKDTreeNodeGPU* tree, float3 ray_o, float3 ray_dir,
 // Cast ray from a pixel
 ////////////////////////////////////////////////////
 __device__
-float4 * trace_pixel(RKDTreeNodeGPU * tree, float4 * pixels, int width, int heigth,
+float4 * trace_pixel(RKDTreeNodeGPU * tree, float4 * pixels,
 	const RCamera render_camera, GPUSceneObject * scene_objs, int num_objs,
-	int root_index, int num_faces, int* indexList, int stride)
+	int root_index, int num_faces, int* indexList, uint width, uint heigth)
 {
 	float3 ray_o, ray_dir;
-	generate_ray(ray_o, ray_dir, render_camera, stride);
+	generate_ray(ray_o, ray_dir, render_camera, width, heigth);
 
 	pixels = device_trace_ray(tree, ray_o, ray_dir, scene_objs, num_objs, pixels, &root_index, num_faces, indexList);
 

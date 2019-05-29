@@ -14,12 +14,12 @@
 #include <vector>
 #include <fstream>
 #include <filesystem/resolver.h>
-std::vector<float3> read_ppm(char *filename);
+std::vector<float4> read_ppm(char *filename);
 
 
 RScene::RScene()
 {
-	textures = std::vector<float3>(read_ppm((char *) "Meshes/1.ppm"));
+	textures = std::vector<float4>(read_ppm((char *) "Meshes/1.ppm"));
 	AFloor *floor = new AFloor;
 	sceneObjects.push_back(floor);
 
@@ -217,10 +217,10 @@ void RScene::build_tree()
 
 
 
-std::vector<float3> read_ppm(char *filename)
+std::vector<float4> read_ppm(char *filename)
 {
 	std::ifstream is(filename);
-	std::vector<float3>imag;
+	std::vector<float4>imag;
 	std::string line_str;
 	std::getline(is, line_str);
 	if (line_str != "P3")
@@ -236,7 +236,7 @@ std::vector<float3> read_ppm(char *filename)
 	int i = 0;
 	while (std::getline(is, line_str))
 	{
-		float3 img;
+		float4 img;
 		line = std::istringstream(line_str);
 		line >> img.x;
 		std::getline(is, line_str);
@@ -245,7 +245,7 @@ std::vector<float3> read_ppm(char *filename)
 		std::getline(is, line_str);
 		line = std::istringstream(line_str);
 		line >> img.z;
-		img = make_float3(img.x / 255.f, img.y / 255.f, img.z / 255.f);
+		img = make_float4(img.x / 255.f, img.y / 255.f, img.z / 255.f, 0);
 		imag.push_back(img);
 		++i;
 	}

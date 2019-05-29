@@ -113,7 +113,6 @@ void RMovableCamera::build_camera(RCamera * camera)
 	float3 directionToCamera = make_float3(xDirection, yDirection, zDirection);
 	view_direction = directionToCamera * (-1.0f);
 	float3 eyePosition = position + directionToCamera * radius;
-	//Vec3f eyePosition = centerPosition; // rotate camera from stationary viewpoint
 
 
 	camera->campos = eyePosition;
