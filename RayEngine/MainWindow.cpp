@@ -34,7 +34,8 @@
 
  
 extern void cuda_render_frame(RCamera sceneCamm, uint* output, uint width, uint heigth);
-extern "C" void initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::vector<float4> textures, std::vector<float4> textures1, std::vector<float4> textures2);
+extern "C" void initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::vector<float4> textures, std::vector<float4> textures1, std::vector<float4> textures2,
+	RenderingSettings render_settings, SceneSettings scene_settings);
 extern void spawn_obj(RCamera pos, TerrainBrush brush);
 extern void toggle_shadow();
 extern "C" void copy_memory(std::vector<RKDThreeGPU*> tree, RCamera _sceneCam, std::vector<float4> h_triangles,
@@ -46,12 +47,15 @@ double lastFrame;
 double deltaTime;
 float click_timer;
 bool shift = false;
+bool show_mouse = true;
 
 float brush_radius = 1;
 
 MainWindow *main_window;
 RMovableCamera *movable_camera;
 GLFWwindow* window;
+RenderingSettings render_settings;
+SceneSettings scene_settings; 
 
 // vao and vbo handle
 GLuint vao, vbo, ibo;
@@ -63,6 +67,7 @@ GLuint pbo = 0;     // OpenGL pixel buffer object
 GLuint tex = 0;     // OpenGL texture object
 struct cudaGraphicsResource* cuda_pbo_resource; // CUDA Graphics Resource (to transfer PBO)
 TerrainBrushType brush_type;
+bool changed = false;
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -147,10 +152,11 @@ MainWindow::MainWindow()
 
 #ifdef sphere_tracing
 	distance_field = new Grid[1];
-	distance_field[0] = Grid(std::string(PATH_TO_VOLUMES) + std::string("terrain250.rsdf"));
+	//distance_field[0] = Grid(std::string(PATH_TO_VOLUMES) + std::string("terrain250.rsdf"));
+	distance_field[0] = Grid(std::string("SDFs/Edited.rsdf"));
 	//distance_field[1] = Grid(std::string(PATH_TO_VOLUMES) + std::string("cat250.rsdf"));
 
-	initialize_volume_render(*SceneCam, distance_field, 1, Scene->textures, Scene->textures1, Scene->textures2);
+	initialize_volume_render(*SceneCam, distance_field, 1, Scene->textures, Scene->textures1, Scene->textures2, render_settings, scene_settings);
 #endif
 	currentFrame = glfwGetTime();
 	lastFrame = currentFrame;
@@ -379,67 +385,72 @@ void MainWindow::RenderFrame()
 
 
 bool should_spawn = false;
+float character_speed = .01f;
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
 void MainWindow::processInput(float delta_time, GLFWwindow *window)
 {
-	RMovableCamera *tmp_cam = new RMovableCamera();
-	memcpy(tmp_cam, movable_camera, sizeof(RMovableCamera));
 
-
-
-	float scale = .5f;
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
+	if (!show_mouse)
+	{
+		RMovableCamera* tmp_cam = new RMovableCamera();
+		memcpy(tmp_cam, movable_camera, sizeof(RMovableCamera));
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		{
+			tmp_cam->move_forward(character_speed);
 
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-	{
-		tmp_cam->move_forward(scale);
+		}
+		else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		{
+			tmp_cam->move_forward(-character_speed);
 
+		}
+		else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		{
+			tmp_cam->strafe(character_speed);
+		}
+		else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		{
+			tmp_cam->strafe(-character_speed);
+		}
+		else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS && click_timer > 10.f)
+		{
+			click_timer = 0.f;
+			toggle_shadow();
+		}
+		else if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+		{
+			shift = true;
+		}
+		else if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE)
+		{
+			shift = false;
+		}
+		memcpy(movable_camera, tmp_cam, sizeof(RMovableCamera));
+		delete tmp_cam;
 	}
-	else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+	
+	if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS)
 	{
-		tmp_cam->move_forward(-scale);
-
+		show_mouse = true;
 	}
-	else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+	else if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE)
 	{
-		tmp_cam->strafe(scale);
-	}
-	else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-	{
-		tmp_cam->strafe(-scale);
-	}
-	else if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS && click_timer > 10.f)
-	{
-		click_timer = 0.f;
-		toggle_shadow();
-	}
-	else if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-	{
-		shift = true;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE)
-	{
-		shift = false;
-	}
-	else if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-	{
-		yDelta--;
-
+		show_mouse = false;
 	}
 
 	bool overlaps = false;
-	for (int i = 0; i < main_window->CUDATree.size(); ++i)
-	{
-		if (point_aabb_collision(main_window->Scene->sceneObjects[i]->collision_box,  tmp_cam->position))
-			overlaps = true;
-	}
+	//for (int i = 0; i < main_window->CUDATree.size(); ++i)
+	//{
+	//	if (point_aabb_collision(main_window->Scene->sceneObjects[i]->collision_box,  tmp_cam->position))
+	//		overlaps = true;
+	//}
 
 	click_timer += delta_time;
 
-	memcpy(movable_camera, tmp_cam, sizeof(RMovableCamera));
-	delete tmp_cam;
+
 }
 
 
@@ -567,13 +578,16 @@ int theModifierState = 0;
 
 void mouse_motion(double xPos, double yPos)
 {
-	int deltaX = lastX - xPos;
-	int deltaY = lastY - yPos;
-
-	if (deltaX != 0 || deltaY != 0)
+	if(!show_mouse)
 	{
-		movable_camera->change_yaw(-deltaX * 0.005);
-		movable_camera->change_pitch(-deltaY * 0.005);
+		int deltaX = lastX - xPos;
+		int deltaY = lastY - yPos;
+
+		if (deltaX != 0 || deltaY != 0)
+		{
+			movable_camera->change_yaw(-deltaX * 0.005);
+			movable_camera->change_pitch(-deltaY * 0.005);
+		}
 	}
 	lastX = xPos;
 	lastY = yPos;
@@ -595,6 +609,8 @@ void cursorEnterCallback(GLFWwindow *widnow, int entered)
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
+	if (show_mouse)
+		return;
 	if (action == GLFW_PRESS)
 	{
 		if (click_timer > 10.f)
@@ -792,21 +808,30 @@ int main()
 			std::cerr << error << std::endl;
 			break;
 		}
-		main_window->main_ui->render_main_hud();
 
+		// input
 		// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
 		// -------------------------------------------------------------------------------
-		glfwSwapBuffers(window);
-		glfwPollEvents();
 
+		processInput(deltaTime, window);
+		glfwPollEvents();
 		
+		if (show_mouse)
+		{
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+		else
+		{
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		}
+		main_window->main_ui->render_main_hud(show_mouse, brush_radius, character_speed, render_settings, scene_settings);
+		glfwSwapBuffers(window);
 		main_window->RenderFrame();
 		render_thread(main_window, deltaTime);
 		// Start the Dear ImGui frame
 
 
-		// input
-		processInput(deltaTime, window);
+		
 		if (should_spawn)
 		{
 			TerrainBrush brush;

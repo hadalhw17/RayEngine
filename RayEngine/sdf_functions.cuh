@@ -191,9 +191,24 @@ float CUBICTEX3D(cudaTextureObject_t tex, float3 coord)
 
 __device__
 __forceinline__
-float get_distance(cudaTextureObject_t tex,  float3 r_orig, float3* step, GPUVolumeObjectInstance instance)
+float get_distance(RenderingSettings render_settings, cudaTextureObject_t tex,  float3 r_orig, float3* step, GPUVolumeObjectInstance instance)
 {
-	float dist = interpolate<float>(tex, r_orig / step[instance.index]);
+	float dist;
+	switch (render_settings.quality)
+	{
+	case LOW:
+		dist = tex3D<float>(tex, r_orig.x / step[instance.index].x, r_orig.y / step[instance.index].y, r_orig.z / step[instance.index].z);
+		break;
+	case MEDIUM:
+		dist = interpolate<float>(tex, r_orig / step[instance.index]);
+		break;
+	case HIGH:
+		dist = cubicTex3DSimple(tex, r_orig / step[instance.index]);
+		break;
+	default:
+		break;
+	}
+	
 	return dist;
 }
 
@@ -228,7 +243,7 @@ float get_distance_scene(float3 r_orig, GPUVolumeObjectInstance instance, GPUBou
 
 
 __device__
-float get_distance_to_sdf(cudaTextureObject_t tex, GPUScene scene, GPUBoundingBox box, float3 from, HitResult hit_result, float3 * step, int3 * dim, GPUVolumeObjectInstance instance, float curr_t)
+float get_distance_to_sdf(RenderingSettings render_settings, cudaTextureObject_t tex, GPUScene scene, GPUBoundingBox box, float3 from, HitResult hit_result, float3 * step, int3 * dim, GPUVolumeObjectInstance instance, float curr_t)
 {
 	float min_dist = K_INFINITY;
 	float t_near = K_INFINITY, t_far;
@@ -240,7 +255,7 @@ float get_distance_to_sdf(cudaTextureObject_t tex, GPUScene scene, GPUBoundingBo
 	if (intersect_box)
 	{
 
-		float min_dist_to_sdf = get_distance(tex, from, step, instance);
+		float min_dist_to_sdf = get_distance(render_settings, tex, from, step, instance);
 		min_dist = t_near + min_dist_to_sdf;
 	}
 	else

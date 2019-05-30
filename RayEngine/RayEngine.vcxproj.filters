@@ -117,9 +117,6 @@
     <ClCompile Include="MeshAdjacencyTable.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="gl_window.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="includes\imgui\imgui.cpp">
       <Filter>vendor</Filter>
     </ClCompile>
@@ -142,9 +139,6 @@
       <Filter>vendor\gl3w</Filter>
     </ClCompile>
     <ClCompile Include="UserInterface.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -312,9 +306,6 @@
       <Filter>vendor\gl3w</Filter>
     </ClInclude>
     <ClInclude Include="UserInterface.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

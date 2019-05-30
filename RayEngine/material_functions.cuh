@@ -46,6 +46,22 @@ void ambient_light(float4& color)
 }
 
 ////////////////////////////////////////////////////
+// Fog
+////////////////////////////////////////////////////
+__device__
+void apply_fog(float4& color, float distance, float d, float3 ray_o, float3 ray_dir)
+{
+	float a = 0.0375f;
+	float fogAmount = __saturatef(a/d * exp(-ray_o.y * d) * (1.0 - exp(-distance * ray_dir.y * d)) / ray_dir.y);
+	fogAmount = __saturatef(fogAmount + (exp(-(45.f - distance) * 0.08)) - 0.1);
+	//float fogAmount = 1.0 - exp(-distance / d);
+	float4  fogColor;
+	sky_mat(fogColor, ray_dir);
+	color += fogColor * fogAmount;
+	
+}
+
+////////////////////////////////////////////////////
 // Phong light
 ////////////////////////////////////////////////////
 __device__
@@ -59,7 +75,7 @@ void phong_light(float3* lights, size_t num_lights, float4& finalColor, RKDTreeN
 		float3 lightpos = lights[i], lightDir;
 		float4 lightInt;
 		float t = K_INFINITY;
-		illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, t);
+		illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, t, 20000);
 
 		shadow_hit_result.ray_o = hit_result.hit_point + bias;
 		shadow_hit_result.ray_dir = -lightDir;
@@ -90,7 +106,7 @@ void shade(float3* lights, size_t num_lights, float4& finalColor, RKDTreeNodeGPU
 		float4 lightInt;
 		float4 lightColor = make_float4(1, 0, 0, 0);
 		float t = K_INFINITY;
-		illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, t);
+		illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, t, 20000);
 
 		shading_hit_result.ray_o = hit_result.hit_point + bias;
 		shading_hit_result.ray_dir = -lightDir;

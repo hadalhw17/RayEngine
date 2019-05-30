@@ -72,18 +72,25 @@ void RUserInterface::clean_UI()
 
 
 
-void RUserInterface::render_main_hud()
+void RUserInterface::render_main_hud(bool show_menu, float &brush_size, float& character_speed, struct RenderingSettings& render_settings, struct SceneSettings& scene_settings)
 {
-	bool overlay = true;
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-	ShowExampleAppSimpleOverlay(&overlay);
-	render_crosshair(&overlay);
-	// Rendering
-	create_welcome_screen(&overlay);
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	if (!show_menu)
+	{
+		bool overlay;
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+		ShowExampleAppSimpleOverlay(&overlay);
+		render_crosshair(&overlay);
+		// Rendering
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+	}
+	else
+	{
+		render_menu(brush_size, character_speed, render_settings, scene_settings);
+	}
+
 }
 
 void RUserInterface::render_main_screen(bool* start_game)
@@ -123,6 +130,94 @@ void RUserInterface::render_main_screen(bool* start_game)
 			*start_game = true;
 			return;
 		}
+	}
+	ImGui::End();
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+extern
+void save_map();
+extern
+void update_render_settings(RenderingSettings render_settings, SceneSettings scene_settings);
+extern
+void generate_noise();
+void RUserInterface::render_menu(float &brush_size, float &character_speed, struct RenderingSettings& render_settings, struct SceneSettings &scene_settings)
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+	const float DISTANCE_X = 10;
+	const float DISTANCE_Y = SCR_HEIGHT / 2 - 250;
+	static int corner = 0;
+	ImGuiIO& io = ImGui::GetIO();
+	if (corner != -1)
+	{
+		ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE_X : DISTANCE_X, (corner & 2) ? io.DisplaySize.y - DISTANCE_Y : DISTANCE_Y);
+		ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+		ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+		ImGui::SetNextWindowSize(ImVec2(500, 500));
+		ImGui::SetNextWindowContentSize(ImVec2(250, 250));
+	}
+	ImGui::SetNextWindowBgAlpha(.5f); // Transparent background
+	bool show = true;
+	if (ImGui::Begin("Menu", &show, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+	{
+		ImGui::Text("Greetings my friend!");
+		ImGui::BeginTabBar("TabBar");
+		if (ImGui::BeginTabItem("Editor Settings"))
+		{
+			ImGui::SliderFloat("Brush size", &brush_size, 0.f, 5.0f, "%.4f", 2.0f);
+			ImGui::SliderFloat("Character speed", &character_speed, 0.f, 2.0f, "%.4f", 2.0f);
+
+			if (ImGui::Button("Save changes"))
+			{
+
+				save_map();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Load map"))
+			{
+				ImGui::End();
+				ImGui::Render();
+				ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+				clean_UI();
+				glfwTerminate();
+				return;
+			}
+
+			if (ImGui::SliderFloat("Noise frequency", &scene_settings.noise_freuency, 1.f, 250.0f, "%.4f", 2.0f))
+			{
+				generate_noise();
+			}
+			if (ImGui::SliderFloat("Noise amplitude", &scene_settings.noise_amplitude, 1.f, 250.0f, "%.4f", 2.0f))
+			{
+				generate_noise();
+			}
+			if (ImGui::Button("Generate noise terrain"))
+			{
+				generate_noise();
+			}
+			ImGui::EndTabItem();
+		}
+		if (ImGui::BeginTabItem("Renderer Settings"))
+		{
+			ImGui::SliderFloat("Texture scale", &render_settings.texture_scale, 1.f, 250.0f, "%.4f", 2.0f);
+			ImGui::SliderInt("Render quality", (int*)& render_settings.quality, 0, 2, "%.4f");
+			ImGui::EndTabItem();
+		}
+		if (ImGui::BeginTabItem("Scene Settings"))
+		{
+			ImGui::SliderFloat("Light angle", &scene_settings.light_pos.x, 0.f, 1.f, "%.4f", 2.0f);
+			ImGui::SliderFloat("Light Y", &scene_settings.light_pos.y, -17.f, 38.f, "%.4f", 2.0f);
+			ImGui::SliderFloat("Light intensity", &scene_settings.light_intensity, 0.f, 100000, "%.4f", 2.0f);
+			ImGui::SliderInt("Prelumbra size", &scene_settings.soft_shadow_k, 1.f, 128.0f, "%.4f");
+			ImGui::SliderFloat("Fog density", &scene_settings.fog_deisity, 0.f, 1.f, "%.4f", 2.0f); ImGui::SameLine();
+			ImGui::Checkbox("Render Fog", &scene_settings.enable_fog);
+			ImGui::EndTabItem();
+		}
+		ImGui::EndTabBar();
+		update_render_settings(render_settings, scene_settings);
 	}
 	ImGui::End();
 	ImGui::Render();

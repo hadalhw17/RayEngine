@@ -46,6 +46,30 @@ struct TerrainBrush
 	float brush_radius;
 };
 
+enum RenderQuality
+{
+	LOW = 0,
+	MEDIUM = 1,
+	HIGH = 2
+};
+
+struct RenderingSettings
+{
+	float texture_scale;
+	RenderQuality quality;
+};
+
+struct SceneSettings
+{
+	float3 light_pos;
+	int soft_shadow_k = 32;
+	float light_intensity;
+	bool enable_fog = false;
+	float fog_deisity;
+	float noise_freuency;
+	float noise_amplitude;
+};
+
 struct GPUVolumeObjectInstance
 {
 	int index;

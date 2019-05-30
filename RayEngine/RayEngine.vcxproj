@@ -227,7 +227,6 @@
     <ClCompile Include="D:\CPPLibs\GLAD\src\glad.c" />
     <ClCompile Include="Floor.cpp" />
     <ClCompile Include="Glass.cpp" />
-    <ClCompile Include="gl_window.cpp" />
     <ClCompile Include="Grid.cpp" />
     <ClCompile Include="includes\GL\gl3w.c" />
     <ClCompile Include="includes\imgui\imgui.cpp" />
@@ -253,7 +252,6 @@
     <ClCompile Include="Ray.cpp" />
     <ClCompile Include="RayEngine.cpp" />
     <ClCompile Include="RayTracer.cpp" />
-    <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="rply.c" />
     <ClCompile Include="RStaticMesh.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -265,7 +263,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\RayTraceer\rply.h" />
-    <ClInclude Include="Renderer.h" />
     <ClInclude Include="UserInterface.h" />
     <CudaCompile Include="Atmosphere.cuh" />
     <ClInclude Include="BoundingVolume.h" />
