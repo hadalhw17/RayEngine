@@ -55,6 +55,8 @@ public:
 	void init_triangles();
 	void setup_camera();
 	void build_scene();
+	class RUserInterface *main_ui;
 
+private:
 
 };

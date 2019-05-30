@@ -61,7 +61,7 @@ float4 mul(const float3x4& M, const float4& v)
 
 
 __global__
-void insert_sphere_to_texture(TerrainBrushType brush_type, cudaTextureObject_t tex, HitResult hit_result, GPUVolumeObjectInstance* instances,
+void insert_sphere_to_texture(TerrainBrush brush, cudaTextureObject_t tex, HitResult hit_result, GPUVolumeObjectInstance* instances,
 	float3* step, float *sdf_texute, GPUBoundingBox *volumes, int3 *tex_dim, float3 *tex_spacing)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -83,15 +83,19 @@ void insert_sphere_to_texture(TerrainBrushType brush_type, cudaTextureObject_t t
 		int index = x + tex_dim[0].x * (y + tex_dim[0].z * z);
 		float3 poi = make_float3(x, y, z) * tex_spacing[0];
 		float3 sphere_pos = hit_result.ray_o + scene_t_near * hit_result.ray_dir;
-		switch (brush_type)
+		switch (brush.brush_type)
 		{
-		case ADD:
-			sdf_texute[index] = fminf(sdf_texute[index], aabb_distance(poi - sphere_pos, make_float3(1)));
+		case SPHERE_ADD:
+			sdf_texute[index] = fminf(sdf_texute[index], sphere_distance(poi - sphere_pos, brush.brush_radius));
 			break;
-		case SUBTRACT:
-			sdf_texute[index] = fmaxf(sdf_texute[index], -sphere_distance(poi - sphere_pos, 1));
+		case SPHERE_SUBTRACT:
+			sdf_texute[index] = fmaxf(sdf_texute[index], -sphere_distance(poi - sphere_pos, brush.brush_radius));
 			break;
-		case INTERSECT:
+		case CUBE_ADD:
+			sdf_texute[index] = fminf(sdf_texute[index], aabb_distance(poi - sphere_pos, make_float3(brush.brush_radius)));
+			break;
+		case CUBE_SUBTRACT:
+			sdf_texute[index] = fmaxf(sdf_texute[index], -aabb_distance(poi - sphere_pos, make_float3(brush.brush_radius)));
 			break;
 		default:
 			break;
@@ -127,11 +131,6 @@ void render_sphere_trace(RCamera render_camera, const GPUScene scene, float3* li
 	int index = imageY * width + imageX;
 
 	float4 pixel_colour = make_float4(0);
-	if (draw_crosshair())
-	{
-		pixels[index] = rgbaFloatToInt(pixel_colour);
-		return;
-	}
 
 	float u = (imageX / (float)width) * 2.0f - 1.0f;
 	float v = (imageY / (float)heigth) * 2.0f - 1.0f;
@@ -206,11 +205,15 @@ void trace_scene(RKDTreeNodeGPU * tree, float4 * pixels,
 	const RCamera render_camera, GPUSceneObject * scene_objs, int num_objs,
 	int root_index, int num_faces, int* indexList, uint width, uint height)
 {
-	int index = (blockIdx.x * blockDim.x) + threadIdx.x;
+	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
+	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	if (index > (width * height)) {
+	if (imageX >= width || imageY >= height)
 		return;
-	}
+
+	int index = imageY * width + imageX;
+
+	float4 pixel_colour = make_float4(0);
 
 	pixels = trace_pixel(tree, pixels, render_camera, scene_objs, num_objs,
 		root_index, num_faces, indexList, width, height);
@@ -225,15 +228,18 @@ __global__
 void gpu_bruteforce_ray_cast(float4 * image_buffer, const RCamera render_camera, GPUSceneObject * scene_objs, int num_objs,
 	int num_faces, int stride, RKDTreeNodeGPU * tree, int* root_index, int* index_list, uint width, uint height)
 {
-	int index = ((threadIdx.x * gridDim.x) + blockIdx.x) + stride;
-	if (index > width * height)
+	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
+	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
+
+	if (imageX >= width || imageY >= height)
 		return;
+
+	int index = imageY * width + imageX;
+
+	float4 pixel_colour = make_float4(0);
 
 	float3 ray_o, ray_dir;
 	generate_ray(ray_o, ray_dir, render_camera, width, height);
-
-
-	float4 pixel_color = make_float4(0);
 
 	float t_near, t_far;
 	GPUBoundingBox bbox = tree[0].box;
@@ -269,10 +275,10 @@ void gpu_bruteforce_ray_cast(float4 * image_buffer, const RCamera render_camera,
 		}
 	}
 
-	ambient_light(pixel_color);
-	pixel_color = clip(pixel_color);
+	ambient_light(pixel_colour);
+	pixel_colour = clip(pixel_colour);
 
-	image_buffer[index] = pixel_color;
+	image_buffer[index] = pixel_colour;
 	return;
 }
 
@@ -294,22 +300,23 @@ bool point_in_aabb(const GPUBoundingBox & tBox, const float3 & vecPoint)
 __global__
 void trace_primary_rays(RKDTreeNodeGPU* tree,
 	const RCamera render_camera, GPUSceneObject* scene_objs, int num_objs,
-	int* root_index, int* indexList, int stride, HitResult* hit_results, uint width, uint height)
+	int* root_index, int* indexList, HitResult* hit_results, uint width, uint height)
 {
 
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int index = imageY * width + imageX;
-	if (index > (width - 1) * (height - 1))
+	if (imageX >= width || imageY >= height)
 		return;
+
+	int index = imageY * width + imageX;
 
 	HitResult hit_result;
 	generate_ray(hit_result.ray_o, hit_result.ray_dir, render_camera, width, height);
 
-	trace_scene(tree, render_camera, scene_objs, num_objs, root_index, indexList, stride, hit_result);
+	trace_scene(tree, render_camera, scene_objs, num_objs, root_index, indexList, hit_result);
 
-	hit_results[index + stride] = hit_result;
+	hit_results[index] = hit_result;
 	return;
 }
 
@@ -337,16 +344,18 @@ float4 bilinear_filter(HitResult primary_hit_results, float3* texture)
 
 __global__
 void trace_secondary_rays(float3 * lights, size_t num_lights, RKDTreeNodeGPU * tree,
-	RCamera * render_camera, GPUSceneObject * scene_objs, int num_objs,
-	int* root_index, int* indexList, uchar4 * pixels, HitResult * primary_hit_results, Atmosphere * atmosphere, float3 * texture, size_t texture_size, int stride)
+	RCamera render_camera, GPUSceneObject * scene_objs, int num_objs,
+	int* root_index, int* indexList, uint * pixels, HitResult * primary_hit_results, Atmosphere * atmosphere, float3 * texture, size_t texture_size)
 {
 	float4 pixel_color = make_float4(0.f);
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int index = imageY * SCR_WIDTH + imageX;
-	if (index > (SCR_WIDTH - 1) * (SCR_HEIGHT - 1))
+	if (imageX >= SCR_WIDTH || imageY >= SCR_HEIGHT)
 		return;
+
+	int index = imageY * SCR_WIDTH + imageX;
+
 	HitResult shad_hit_result;
 	if (primary_hit_results[index].hits)
 	{
@@ -390,7 +399,7 @@ void trace_secondary_rays(float3 * lights, size_t num_lights, RKDTreeNodeGPU * t
 
 	pixel_color = clip(pixel_color);
 	primary_hit_results[index].hit_color = pixel_color;
-	pixels[index + stride] = make_uchar4(0xFF * pixel_color.x, 0xFF * pixel_color.y, 0xFF * pixel_color.z, 0xFF * pixel_color.w);
+	pixels[index] += rgbaFloatToInt(pixel_color);
 }
 
 
@@ -400,21 +409,24 @@ void trace_secondary_rays(float3 * lights, size_t num_lights, RKDTreeNodeGPU * t
 ////////////////////////////////////////////////////
 __global__
 void generate_shadow_map(float3 * lights, size_t num_lights, RKDTreeNodeGPU * tree,
-	RCamera * render_camera, GPUSceneObject * scene_objs, int num_objs,
-	int* root_index, int* indexList, float4 * pixels, HitResult * primary_hit_results, int stride)
+	RCamera render_camera, GPUSceneObject * scene_objs, int num_objs,
+	int* root_index, int* indexList, uint *pixels, HitResult * primary_hit_results)
 {
 	float4 pixel_color = make_float4(0);
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int index = imageY * SCR_WIDTH + imageX;
-	if (index > (SCR_WIDTH - 1) * (SCR_HEIGHT - 1))
+	if (imageX >= SCR_WIDTH || imageY >= SCR_HEIGHT)
 		return;
+
+	int index = imageY * SCR_WIDTH + imageX;
+
+	float4 pixel_colour = make_float4(0);
 	if (!primary_hit_results[index].hits)
 	{
 		pixel_color = make_float4(0);
 		//primary_hit_results[index].hit_color = pixel_color;
-		pixels[index + stride] = pixel_color;
+		pixels[index] = rgbaFloatToInt(pixel_color);
 		return;
 	}
 
@@ -427,7 +439,7 @@ void generate_shadow_map(float3 * lights, size_t num_lights, RKDTreeNodeGPU * tr
 	//primary_hit_results[index].hit_color = pixel_color;
 
 	pixel_color = clip(pixel_color);
-	pixels[index + stride] = pixel_color;
+	pixels[index] = rgbaFloatToInt(pixel_color);
 }
 
 
@@ -435,15 +447,17 @@ void generate_shadow_map(float3 * lights, size_t num_lights, RKDTreeNodeGPU * tr
 __global__
 void trace_secondary_shadow_rays(curandState * rand_state, float3 * lights, size_t num_lights, RKDTreeNodeGPU * tree,
 	const RCamera render_camera, GPUSceneObject * scene_objs, int num_objs,
-	int* root_index, int* indexList, float4 * pixels, HitResult * primary_hit_results, int stride)
+	int* root_index, int* indexList, float4 * pixels, HitResult * primary_hit_results)
 {
-	float4 pixel_color = make_float4(0.f);
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int index = imageY * SCR_WIDTH + imageX;
-	if (index > (SCR_WIDTH - 1) * (SCR_HEIGHT - 1))
+	if (imageX >= SCR_WIDTH || imageY >= SCR_HEIGHT)
 		return;
+
+	int index = imageY * SCR_WIDTH + imageX;
+
+	float4 pixel_colour = make_float4(0);
 
 	curandState local_random = rand_state[index];
 	HitResult shad_hit_result;
@@ -475,22 +489,22 @@ void trace_secondary_shadow_rays(curandState * rand_state, float3 * lights, size
 				// don't forget to divide by PDF and multiply by cos(theta)
 				local_hit_result.ray_o = primary_hit_results[index].hit_point + sample_world * make_float3(K_EPSILON);
 				local_hit_result.ray_dir = sample_world;
-				trace_scene(tree, render_camera, scene_objs, num_objs, root_index, indexList, stride, local_hit_result);
+				trace_scene(tree, render_camera, scene_objs, num_objs, root_index, indexList, local_hit_result);
 				indirectLigthing += r1 * local_hit_result.hit_color / pdf;
 			}
 			// divide by N
 			indirectLigthing /= (float)N;
-			pixel_color = (direct_light / M_PI + 2 * indirectLigthing) * 0.18f;
+			pixel_colour = (direct_light / M_PI + 2 * indirectLigthing) * 0.18f;
 			//shad_hit_result.hit_color = pixel_color;
 		}
 		else if (hit_mat_type == REFLECT)
 		{
-			reflect_light(pixel_color, tree, scene_objs, num_objs, root_index, indexList, primary_hit_results[index], shad_hit_result);
+			reflect_light(pixel_colour, tree, scene_objs, num_objs, root_index, indexList, primary_hit_results[index], shad_hit_result);
 			//primary_hit_results[index] = hit_result;
 		}
 		else if (hit_mat_type == REFRACT)
 		{
-			refract_light(pixel_color, tree, scene_objs, num_objs, root_index, indexList, primary_hit_results[index], shad_hit_result);
+			refract_light(pixel_colour, tree, scene_objs, num_objs, root_index, indexList, primary_hit_results[index], shad_hit_result);
 			//primary_hit_results[index] = hit_result;
 		}
 		primary_hit_results[index] = shad_hit_result;
@@ -502,11 +516,11 @@ void trace_secondary_shadow_rays(curandState * rand_state, float3 * lights, size
 	}
 
 
-	pixel_color = clip(pixel_color);
-	gray_scale(pixel_color);
+	pixel_colour = clip(pixel_colour);
+	gray_scale(pixel_colour);
 
-	primary_hit_results[index].hit_color = pixel_color;
-	pixels[index + stride] += pixel_color;
+	primary_hit_results[index].hit_color = pixel_colour;
+	pixels[index] += pixel_colour;
 }
 
 
@@ -516,9 +530,11 @@ void register_random(curandState * rand_state)
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	int index = imageY * SCR_WIDTH + imageX;
-	if (index > (SCR_WIDTH - 1) * (SCR_HEIGHT - 1))
+	if (imageX >= SCR_WIDTH || imageY >= SCR_HEIGHT)
 		return;
+
+	int index = imageY * SCR_WIDTH + imageX;
+
 
 	curand_init(19622342346234384, index, 0, &rand_state[index]);
 }
@@ -582,7 +598,7 @@ void copy_device(HitResult * dist, HitResult * source)
 // Kernel is being executed from here
 ////////////////////////////////////////////////////
 extern
-uchar4* render_frame(RCamera sceneCam, uint* output, uint width, uint heigth)
+void cuda_render_frame(RCamera sceneCam, uint* output, uint width, uint heigth)
 {
 	int size = SCR_WIDTH * SCR_HEIGHT * sizeof(uint4);
 
@@ -598,25 +614,23 @@ uchar4* render_frame(RCamera sceneCam, uint* output, uint width, uint heigth)
 
 #ifdef ray_tracing
 	// Generate primary rays and cast them throught the scene.
-	trace_primary_rays << < blockSize, gridSize >> > (d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list, 0, d_hit_result);
+	trace_primary_rays << < primaryRaysGridDim, primaryRaysBlockDim >> > (d_tree, sceneCam, d_scene_objects, d_object_number, d_root_index, d_index_list, d_hit_result, width, heigth);
 
 	gpuErrchk(cudaDeviceSynchronize());
 	// Generate primary shadow map
-	generate_shadow_map << < blockSize, gridSize >> > (d_light, num_light, d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list, d_shadow_map, d_hit_result, 0);
+	//generate_shadow_map << < primaryRaysGridDim, primaryRaysBlockDim >> > (d_light, num_light, d_tree, sceneCam, d_scene_objects, d_object_number, d_root_index, d_index_list, output, d_hit_result);
 	//for (int i = 0; i < 500; ++i)
 	//{
 	//	trace_secondary_shadow_rays << < blockSize, gridSize >> > (rand_state, d_light, num_light, d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list, d_indirect_map, d_shadow_hit_result, 0);
 	//}
-	gpuErrchk(cudaDeviceSynchronize());
+	//gpuErrchk(cudaDeviceSynchronize());
 	// Generate secondary rays and evaluate scene colors from them.
 	for (int i = 0; i < 5; ++i)
 	{
-		trace_secondary_rays << < blockSize, gridSize >> > (d_light, num_light, d_tree, d_render_camera, d_scene_objects, d_object_number, d_root_index, d_index_list,
-			d_pixels, d_hit_result, d_atmosphere, d_textures, d_texture_size, 0);
+		trace_secondary_rays << < primaryRaysGridDim, primaryRaysBlockDim >> > (d_light, num_light, d_tree, sceneCam, d_scene_objects, d_object_number, d_root_index, d_index_list,
+			output, d_hit_result, d_atmosphere, d_textures, d_texture_size);
 	}
 
-	//mix_direct_indirect_light << <blockSize, gridSize >> > (d_shadow_map, d_indirect_map);
-	//mix_color_maps << <blockSize, gridSize >> > (d_pixels, d_shadow_map);
 #endif
 #ifdef sphere_tracing
 	// Generate primary rays and cast them throught the scene.
@@ -628,13 +642,8 @@ uchar4* render_frame(RCamera sceneCam, uint* output, uint width, uint heigth)
 
 	Craze << <1, 1 >> > (d_light, angle, d_atmosphere);
 	angle += 0.001;  // or some other value.  Higher numbers = circles faster
-	if (angle > 1.1f) angle = 0.f;
+	//if (angle > 1.1f) angle = 0.f;
 
-
-	// Copy pixel array back to host.
-	//gpuErrchk(cudaMemcpyAsync(output, d_pixels, size, cudaMemcpyDeviceToDevice));
-
-	return h_pixels;
 }
 
 extern 
@@ -654,7 +663,7 @@ void toggle_shadow()
 }
 
 extern
-void spawn_obj(RCamera cam, TerrainBrushType brush_type)
+void spawn_obj(RCamera cam, TerrainBrush brush)
 {
 	dim3 primaryRaysBlockDim(2, 2, 2);
 	dim3 primaryRaysGridDim(125, 125, 125);
@@ -702,15 +711,9 @@ void spawn_obj(RCamera cam, TerrainBrushType brush_type)
 	HitResult hit_result;
 	hit_result.ray_o = ray_o;
 	hit_result.ray_dir = apertureToImagePlane;
-	insert_sphere_to_texture << < primaryRaysGridDim, primaryRaysBlockDim >> > (brush_type, texObject, hit_result, d_volume_instances, d_sdf_steps, d_sdf, d_sdf_volumes, d_sdf_dim, d_sdf_steps);
+	insert_sphere_to_texture << < primaryRaysGridDim, primaryRaysBlockDim >> > (brush, texObject, hit_result, d_volume_instances, d_sdf_steps, d_sdf, d_sdf_volumes, d_sdf_dim, d_sdf_steps);
 
 
 	gpuErrchk(cudaDeviceSynchronize());
 	bind_sdf_to_texture(d_sdf, make_int3(250), 1);
-}
-
-extern "C"
-void copyInvViewMatrix(float* invViewMatrix, size_t sizeofMatrix)
-{
-	gpuErrchk(cudaMemcpyToSymbol(c_invViewMatrix, invViewMatrix, sizeofMatrix));
 }

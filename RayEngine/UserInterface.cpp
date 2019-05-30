@@ -1,0 +1,191 @@
+#include "UserInterface.h"
+
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+#include <GL/gl3w.h>    // Initialize with gl3wInit()
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
+#include <GL/glew.h>    // Initialize with glewInit()
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
+#include <glad/glad.h>  // Initialize with gladLoadGL()
+#endif
+
+// Include glfw3.h after our OpenGL definitions
+#include <GLFW/glfw3.h>
+#include <iostream>
+
+#include "RayEngine.h"
+
+void RUserInterface::inti_UI(GLFWwindow* window)
+{
+#if __APPLE__
+	// GL 3.2 + GLSL 150
+	const char* glsl_version = "#version 150";
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
+#else
+	// GL 3.0 + GLSL 130
+	const char* glsl_version = "#version 330 core";
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+#endif
+
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
+
+	// Setup Dear ImGui style
+	IMGUI_CHECKVERSION();
+	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsClassic();
+
+	// Setup Platform/Renderer bindings
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init(glsl_version);
+
+	// Load Fonts
+	// - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+	// - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+	// - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+	// - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+	// - Read 'misc/fonts/README.txt' for more instructions and details.
+	// - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+	//io.Fonts->AddFontDefault();
+	//io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
+	//io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
+	//io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
+	//io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
+	//ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+	//IM_ASSERT(font != NULL);
+}
+
+void RUserInterface::clean_UI()
+{
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+	//start_game = false;
+}
+
+
+
+void RUserInterface::render_main_hud()
+{
+	bool overlay = true;
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+	ShowExampleAppSimpleOverlay(&overlay);
+	render_crosshair(&overlay);
+	// Rendering
+	create_welcome_screen(&overlay);
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void RUserInterface::render_main_screen(bool* start_game)
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+	const float DISTANCE_X = SCR_WIDTH / 2 - 250;
+	const float DISTANCE_Y = SCR_HEIGHT / 2 - 250;
+	static int corner = 0;
+	ImGuiIO& io = ImGui::GetIO();
+	if (corner != -1)
+	{
+		ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE_X : DISTANCE_X, (corner & 2) ? io.DisplaySize.y - DISTANCE_Y : DISTANCE_Y);
+		ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+		ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+		ImGui::SetNextWindowSize(ImVec2(500, 500));
+		ImGui::SetNextWindowContentSize(ImVec2(250, 250));
+	}
+	ImGui::SetNextWindowBgAlpha(.5f); // Transparent background
+	bool show = true;
+	if (ImGui::Begin("WelcomeScreen", &show, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+	{
+		ImGui::Text("Greetings my friend!");
+		if (ImGui::Button("Start!"))
+		{
+			*start_game = true;
+			show = false;
+		}
+		if (ImGui::Button("Quit"))
+		{
+			ImGui::End();
+			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+			clean_UI();
+			glfwTerminate();
+			*start_game = true;
+			return;
+		}
+	}
+	ImGui::End();
+	ImGui::Render();
+	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void RUserInterface::ShowExampleAppSimpleOverlay(bool* p_open)
+{
+	const float DISTANCE = 10.0f;
+	static int corner = 0;
+	ImGuiIO& io = ImGui::GetIO();
+	if (corner != -1)
+	{
+		ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? io.DisplaySize.y - DISTANCE : DISTANCE);
+		ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+		ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+	}
+	ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+	if (ImGui::Begin("RayCraft", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+	{
+		ImGui::Text("Wait what is it here?\n" "This is UI in Ray Engine.\n" "Featuring RayCraft! World rendered on 2 triangles");
+		ImGui::Separator();
+		if (ImGui::IsMousePosValid())
+			ImGui::Text("Mouse Position: (%.1f,%.1f)", io.MousePos.x, io.MousePos.y);
+		else
+			ImGui::Text("Mouse Position: <invalid>");
+		/*if (ImGui::BeginPopupContextWindow())
+		{
+			if (ImGui::MenuItem("Custom", NULL, corner == -1)) corner = -1;
+			if (ImGui::MenuItem("Top-left", NULL, corner == 0)) corner = 0;
+			if (ImGui::MenuItem("Top-right", NULL, corner == 1)) corner = 1;
+			if (ImGui::MenuItem("Bottom-left", NULL, corner == 2)) corner = 2;
+			if (ImGui::MenuItem("Bottom-right", NULL, corner == 3)) corner = 3;
+			if (p_open && ImGui::MenuItem("Close"))* p_open = false;
+			ImGui::EndPopup();
+		}*/
+	}
+	ImGui::End();
+}
+
+
+void RUserInterface::render_crosshair(bool* p_open)
+{
+	const float DISTANCE_X = SCR_WIDTH / 2 - 10;
+	const float DISTANCE_Y = SCR_HEIGHT / 2 - 10;
+	static int corner = 0;
+	ImGuiIO& io = ImGui::GetIO();
+	if (corner != -1)
+	{
+		ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE_X : DISTANCE_X, (corner & 2) ? io.DisplaySize.y - DISTANCE_Y : DISTANCE_Y);
+		ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+		ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+	}
+	ImGui::SetNextWindowBgAlpha(.7f); // Transparent background
+
+	if (ImGui::Begin("Crosshair", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+	{
+		ImGui::SameLine();
+	}
+	ImGui::End();
+}
+
+void RUserInterface::create_welcome_screen(bool *p_open)
+{
+	
+}

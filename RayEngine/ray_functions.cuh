@@ -386,7 +386,7 @@ void trace_shadow(RKDTreeNodeGPU * tree, GPUSceneObject * scene_objs, int num_ob
 __device__
 void trace_scene(RKDTreeNodeGPU * tree,
 	const RCamera render_camera, GPUSceneObject * scene_objs, int num_objs,
-	int* root_index, int* indexList, int stride, HitResult & hit_result)
+	int* root_index, int* indexList, HitResult & hit_result)
 {
 	// Perform ray-box intersection test.
 	for (int i = 0; i < num_objs; i++)

@@ -19,6 +19,12 @@
     <Filter Include="Header Files\Actors">
       <UniqueIdentifier>{7c2cd03d-8c3d-41c9-b5bb-8cae550455cd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="vendor">
+      <UniqueIdentifier>{c112258d-f74d-49cd-9c7c-62e81914c890}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="vendor\gl3w">
+      <UniqueIdentifier>{b8aacd8e-c7a3-45e4-a13a-d7b4ead9e3dc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="D:\CPPLibs\GLAD\src\glad.c">
@@ -112,6 +118,33 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="gl_window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="includes\imgui\imgui.cpp">
+      <Filter>vendor</Filter>
+    </ClCompile>
+    <ClCompile Include="includes\imgui\imgui_demo.cpp">
+      <Filter>vendor</Filter>
+    </ClCompile>
+    <ClCompile Include="includes\imgui\imgui_draw.cpp">
+      <Filter>vendor</Filter>
+    </ClCompile>
+    <ClCompile Include="includes\imgui\imgui_impl_glfw.cpp">
+      <Filter>vendor</Filter>
+    </ClCompile>
+    <ClCompile Include="includes\imgui\imgui_impl_opengl3.cpp">
+      <Filter>vendor</Filter>
+    </ClCompile>
+    <ClCompile Include="includes\imgui\imgui_widgets.cpp">
+      <Filter>vendor</Filter>
+    </ClCompile>
+    <ClCompile Include="includes\GL\gl3w.c">
+      <Filter>vendor\gl3w</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -239,6 +272,51 @@
     <ClInclude Include="ray_functions.cuh">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\imgui\imconfig.h">
+      <Filter>vendor</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\imgui\imgui.h">
+      <Filter>vendor</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\imgui\imgui_impl_glfw.h">
+      <Filter>vendor</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\imgui\imgui_impl_metal.h">
+      <Filter>vendor</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\imgui\imgui_impl_opengl3.h">
+      <Filter>vendor</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\imgui\imgui_internal.h">
+      <Filter>vendor</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\imgui\imstb_rectpack.h">
+      <Filter>vendor</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\imgui\imstb_textedit.h">
+      <Filter>vendor</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\imgui\imstb_truetype.h">
+      <Filter>vendor</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\GL\gl3w.h">
+      <Filter>vendor\gl3w</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\GL\glcorearb.h">
+      <Filter>vendor\gl3w</Filter>
+    </ClInclude>
+    <ClInclude Include="includes\GL\glew.h">
+      <Filter>vendor\gl3w</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="Atmosphere.cu">
@@ -253,5 +331,15 @@
     <CudaCompile Include="filter_functions.cuh">
       <Filter>Header Files</Filter>
     </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="RayEngine.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="includes\imgui\imgui_impl_metal.mm">
+      <Filter>vendor</Filter>
+    </None>
   </ItemGroup>
 </Project>

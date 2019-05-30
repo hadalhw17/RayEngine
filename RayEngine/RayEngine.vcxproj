@@ -229,6 +229,13 @@
     <ClCompile Include="Glass.cpp" />
     <ClCompile Include="gl_window.cpp" />
     <ClCompile Include="Grid.cpp" />
+    <ClCompile Include="includes\GL\gl3w.c" />
+    <ClCompile Include="includes\imgui\imgui.cpp" />
+    <ClCompile Include="includes\imgui\imgui_demo.cpp" />
+    <ClCompile Include="includes\imgui\imgui_draw.cpp" />
+    <ClCompile Include="includes\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="includes\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="includes\imgui\imgui_widgets.cpp" />
     <ClCompile Include="jpeg.cpp" />
     <ClCompile Include="KDThreeGPU.cpp" />
     <ClCompile Include="KDTree.cpp" />
@@ -246,6 +253,7 @@
     <ClCompile Include="Ray.cpp" />
     <ClCompile Include="RayEngine.cpp" />
     <ClCompile Include="RayTracer.cpp" />
+    <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="rply.c" />
     <ClCompile Include="RStaticMesh.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -253,14 +261,30 @@
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="Sphere.cpp" />
     <ClCompile Include="Triangle.cpp" />
+    <ClCompile Include="UserInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\RayTraceer\rply.h" />
+    <ClInclude Include="Renderer.h" />
+    <ClInclude Include="UserInterface.h" />
     <CudaCompile Include="Atmosphere.cuh" />
     <ClInclude Include="BoundingVolume.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="cuda_memory_functions.cuh" />
+    <ClInclude Include="includes\GL\gl3w.h" />
+    <ClInclude Include="includes\GL\glcorearb.h" />
+    <ClInclude Include="includes\GL\glew.h" />
+    <ClInclude Include="includes\imgui\imconfig.h" />
+    <ClInclude Include="includes\imgui\imgui.h" />
+    <ClInclude Include="includes\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="includes\imgui\imgui_impl_metal.h" />
+    <ClInclude Include="includes\imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="includes\imgui\imgui_internal.h" />
+    <ClInclude Include="includes\imgui\imstb_rectpack.h" />
+    <ClInclude Include="includes\imgui\imstb_textedit.h" />
+    <ClInclude Include="includes\imgui\imstb_truetype.h" />
     <ClInclude Include="material_functions.cuh" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="sdf_functions.cuh" />
     <ClInclude Include="Character.h" />
     <ClInclude Include="Cow.h" />
@@ -325,6 +349,12 @@
       <HostDebugInfo Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</HostDebugInfo>
       <CudaRuntime Condition="'$(Configuration)|$(Platform)'=='Release|x64'">None</CudaRuntime>
     </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="RayEngine.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="includes\imgui\imgui_impl_metal.mm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

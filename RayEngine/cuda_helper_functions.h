@@ -11,15 +11,7 @@
 #include "GPUBoundingBox.h"
 #include "Atmosphere.cuh"
 
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true)
-{
-	if (code != cudaSuccess)
-	{
-		fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-		if (abort) exit(code);
-	}
-}
+
 
 __device__ uint rgbaFloatToInt(float4 rgba)
 {
@@ -45,7 +37,7 @@ void illuminate(float3& P, float3 light_pos, float3& lightDir, float4& lightInte
 	float r2 = light_pos.x * light_pos.x + light_pos.y * light_pos.y + light_pos.z * light_pos.z;
 	distance = sqrtf(r2);
 	lightDir.x /= distance, lightDir.y /= distance, lightDir.z /= distance;
-	lightIntensity = make_float4(0.86, 0.80, 0.45, 1) * 20000 / (4 * M_PI * r2);
+	lightIntensity = make_float4(0.86, 0.80, 0.45, 1) * 5000 / (4 * M_PI * r2);
 }
 
 

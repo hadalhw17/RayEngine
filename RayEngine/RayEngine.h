@@ -1,5 +1,8 @@
 #pragma once
 #include "device_launch_parameters.h"
+#include "cuda_runtime_api.h"
+#include "stdio.h"
+
 #define sphere_tracing
 #include <utility>
 
@@ -17,15 +20,30 @@
 
 #define PATH_TO_VOLUMES "C://dev/SDFGenerator/SDFGenerator/SDFs/"
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true)
+{
+	if (code != cudaSuccess)
+	{
+		fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+		if (abort) exit(code);
+	}
+}
 
 
 using edge = std::pair<int, int>;
 
 enum TerrainBrushType
 {
-	ADD = 0,
-	SUBTRACT = 1,
-	INTERSECT = 2
+	SPHERE_ADD = 0,
+	SPHERE_SUBTRACT = 1,
+	CUBE_ADD = 2,
+	CUBE_SUBTRACT = 3
+};
+
+struct TerrainBrush
+{
+	TerrainBrushType brush_type;
+	float brush_radius;
 };
 
 struct GPUVolumeObjectInstance
