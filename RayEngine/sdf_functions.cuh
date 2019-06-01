@@ -284,7 +284,7 @@ float get_distance_to_sdf(RenderingSettings render_settings, cudaTextureObject_t
 __device__
 float3 compute_sdf_normal(float3 p_hit, float t, RenderingSettings render_settings, cudaTextureObject_t tex, float3 step, GPUVolumeObjectInstance curr_obj)
 {
-	float delta = fmaxf(0.00002, 10e-6 * t);
+	float delta = 10e-6;
 	float curr_dist = get_distance(render_settings, tex, p_hit, step).x;
 	return normalize(make_float3(
 		get_distance(render_settings, tex, p_hit + make_float3(delta, 0, 0), step).x - curr_dist,

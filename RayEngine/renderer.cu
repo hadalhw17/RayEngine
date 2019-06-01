@@ -153,7 +153,7 @@ bool draw_crosshair()
 
 __global__
 void render_sphere_trace(const RenderingSettings render_settings, const RCamera render_camera, const SceneSettings scene, const float3* __restrict__ lights, const int num_lights,const  GPUVolumeObjectInstance* __restrict__ instances, const int num_instances,
-	const GPUBoundingBox* __restrict__ volumes, const float3 step, const int3 dim, uint * __restrict__ pixels, const int num_sdf, cudaTextureObject_t tex,const bool shade,const  uint width,const uint heigth, const  GPUMat * __restrict__ materials)
+	const GPUBoundingBox* __restrict__ volumes, const float3 step, const int3 dim, uint * __restrict__ pixels, const int num_sdf, const cudaTextureObject_t tex,const bool shade,const  uint width,const uint heigth, const  GPUMat * __restrict__ materials)
 {
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
@@ -641,7 +641,10 @@ void copy_device(HitResult * dist, HitResult * source)
 	dist[index] = source[index];
 }
 
-
+int iDivUp(int a, int b)
+{
+	return (a % b != 0) ? (a / b + 1) : (a / b);
+}
 __device__
 float4* dev_tex_p;
 ////////////////////////////////////////////////////
@@ -654,12 +657,14 @@ void cuda_render_frame(RCamera sceneCam, uint* output, uint width, uint heigth)
 	int size = SCR_WIDTH * SCR_HEIGHT * sizeof(uint4);
 
 	// Number of threads in each thread block
-	int  blockSize = SCR_WIDTH;
+	//int  blockSize = SCR_WIDTH;
 
 	// Number of thread blocks in grid
-	int  gridSize = SCR_HEIGHT;
+	//int  gridSize = SCR_HEIGHT;
 	dim3 primaryRaysBlockDim(32, 32);
 	dim3 primaryRaysGridDim(SCR_WIDTH >> 5, SCR_HEIGHT >> 5);
+	dim3 blockSize = (16, 16);
+	dim3 gridSize = dim3(iDivUp(width, blockSize.x), iDivUp(heigth, blockSize.y));
 
 	//------------------------------------------------------------------------------------------------------
 
@@ -685,14 +690,14 @@ void cuda_render_frame(RCamera sceneCam, uint* output, uint width, uint heigth)
 #endif
 #ifdef sphere_tracing
 	// Generate primary rays and cast them throught the scene.
-	render_sphere_trace << < primaryRaysGridDim, primaryRaysBlockDim >> > (cuda_render_settings, sceneCam, cuda_scene_settings, d_light, num_light, d_volume_instances, d_num_instances,
+	render_sphere_trace << < gridSize, blockSize >> > (cuda_render_settings, sceneCam, cuda_scene_settings, d_light, num_light, d_volume_instances, d_num_instances,
 		d_sdf_volumes, sdf_spacing, sdf_dim, output, d_num_sdf, texObject, should_shade, width, heigth, d_materials);
 
 #endif
 	gpuErrchk(cudaDeviceSynchronize());
 
-	Craze << <1, 1 >> > (d_light, angle, d_atmosphere);
-	angle += 0.001;  // or some other value.  Higher numbers = circles faster
+	//Craze << <1, 1 >> > (d_light, angle, d_atmosphere);
+	//angle += 0.001;  // or some other value.  Higher numbers = circles faster
 	//if (angle > 1.1f) angle = 0.f;
 
 }

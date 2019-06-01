@@ -25,7 +25,7 @@ struct GPUMat
 	texturess textttt;
 };
 
-__device__
+__device__ __constant__
 GPUMat *d_materials;
 
 
@@ -51,7 +51,7 @@ float3 sdf_spacing;
 
 int3 sdf_dim;
 
-__device__
+__device__ __constant__	
 struct GPUVolumeObjectInstance* d_volume_instances;
 
 __device__
@@ -211,7 +211,7 @@ bool single_shadow_ray_sphere_trace(RenderingSettings render_settings, SceneSett
 		min_dist = res.x;
 		material_index = res.y;
 
-		if (prel < 0.001 || min_dist <= threshold)
+		if (prel < K_EPSILON || min_dist <= threshold)
 		{
 			t_near = t;
 			prel = 0;
@@ -241,7 +241,6 @@ void sphere_trace_shadow(const RenderingSettings render_settings,const SceneSett
 	hit_result.ray_o = p_hit;
 	hit_result.ray_dir = normalize(-lightDir);
 
-
 	float sh = 1.f;
 
 	float t = 0;
@@ -252,17 +251,15 @@ void sphere_trace_shadow(const RenderingSettings render_settings,const SceneSett
 		t_near, light_dst, step, 0, sh, 10e-6, material_ind);
 	float amb = __saturatef(0.5 + 0.5 * normal.y);
 	float soft_shadow = __saturatef(sh);
-	float dif = fmaxf(.0f, dot(normal, (-lightDir)));
+	float dif = fmaxf(.0f, dot(normal, hit_result.ray_dir));
 	float bac = __saturatef(0.2 + 0.8 * dot(normalize(make_float3(-lightDir.x, 0.0, lightDir.z)), normal));
 
-	pixel_color += soft_shadow * lightInt * fmaxf(.0f, dot(hit_result.normal, (-lightDir)));
+	pixel_color += soft_shadow * lightInt * dif;
 	pixel_color += amb * make_float3(0.40, 0.60, 1.00) * 1.2;
 	pixel_color += bac * make_float3(0.40, 0.50, 0.60);
 
 	final_colour *= pixel_color;
 
-	// sun scatter
-	//final_colour += 0.3 * make_float3(1.0, 0.7, 0.3) * powf(sun_dot, 8.0);
 	// gamma
 	//final_colour = sqrtf(final_colour);
 	//pixel_color = clip(pixel_color);
