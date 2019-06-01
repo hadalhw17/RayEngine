@@ -53,7 +53,7 @@ void apply_fog(float3& color, float distance, float d, float3 ray_o, float3 ray_
 {
 	float a = 0.0375f;
 	float fogAmount = __saturatef(a/d * __expf(-ray_o.y * d) * (1.0 - __expf(-distance * ray_dir.y * d)) / ray_dir.y);
-	fogAmount = __saturatef(fogAmount + (__expf(-(45.f - distance) * d)) - 0.1);
+	//fogAmount = __saturatef(fogAmount + (__expf(-(100.f - distance) * d)) - 0.1);
 	//float fogAmount = 1.0 - __expf(-distance * d);
 	//float fo = 1.0 - exp(-pow(0.001 * distance / d, 1.5));
 	float3  fogColor = 0.65 * make_float3(0.4, 0.65, 1.0);

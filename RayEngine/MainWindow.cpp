@@ -153,16 +153,18 @@ MainWindow::MainWindow()
 
 #ifdef sphere_tracing
 	distance_field = new Grid[1];
-	//distance_field[0] = Grid(std::string(PATH_TO_VOLUMES) + std::string("terrain250.rsdf"));
-	distance_field[0] = Grid(std::string("SDFs/Edited.rsdf"));
+	distance_field[0] = Grid(std::string(PATH_TO_VOLUMES) + std::string("terrain250.rsdf"));
+	//distance_field[0] = Grid(std::string("SDFs/Edited.rsdf"));
 	//distance_field[1] = Grid(std::string(PATH_TO_VOLUMES) + std::string("cat250.rsdf"));
 	scene_settings.volume_resolution = make_int3(1);
 	scene_settings.world_size = make_float3(1.f);
 	RMaterial default_material((char*) "Meshes/3.ppm", (char*) "Meshes/2.ppm", (char*) "Meshes/3.ppm");
 	RMaterial cobblestone_material((char*) "Meshes/1.ppm", (char*) "Meshes/1.ppm", (char*) "Meshes/1.ppm");
+	RMaterial snow_material((char*) "Meshes/snow.ppm", (char*) "Meshes/snow.ppm", (char*) "Meshes/snow.ppm");
 	std::vector<VoxelMaterial> materials;
 	materials.push_back(default_material.material);
 	materials.push_back(cobblestone_material.material);
+	materials.push_back(snow_material.material);
 
 	initialize_volume_render(*SceneCam, distance_field, 1, materials, render_settings, scene_settings);
 #endif

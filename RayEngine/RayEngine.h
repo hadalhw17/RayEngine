@@ -66,6 +66,9 @@ struct RenderingSettings
 {
 	float texture_scale;
 	RenderQuality quality;
+	bool gamma;
+	bool vignetting;
+	float vignetting_k;
 };
 
 struct SceneSettings

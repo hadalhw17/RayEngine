@@ -97,9 +97,9 @@ void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings s
 			break;
 		case CUBE_ADD:
 			GPUVolumeObjectInstance obj;
-			float3 normal = compute_sdf_normal(poi, 1, render_settings, tex, step, obj);
+			float3 normal = compute_sdf_normal(poi, 10e-6, render_settings, tex, step, obj);
 			sdf_texute[index] = sdf_smin(sdf_texute[index], make_float2(aabb_distance(poi - sphere_pos + make_float3(brush.brush_radius), make_float3(brush.brush_radius)), mat_index));
-			//sdf_texute[index] = fminf(sdf_texute[index], aabb_distance(poi - sphere_pos - normal * brush.brush_radius, make_float3(brush.brush_radius)));
+			//sdf_texute[index] = sdf_smin(sdf_texute[index], make_float2(aabb_distance(poi - (sphere_pos - normal * brush.brush_radius*2) - make_float3(0,4,0), make_float3(brush.brush_radius)), mat_index));
 			break;
 		case CUBE_SUBTRACT:
 			sdf_texute[index] = sdf_fmaxf(sdf_texute[index], make_float2(-aabb_distance(poi - sphere_pos, make_float3(brush.brush_radius)), mat_index));
@@ -122,11 +122,11 @@ void generate_noise(RenderingSettings render_settings, SceneSettings scene_setti
 		return;
 
 	volumes[0] = GPUBoundingBox(make_float3(0.f), make_float3((tex_dim.x - 1) * spacing.x, (tex_dim.y - 1) * spacing.y, (tex_dim.z - 1) * spacing.z));
-	int index = x + (tex_dim.x - 1) * (y + (tex_dim.z - 1) * z);
+	int index = x + (tex_dim.x) * (y + (tex_dim.z) * z);
 	float3 poi = make_float3(x, y, z) * spacing;
 	float lh = 0.0f;
 	float ly = 0.0f;		
-	lh = f(poi.x, poi.z, scene_settings.noise_freuency, scene_settings.noise_amplitude + 5);
+	lh = f(poi.x, poi.z, scene_settings.noise_freuency, scene_settings.noise_amplitude + 10);
 	ly = poi.y;
 	float sign = -1;
 	if (poi.y > lh)
@@ -134,7 +134,7 @@ void generate_noise(RenderingSettings render_settings, SceneSettings scene_setti
 		sign = 1;
 	}
 	else if (poi.y == lh) sign = 0;
-	sdf_texute[index] = make_float2(sign * fabs(length(poi - make_float3(poi.x, lh, poi.z))), -1);
+	sdf_texute[index] = make_float2(sign * fabs(length(poi - make_float3(poi.x, lh, poi.z))), 0);
 }
 
 __device__
@@ -152,8 +152,8 @@ bool draw_crosshair()
 
 
 __global__
-void render_sphere_trace(RenderingSettings render_settings, RCamera render_camera, const SceneSettings scene, float3* lights, const int num_lights, GPUVolumeObjectInstance* instances, const int num_instances,
-	GPUBoundingBox* volumes,  float3 step, int3 dim, uint *pixels, int num_sdf, cudaTextureObject_t	tex, bool shade, float4 *texture, uint width, uint heigth, const  GPUMat *materials)
+void render_sphere_trace(const RenderingSettings render_settings, const RCamera render_camera, const SceneSettings scene, const float3* __restrict__ lights, const int num_lights,const  GPUVolumeObjectInstance* __restrict__ instances, const int num_instances,
+	const GPUBoundingBox* __restrict__ volumes, const float3 step, const int3 dim, uint * __restrict__ pixels, const int num_sdf, cudaTextureObject_t tex,const bool shade,const  uint width,const uint heigth, const  GPUMat * __restrict__ materials)
 {
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
@@ -179,6 +179,7 @@ void render_sphere_trace(RenderingSettings render_settings, RCamera render_camer
 	int num_intersected = 0;
 
 	// Interate over every object and test for intersection with their aabb.
+#pragma unroll 1
 	for (int i = 0; i < num_instances; ++i)
 	{
 		if (gpu_ray_box_intersect(volumes[instances[i].index], hit_result.ray_o + instances[i].location, hit_result.ray_dir, scene_t_near, scene_t_far))
@@ -205,12 +206,12 @@ void render_sphere_trace(RenderingSettings render_settings, RCamera render_camer
 	{
 		sky_mat(pixel_colour, hit_result.ray_dir);
 		if(scene.enable_fog)
-			apply_fog(pixel_colour, 200, scene.fog_deisity, hit_result.ray_o, hit_result.ray_dir);
+			apply_fog(pixel_colour, K_INFINITY, scene.fog_deisity, hit_result.ray_o, hit_result.ray_dir);
 	}
 	else
 	{
 		sphere_trace_shade(render_settings, tex, scene, lights, num_lights, hit_result, instances, smallest_dist, volumes,
-			num_instances, step, dim, material_index, pixel_colour, 0, shade, texture, materials);
+			num_instances, step, dim, material_index, pixel_colour, 0, shade, materials);
 		if (scene.enable_fog)
 			apply_fog(pixel_colour, smallest_dist, scene.fog_deisity, hit_result.ray_o, hit_result.ray_dir);
 
@@ -223,8 +224,8 @@ void render_sphere_trace(RenderingSettings render_settings, RCamera render_camer
 	//pixel_colour = pixel_colour * 0.3 + 0.7 * pixel_colour * pixel_colour * (make_float3(3.0) - 2.0 * pixel_colour);
 	//pixel_colour = mix(pixel_colour, make_float3(pixel_colour.x + pixel_colour.y + pixel_colour.z) * 0.33, 0.2);
 	//pixel_colour *= 1.25 * make_float3(1.02, 1.05, 1.0);
-	pixel_colour = powf(pixel_colour, 1.0 / 2.2);
-	pixel_colour *= 0.5 + 0.5 * pow(16.0 * u * v * (1.0 - u) * (1.0 - v), 0.1);
+	if(render_settings.gamma) pixel_colour = powf(pixel_colour, 1.0 / 2.2);
+	if(render_settings.vignetting) pixel_colour *= 0.5 + 0.5 * powf(16.0 * u * v * (1.0 - u) * (1.0 - v), render_settings.vignetting_k);
 	pixel_colour = clip(pixel_colour);
 	pixels[index] = rgbaFloatToInt(pixel_colour);
 	return;
@@ -685,7 +686,7 @@ void cuda_render_frame(RCamera sceneCam, uint* output, uint width, uint heigth)
 #ifdef sphere_tracing
 	// Generate primary rays and cast them throught the scene.
 	render_sphere_trace << < primaryRaysGridDim, primaryRaysBlockDim >> > (cuda_render_settings, sceneCam, cuda_scene_settings, d_light, num_light, d_volume_instances, d_num_instances,
-		d_sdf_volumes, sdf_spacing, sdf_dim, output, d_num_sdf, texObject, should_shade, dev_tex_p, width, heigth, d_materials);
+		d_sdf_volumes, sdf_spacing, sdf_dim, output, d_num_sdf, texObject, should_shade, width, heigth, d_materials);
 
 #endif
 	gpuErrchk(cudaDeviceSynchronize());

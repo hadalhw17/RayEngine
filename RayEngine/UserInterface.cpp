@@ -192,7 +192,7 @@ void RUserInterface::render_menu(TerrainBrush &brush, float &character_speed, st
 				{
 					generate_noise();
 				}
-				if (ImGui::SliderFloat("Noise amplitude", &scene_settings.noise_amplitude, 0.f, 2.f, "%.4f", 2.0f))
+				if (ImGui::SliderFloat("Noise amplitude", &scene_settings.noise_amplitude, 0.f, 10.f, "%.4f", 2.0f))
 				{
 					generate_noise();
 				}
@@ -243,12 +243,15 @@ void RUserInterface::render_menu(TerrainBrush &brush, float &character_speed, st
 		{
 			ImGui::SliderFloat("Texture scale", &render_settings.texture_scale, 1.f, 250.0f, "%.4f", 2.0f);
 			ImGui::SliderInt("Render quality", (int*)& render_settings.quality, 0, 2, "%.4f");
+			ImGui::Checkbox("Apply gamma corrention", &render_settings.gamma);
+			ImGui::Checkbox("Apply vignetting", &render_settings.vignetting);
+			ImGui::SliderFloat("Vignetting k", &render_settings.vignetting_k, 0.f, 10.f, "%.4f");
 			ImGui::EndTabItem();
 		}
 		if (ImGui::BeginTabItem("Scene Settings"))
 		{
 			ImGui::SliderFloat("Light angle", &scene_settings.light_pos.x, 0.f, 1.f, "%.4f", 2.0f);
-			ImGui::SliderFloat("Light Y", &scene_settings.light_pos.y, -17.f, 38.f, "%.4f", 2.0f);
+			ImGui::SliderFloat("Light Y", &scene_settings.light_pos.y, 0.f, 100.f, "%.4f", 2.0f);
 			ImGui::SliderFloat("Light intensity", &scene_settings.light_intensity, 0.f, 100000, "%.4f", 2.0f);
 			ImGui::SliderInt("Prelumbra size", &scene_settings.soft_shadow_k, 1.f, 128.0f, "%.4f");
 			ImGui::SliderFloat("Fog density", &scene_settings.fog_deisity, 0.f, 1.f, "%.4f", 2.0f); ImGui::SameLine();

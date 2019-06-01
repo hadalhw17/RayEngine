@@ -98,7 +98,8 @@ __forceinline__ __device__
 float2 sdf_smin(float2 a, float2 b, float k = 0.1)
 {
 	float h = fmaxf(k - fabs(a.x - b.x), 0.0) / k;
-	return sdf_fminf(a, b) - h * h * k * (1.0 / 4.0);
+	float2 res = sdf_fminf(a, b) - h * h * k * (1.0 / 4.0);
+	return make_float2(res.x, sdf_fminf(a, b).y);
 }
 
 // Tricubic interpolated texture lookup, using unnormalized coordinates.
@@ -142,8 +143,8 @@ float2 cubicTex3DSimple(cudaTextureObject_t	tex, float3 coord)
 			{
 				float bsplineXYZ = bspline(x - fraction.x) * bsplineYZ;
 				float u = index.x + x;
-				fetch = bsplineXYZ * tex3D<float2>(tex, u, v, w);
-				result += fetch.x;
+				fetch = tex3D<float2>(tex, u, v, w);
+				result += bsplineXYZ * fetch.x;
 			}
 		}
 	}
@@ -283,7 +284,7 @@ float get_distance_to_sdf(RenderingSettings render_settings, cudaTextureObject_t
 __device__
 float3 compute_sdf_normal(float3 p_hit, float t, RenderingSettings render_settings, cudaTextureObject_t tex, float3 step, GPUVolumeObjectInstance curr_obj)
 {
-	float delta = fmaxf(0.002, 10e-6 * t);
+	float delta = fmaxf(0.00002, 10e-6 * t);
 	float curr_dist = get_distance(render_settings, tex, p_hit, step).x;
 	return normalize(make_float3(
 		get_distance(render_settings, tex, p_hit + make_float3(delta, 0, 0), step).x - curr_dist,

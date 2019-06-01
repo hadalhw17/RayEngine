@@ -42,7 +42,7 @@ float3 sqrtf(float3 target)
 // Compute light intensity
 ////////////////////////////////////////////////////
 HOST_DEVICE_FUNCTION
-void illuminate(float3& P, float3 light_pos, float3& lightDir, float3& lightIntensity, float& distance, float intensity)
+void illuminate(const float3& P,const float3 light_pos, float3& lightDir, float3& lightIntensity, float& distance,const float intensity)
 {
 	// Return not to devide by zero.
 	if (distance == 0)
@@ -89,9 +89,9 @@ float3 clip(float3 color)
 // Normal visualisation material
 ////////////////////////////////////////////////////
 __forceinline__ HOST_DEVICE_FUNCTION
-void simple_shade(float4& color, float3 normal, float3 ray_dir)
+void simple_shade(float3& color, float3 normal, float3 ray_dir)
 {
-	color += make_float4(fmaxf(0.f, dot(normal, -ray_dir) / 2)); // facing ratio 
+	color += make_float3(fmaxf(0.f, dot(normal, -ray_dir) / 2)); // facing ratio 
 }
 
 ////////////////////////////////////////////////////
