@@ -9,7 +9,7 @@ RCharacter::RCharacter()
 {
 	Material material;
 	material.type = TILE;
-	material.color = make_float4(0, 0.5, 0.2, 0);
+	material.color = make_float3(0, 0.5, 0.2);
 	material.uvs = true;
 	float3 location = make_float3(0);
 	object_properties.material = material;

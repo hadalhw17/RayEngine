@@ -13,20 +13,36 @@
 
 
 
-__device__ uint rgbaFloatToInt(float4 rgba)
+__device__ uint rgbaFloatToInt(float3 rgba)
 {
 	rgba.x = __saturatef(rgba.x);   // clamp to [0.0, 1.0]
 	rgba.y = __saturatef(rgba.y);
 	rgba.z = __saturatef(rgba.z);
-	rgba.w = __saturatef(rgba.w);
-	return (uint(rgba.w * 255) << 24) | (uint(rgba.z * 255) << 16) | (uint(rgba.y * 255) << 8) | uint(rgba.x * 255);
+	float a = 1.f;
+	return (uint(a * 255) << 24) | (uint(rgba.z * 255) << 16) | (uint(rgba.y * 255) << 8) | uint(rgba.x * 255);
+}
+
+__device__
+float3 mix(float3 target, float3 second, float t)
+{
+	return make_float3(__saturatef(target.x + (t) * second.x),
+		__saturatef(target.y + (t) * second.y),
+		__saturatef(target.z + (t) * second.z));
+}
+
+__device__
+float3 sqrtf(float3 target)
+{
+	return make_float3(sqrtf(target.x),
+		sqrtf(target.y),
+		sqrtf(target.z));
 }
 
 ////////////////////////////////////////////////////
 // Compute light intensity
 ////////////////////////////////////////////////////
 HOST_DEVICE_FUNCTION
-void illuminate(float3& P, float3 light_pos, float3& lightDir, float4& lightIntensity, float& distance, float intensity)
+void illuminate(float3& P, float3 light_pos, float3& lightDir, float3& lightIntensity, float& distance, float intensity)
 {
 	// Return not to devide by zero.
 	if (distance == 0)
@@ -37,32 +53,35 @@ void illuminate(float3& P, float3 light_pos, float3& lightDir, float4& lightInte
 	float r2 = light_pos.x * light_pos.x + light_pos.y * light_pos.y + light_pos.z * light_pos.z;
 	distance = sqrtf(r2);
 	lightDir.x /= distance, lightDir.y /= distance, lightDir.z /= distance;
-	lightIntensity = make_float4(0.86, 0.80, 0.45, 1) * intensity / (4 * M_PI * r2);
+	lightIntensity = make_float3(0.86, 0.80, 0.45) * intensity / (4 * M_PI * r2);
 }
 
 
 ////////////////////////////////////////////////////
 // Clip color
 ////////////////////////////////////////////////////
-HOST_DEVICE_FUNCTION
-float4 clip(float4 color)
+__device__
+float3 clip(float3 color)
 {
-	float Red = color.x, Green = color.y, Blue = color.z, special = color.w;
-	float alllight = color.x + color.y + color.z;
-	float excesslight = alllight - 3;
-	if (excesslight > 0) {
-		Red = Red + excesslight * (Red / alllight);
-		Green = Green + excesslight * (Green / alllight);
-		Blue = Blue + excesslight * (Blue / alllight);
-	}
-	if (Red > 1) { Red = 1; }
-	if (Green > 1) { Green = 1; }
-	if (Blue > 1) { Blue = 1; }
-	if (Red < 0) { Red = 0; }
-	if (Green < 0) { Green = 0; }
-	if (Blue < 0) { Blue = 0; }
+	//float Red = color.x, Green = color.y, Blue = color.z, special = color.w;
+	//float alllight = color.x + color.y + color.z;
+	//float excesslight = alllight - 3;
+	//if (excesslight > 0) {
+	//	Red = Red + excesslight * (Red / alllight);
+	//	Green = Green + excesslight * (Green / alllight);
+	//	Blue = Blue + excesslight * (Blue / alllight);
+	//}
+	//if (Red > 1) { Red = 1; }
+	//if (Green > 1) { Green = 1; }
+	//if (Blue > 1) { Blue = 1; }
+	//if (Red < 0) { Red = 0; }
+	//if (Green < 0) { Green = 0; }
+	//if (Blue < 0) { Blue = 0; }
 
-	return make_float4(Red, Green, Blue, special);
+	//return make_float4(Red, Green, Blue, special);
+	return make_float3(__saturatef(color.x),
+		__saturatef(color.y),
+		__saturatef(color.z));
 }
 
 
@@ -79,7 +98,7 @@ void simple_shade(float4& color, float3 normal, float3 ray_dir)
 // Sky material represent ray directions
 ////////////////////////////////////////////////////
 HOST_DEVICE_FUNCTION
-void sky_mat(float4& color, float3 ray_dir)
+void sky_mat(float3& color, float3 ray_dir)
 {
 	//// Visualise ray directions on the sky.
 	//color = make_float4(ray_dir, 0);
@@ -88,7 +107,7 @@ void sky_mat(float4& color, float3 ray_dir)
 	//color.z = (color.z < 0.0f) ? (color.z * -1.0f) : color.z;
 
 	float t = 0.5f * (ray_dir.y + 1.f);
-	color = make_float4(1.f) - t * make_float4(1.f) = t * make_float4(0.5f, 0.7f, 1.f, 0.f);
+	color = make_float3(1.f) - t * make_float3(1.f) = t * make_float3(0.5f, 0.7f, 1.f);
 }
 
 ////////////////////////////////////////////////////
@@ -122,9 +141,9 @@ float3 min(float3 a, float3 b)
 
 
 __forceinline__ HOST_DEVICE_FUNCTION
-void gray_scale(float4& color)
+void gray_scale(float3& color)
 {
-	color = make_float4((0.3 * color.x) + (0.59 * color.y) + (0.11 * color.z));
+	color = make_float3((0.3 * color.x) + (0.59 * color.y) + (0.11 * color.z));
 
 }
 

@@ -8,7 +8,7 @@ AGlass::AGlass()
 {
 	Material material;
 	material.type = REFLECT;
-	material.color = make_float4(0, 0, 0, 0);
+	material.color = make_float3(0, 0, 0);
 	float3 location = make_float3(0);
 	object_properties.material = material;
 	object_properties.location = location;

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "device_launch_parameters.h"
 #include "cuda_runtime.h"
@@ -33,11 +33,9 @@ float* d_sdf;
 __device__ __constant__
 float* dev_sdf_p;
 
-__device__ __constant__
-float3* d_sdf_steps;
+float3 sdf_spacing;
 
-__device__ __constant__
-int3* d_sdf_dim;
+int3 sdf_dim;
 
 __device__
 struct GPUVolumeObjectInstance* d_volume_instances;
@@ -169,7 +167,7 @@ float f(float x, float z, float freq, float amp)
 }
 __device__
 bool single_ray_sphere_trace(RenderingSettings render_settings, SceneSettings scene_settings, cudaTextureObject_t tex, HitResult hit_result, GPUVolumeObjectInstance* instances,
-	float& t_near, float t_far, float3* step, int nearest_shape, float &prel, float threshold)
+	float& t_near, float t_far, float3 step, int nearest_shape, float &prel, float threshold)
 {
 	GPUVolumeObjectInstance curr_obj = instances[nearest_shape];
 	float t = t_near;
@@ -193,8 +191,8 @@ bool single_ray_sphere_trace(RenderingSettings render_settings, SceneSettings sc
 			prel = 0;
 			return true;
 		}
-		t += min_dist;
 		prel = fminf(prel, scene_settings.soft_shadow_k * min_dist / t);
+		t += min_dist;
 	}
 	return false;
 }
@@ -202,9 +200,9 @@ bool single_ray_sphere_trace(RenderingSettings render_settings, SceneSettings sc
 
 __device__
 void sphere_trace_shadow(RenderingSettings render_settings, SceneSettings scene_settings, cudaTextureObject_t tex, GPUVolumeObjectInstance* instances, float3 p_hit, float3 normal, GPUBoundingBox* volumes, int num_sdf,
-	float3* step, int3* dim, float3 light, float4& final_colour, int shape)
+	float3 step, int3 dim, float3 light, float3& final_colour, int shape)
 {
-	float4 pixel_color = make_float4(0.f);
+	float3 pixel_color = make_float3(0.f);
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -217,36 +215,57 @@ void sphere_trace_shadow(RenderingSettings render_settings, SceneSettings scene_
 	float x = cosf(scene_settings.light_pos.x) * 20.f;
 	float z = sinf(scene_settings.light_pos.x) * 20.f;
 	float3 lightpos = make_float3(x, scene_settings.light_pos.y, z), lightDir;
-	float4 lightInt;
+	float3 lightInt;
 	illuminate(p_hit, lightpos, lightDir, lightInt, light_dst, scene_settings.light_intensity);
 
 	HitResult hit_result;
 	hit_result.ray_o = p_hit;
 	hit_result.ray_dir = -lightDir;
 
-	if (dot(lightpos - p_hit, normal) <= 0)
-	{
-		return;
-	}
+	float sun_dot = dot(-lightDir, lightpos);
+	float fre = __saturatef(1.0 + dot(hit_result.ray_dir, normal));
+	float3 hal = normalize(lightpos - hit_result.ray_dir);
 
-	float res = 1.f;
+	float sh = 1.f;
 
 	float t = 0;
 	int step_count = 0;
 	float t_near = 0;
 	bool intersects = single_ray_sphere_trace(render_settings, scene_settings, tex, hit_result, instances,
-		t_near, light_dst, step, 0,res, K_EPSILON);
-	final_colour += res * (lightInt * dot(hit_result.ray_dir, normal));
+		t_near, light_dst, step, 0, sh, K_EPSILON);
+	float amb = __saturatef(0.5 + 0.5 * normal.y);
+	float soft_shadow = __saturatef(sh);
+	float dif = fmaxf(.0f, dot(normal, (-lightDir)));
+	float bac = __saturatef(0.2 + 0.8 * dot(normalize(make_float3(-lightDir.x, 0.0, lightDir.z)), normal));
+
+	pixel_color += soft_shadow * lightInt * fmaxf(.0f, dot(hit_result.normal, (-lightDir)));
+	pixel_color += amb * make_float3(0.40, 0.60, 1.00) * 1.2;
+	pixel_color += bac * make_float3(0.40, 0.50, 0.60);
+
+	final_colour *= pixel_color;
+
+	// sun scatter
+	//final_colour += 0.3 * make_float3(1.0, 0.7, 0.3) * powf(sun_dot, 8.0);
+	// gamma
+	//final_colour = sqrtf(final_colour);
+	//pixel_color = clip(pixel_color);
+	//final_colour = sqrtf(final_colour);
 	return;
 }
 
-__device__
+inline __device__
 float3 powf(float3 a, float b)
 {
 	return make_float3(powf(a.x, b), powf(a.y, b), powf(a.z, b));
 }
+
+inline __device__
+float4 powf(float4 a, float b)
+{
+	return make_float4(powf(a.x, b), powf(a.y, b), powf(a.z, b), 0);
+}
 __device__
-float4 triplanar_mapping(float3 norm, float3 p_hit, float4 *texture)
+float3 triplanar_mapping(float3 norm, float3 p_hit, float4 *texture)
 {
 	// in wNorm is the world-space normal of the fragment
 	float3 blending = fabs(norm);
@@ -264,7 +283,7 @@ float4 triplanar_mapping(float3 norm, float3 p_hit, float4 *texture)
 
 	
 	// blend the results of the 3 planar projections.
-	float4 tex = blending.x * xaxis + blending.y * yaxis + blending.z * zaxis;
+	float3 tex = blending.x * make_float3(xaxis.x, xaxis.y, xaxis.z) + blending.y * make_float3(yaxis.x, yaxis.y, yaxis.z) + blending.z * make_float3(zaxis.x, zaxis.y, zaxis.z);
 	return tex;
 
 	//float3 m = powf(fabs(norm), 2);
@@ -276,24 +295,23 @@ float4 triplanar_mapping(float3 norm, float3 p_hit, float4 *texture)
 
 __device__
 void sphere_trace_shade(RenderingSettings render_settings, cudaTextureObject_t tex, SceneSettings scene, float3 * lights, int num_lights, HitResult hit_result, GPUVolumeObjectInstance * instance, float t, GPUBoundingBox * volumes,
- int num_sdf, float3 * step, int3 * dim, int curr_sdf, float4 & final_colour, int step_count, bool shade, float4 *texture)
+ int num_sdf, float3 step, int3 dim, int curr_sdf, float3 &final_colour, int step_count, bool shade, float4 *texture)
 {
+	final_colour = make_float3(0);
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if (imageX >= SCR_WIDTH || imageY >= SCR_HEIGHT)
 		return;
 
-	int index = imageX * SCR_HEIGHT + imageY;
+	int index = imageY * SCR_WIDTH + imageX;
 
 	GPUVolumeObjectInstance curr_obj = instance[curr_sdf];
 	float3 p_hit = hit_result.ray_o + (t)* hit_result.ray_dir;
 	hit_result.ray_o = p_hit;
-	float delta = 10e-5;
-	float3 n = normalize(make_float3(
-		get_distance(render_settings, tex, p_hit + make_float3(delta, 0, 0), step, curr_obj) - get_distance(render_settings, tex, p_hit + make_float3(-delta, 0, 0), step, curr_obj),
-		get_distance(render_settings, tex, p_hit + make_float3(0, delta, 0), step, curr_obj) - get_distance(render_settings, tex, p_hit + make_float3(0, -delta, 0), step, curr_obj),
-		get_distance(render_settings, tex, p_hit + make_float3(0, 0, delta), step, curr_obj) - get_distance(render_settings, tex, p_hit + make_float3(0, 0, -delta), step, curr_obj)));
+
+
+	float3 n = compute_sdf_normal(p_hit, t, render_settings, tex, step, curr_obj);
 
 	//if (p_hit.y <= volumes[curr_obj.index].Max.y * 0.3) final_colour = make_float4(0.11, 0.16, 0.62, 0.f);
 	//else if (p_hit.y > volumes[curr_obj.index].Max.y * 0.3 && p_hit.y < volumes[curr_obj.index].Max.y * 0.6) final_colour = make_float4(0.59, 0.29, 0.f, 0.f);
@@ -301,9 +319,10 @@ void sphere_trace_shade(RenderingSettings render_settings, cudaTextureObject_t t
 	/*int square = floor(p_hit.x) + floor(p_hit.z);
 	tile_pattern(final_colour, square);*/
 
-	final_colour += triplanar_mapping(n, (p_hit/ step[0]) / render_settings.texture_scale, texture);
+	final_colour = mix(final_colour, triplanar_mapping(n, (p_hit/ step) / render_settings.texture_scale, texture), 0.3);
 	//final_colour = nearest_neightbour_filter((p_hit.z / step[0].z) / 250, (p_hit.x / step[0].x)/ 250, texture);
-	if (curr_obj.index != -1 && shade)
+	
+	if (shade)
 	{
 		for (int i = 0; i < num_lights; ++i)
 		{
@@ -412,7 +431,8 @@ uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::
 		h_volumes[g] = GPUBoundingBox(make_float3(0.f), sdf[g].box_max);
 
 	}
-	spacing = sdf[0].spacing;
+	sdf_spacing = sdf[0].spacing;
+	sdf_dim = sdf[0].sdf_dim;
 	h_volumes[num_sdf] = GPUBoundingBox(make_float3(0.f), make_float3(6));
 	scene.dim = make_int3(100);
 	for (int i = 0; i < d_num_instances; ++i)
@@ -430,8 +450,6 @@ uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::
 	gpuErrchk(cudaMalloc(&d_pixels, size));
 	gpuErrchk(cudaMalloc(&d_render_camera, sizeof(RCamera)));
 	gpuErrchk(cudaMalloc(&d_light, num_light * sizeof(float3)));
-	gpuErrchk(cudaMalloc(&d_sdf_steps, num_sdf * sizeof(float3)));
-	gpuErrchk(cudaMalloc(&d_sdf_dim, num_sdf * sizeof(int3)));
 	gpuErrchk(cudaMalloc(&d_atmosphere, sizeof(Atmosphere)));
 	gpuErrchk(cudaMalloc(&d_sdf_volumes, num_sdf * sizeof(GPUBoundingBox)));
 	gpuErrchk(cudaMalloc(&d_volume_instances, 200 * sizeof(GPUVolumeObjectInstance)));
@@ -441,8 +459,7 @@ uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::
 	gpuErrchk(cudaMemcpy(d_pixels, h_pixels, image_size, cudaMemcpyHostToDevice));
 	gpuErrchk(cudaMemcpy(d_render_camera, h_camera, sizeof(RCamera), cudaMemcpyHostToDevice));
 	gpuErrchk(cudaMemcpy(d_light, h_lights, num_light * sizeof(float3), cudaMemcpyHostToDevice));
-	gpuErrchk(cudaMemcpy(d_sdf_steps, h_sdf_steps, num_sdf * sizeof(float3), cudaMemcpyHostToDevice));
-	gpuErrchk(cudaMemcpy(d_sdf_dim, h_sdf_dim, num_sdf * sizeof(int3), cudaMemcpyHostToDevice));
+
 	gpuErrchk(cudaMemcpy(d_sdf_volumes, h_volumes, num_sdf * sizeof(GPUBoundingBox), cudaMemcpyHostToDevice));
 	gpuErrchk(cudaMemcpy(d_atmosphere, h_atmosphere, sizeof(Atmosphere), cudaMemcpyHostToDevice));
 	gpuErrchk(cudaMemcpy(d_volume_instances, volume_objs, 2 * sizeof(GPUVolumeObjectInstance), cudaMemcpyHostToDevice));
@@ -508,8 +525,6 @@ void free_memory()
 	gpuErrchk(cudaFree(d_sdf));
 	gpuErrchk(cudaFree(d_sdf_volumes));
 	gpuErrchk(cudaFree(d_render_camera));
-	gpuErrchk(cudaFree(d_sdf_steps));
-	gpuErrchk(cudaFree(d_sdf_dim));
 	gpuErrchk(cudaFree(d_volume_instances));
 	gpuErrchk(cudaFree(dev_tex_p));
 }

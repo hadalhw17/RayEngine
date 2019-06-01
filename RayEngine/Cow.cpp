@@ -8,7 +8,7 @@ ACow::ACow()
 {
 	Material material;
 	material.type = PHONG;
-	material.color = make_float4(0, 0, 0.2, 0);
+	material.color = make_float3(0, 0, 0.2);
 	material.uvs = true;
 	float3 location = make_float3(0);
 	object_properties.material = material;

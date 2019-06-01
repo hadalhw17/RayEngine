@@ -40,7 +40,7 @@ void narmals_mat(float4& color, float3 normal)
 // Ambient light
 ////////////////////////////////////////////////////
 __device__
-void ambient_light(float4& color)
+void ambient_light(float3& color)
 {
 	color += color * 0.2;
 }
@@ -49,15 +49,15 @@ void ambient_light(float4& color)
 // Fog
 ////////////////////////////////////////////////////
 __device__
-void apply_fog(float4& color, float distance, float d, float3 ray_o, float3 ray_dir)
+void apply_fog(float3& color, float distance, float d, float3 ray_o, float3 ray_dir)
 {
 	float a = 0.0375f;
-	float fogAmount = __saturatef(a/d * exp(-ray_o.y * d) * (1.0 - exp(-distance * ray_dir.y * d)) / ray_dir.y);
-	fogAmount = __saturatef(fogAmount + (exp(-(45.f - distance) * 0.08)) - 0.1);
-	//float fogAmount = 1.0 - exp(-distance / d);
-	float4  fogColor;
-	sky_mat(fogColor, ray_dir);
-	color += fogColor * fogAmount;
+	float fogAmount = __saturatef(a/d * __expf(-ray_o.y * d) * (1.0 - __expf(-distance * ray_dir.y * d)) / ray_dir.y);
+	fogAmount = __saturatef(fogAmount + (__expf(-(45.f - distance) * d)) - 0.1);
+	//float fogAmount = 1.0 - __expf(-distance * d);
+	//float fo = 1.0 - exp(-pow(0.001 * distance / d, 1.5));
+	float3  fogColor = 0.65 * make_float3(0.4, 0.65, 1.0);
+	color = mix(color, fogColor, fogAmount);
 	
 }
 
@@ -65,15 +65,15 @@ void apply_fog(float4& color, float distance, float d, float3 ray_o, float3 ray_
 // Phong light
 ////////////////////////////////////////////////////
 __device__
-void phong_light(float3* lights, size_t num_lights, float4& finalColor, RKDTreeNodeGPU* tree,
+void phong_light(float3* lights, size_t num_lights, float3& finalColor, RKDTreeNodeGPU* tree,
 	GPUSceneObject* scene_objs, int num_objs, int* root_index, int* index_list, HitResult& hit_result, HitResult& shadow_hit_result)
 {
 	float3 bias = hit_result.normal * make_float3(-K_EPSILON);
 	for (int i = 0; i < num_lights; ++i)
 	{
-		float4 diffuse = make_float4(0), specular = make_float4(0);
+		float3 diffuse = make_float3(0), specular = make_float3(0);
 		float3 lightpos = lights[i], lightDir;
-		float4 lightInt;
+		float3 lightInt;
 		float t = K_INFINITY;
 		illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, t, 20000);
 
@@ -82,10 +82,10 @@ void phong_light(float3* lights, size_t num_lights, float4& finalColor, RKDTreeN
 
 		trace_shadow(tree, scene_objs, num_objs, root_index, index_list, shadow_hit_result);
 
-		diffuse += lightInt * make_float4(shadow_hit_result.hits * 0.18) * fmaxf(0.0, dot(hit_result.normal, -lightDir));
+		diffuse += lightInt * make_float3(shadow_hit_result.hits * 0.18) * fmaxf(0.0, dot(hit_result.normal, -lightDir));
 
 		float3 R = reflect(lightDir, hit_result.normal);
-		specular += lightInt * make_float4(shadow_hit_result.hits * powf(fmaxf(0.0, dot(R, -hit_result.ray_dir)), 10));
+		specular += lightInt * make_float3(shadow_hit_result.hits * powf(fmaxf(0.0, dot(R, -hit_result.ray_dir)), 10));
 
 		finalColor += diffuse * 0.8 + specular * 0.2;
 		shadow_hit_result = HitResult();
@@ -96,15 +96,15 @@ void phong_light(float3* lights, size_t num_lights, float4& finalColor, RKDTreeN
 // Shade
 ////////////////////////////////////////////////////
 __device__
-void shade(float3* lights, size_t num_lights, float4& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
+void shade(float3* lights, size_t num_lights, float3& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
 	int* root_index, int* index_list, HitResult& hit_result, HitResult& shading_hit_result)
 {
 	float3 bias = hit_result.normal * make_float3(K_EPSILON);
 	for (int i = 0; i < num_lights; ++i)
 	{
 		float3 lightpos = lights[i], lightDir;
-		float4 lightInt;
-		float4 lightColor = make_float4(1, 0, 0, 0);
+		float3 lightInt;
+		float3 lightColor = make_float3(1, 0, 0);
 		float t = K_INFINITY;
 		illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, t, 20000);
 
@@ -161,10 +161,10 @@ float3 refract(float3 & I, float3 & N, float& ior)
 }
 
 __device__
-void reflect_refract(float4& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
+void reflect_refract(float3& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
 	int* root_index, int* index_list, HitResult& hit_result, HitResult& shading_hit_result)
 {
-	float4 refractionRColor = make_float4(0), reflectionRColor = make_float4(0);
+	float3 refractionRColor = make_float3(0), reflectionRColor = make_float3(0);
 	float kr = 0, ior = 1.3;
 	float3 direct = hit_result.ray_dir;
 	bool outside = dot(direct, hit_result.normal) < 0;
@@ -200,14 +200,14 @@ void reflect_refract(float4& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* s
 	}
 	// mix the two
 	finalColor += reflectionRColor * (kr)+refractionRColor * (1 - kr);
-	finalColor = clip(finalColor);
+	//finalColor = clip(finalColor);
 }
 
 __device__
-void refract_light(float4& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
+void refract_light(float3& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
 	int* root_index, int* index_list, HitResult& hit_result, HitResult& shading_hit_result)
 {
-	float4 refractionRColor = make_float4(0), reflectionRColor = make_float4(0);
+	float3 refractionRColor = make_float3(0), reflectionRColor = make_float3(0);
 	float kr = 0, ior = 1.3;
 	float3 direct = hit_result.ray_dir;
 	bool outside = dot(direct, hit_result.normal) < 0;
@@ -243,11 +243,11 @@ void refract_light(float4& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* sce
 	}
 	// mix the two
 	finalColor = reflectionRColor * (kr)+refractionRColor * (1 - kr);
-	finalColor = clip(finalColor);
+	//finalColor = clip(finalColor);
 }
 
 __device__
-void reflect(float4& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
+void reflect(float3& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
 	int* root_index, int* index_list, HitResult& hit_result, HitResult& shading_hit_result)
 {
 	float3 direct = hit_result.ray_dir;
@@ -266,7 +266,7 @@ void reflect(float4& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_obj
 }
 
 __device__
-void reflect_light(float4& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
+void reflect_light(float3& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
 	int* root_index, int* index_list, HitResult& hit_result, HitResult& shading_hit_result)
 {
 	float3 direct = hit_result.ray_dir;
@@ -312,8 +312,8 @@ float3 compute_incident_light(Atmosphere* armosphere, const float3 orig, const f
 		float3 samplePosition = orig + (tCurrent + segmentLength * 0.5f) * dir;
 		float height = length(samplePosition) - armosphere->earthRadius;
 		// compute optical depth for light
-		float hr = exp(-height / armosphere->Hr) * segmentLength;
-		float hm = exp(-height / armosphere->Hm) * segmentLength;
+		float hr = __expf(-height / armosphere->Hr) * segmentLength;
+		float hm = __expf(-height / armosphere->Hm) * segmentLength;
 		opticalDepthR += hr;
 		opticalDepthM += hm;
 		// light optical depth
@@ -326,13 +326,13 @@ float3 compute_incident_light(Atmosphere* armosphere, const float3 orig, const f
 			float3 samplePositionLight = samplePosition + (tCurrentLight + segmentLengthLight * 0.5f) * armosphere->sunDirection;
 			float heightLight = length(samplePositionLight) - armosphere->earthRadius;
 			if (heightLight < 0) break;
-			opticalDepthLightR += exp(-heightLight / armosphere->Hr) * segmentLengthLight;
-			opticalDepthLightM += exp(-heightLight / armosphere->Hm) * segmentLengthLight;
+			opticalDepthLightR += __expf(-heightLight / armosphere->Hr) * segmentLengthLight;
+			opticalDepthLightM += __expf(-heightLight / armosphere->Hm) * segmentLengthLight;
 			tCurrentLight += segmentLengthLight;
 		}
 		if (j == numSamplesLight) {
 			float3 tau = armosphere->betaR * (opticalDepthR + opticalDepthLightR) + armosphere->betaM * 1.1f * (opticalDepthM + opticalDepthLightM);
-			float3 attenuation = make_float3(exp(-tau.x), exp(-tau.y), exp(-tau.z));
+			float3 attenuation = make_float3(__expf(-tau.x), __expf(-tau.y), __expf(-tau.z));
 			sumR += attenuation * hr;
 			sumM += attenuation * hm;
 		}

@@ -107,6 +107,8 @@ float bspline(float t)
 	else return 0.0f;
 }
 
+
+
 __device__
 float cubicTex3DSimple(cudaTextureObject_t	tex, float3 coord)
 {
@@ -191,19 +193,19 @@ float CUBICTEX3D(cudaTextureObject_t tex, float3 coord)
 
 __device__
 __forceinline__
-float get_distance(RenderingSettings render_settings, cudaTextureObject_t tex,  float3 r_orig, float3* step, GPUVolumeObjectInstance instance)
+float get_distance(RenderingSettings render_settings, cudaTextureObject_t tex,  float3 r_orig, float3 step, GPUVolumeObjectInstance instance)
 {
 	float dist;
 	switch (render_settings.quality)
 	{
 	case LOW:
-		dist = tex3D<float>(tex, r_orig.x / step[instance.index].x, r_orig.y / step[instance.index].y, r_orig.z / step[instance.index].z);
+		dist = tex3D<float>(tex, r_orig.x / step.x, r_orig.y / step.y, r_orig.z / step.z);
 		break;
 	case MEDIUM:
-		dist = interpolate<float>(tex, r_orig / step[instance.index]);
+		dist = interpolate<float>(tex, r_orig / step);
 		break;
 	case HIGH:
-		dist = cubicTex3DSimple(tex, r_orig / step[instance.index]);
+		dist = cubicTex3DSimple(tex, r_orig / step);
 		break;
 	default:
 		break;
@@ -243,7 +245,7 @@ float get_distance_scene(float3 r_orig, GPUVolumeObjectInstance instance, GPUBou
 
 
 __device__
-float get_distance_to_sdf(RenderingSettings render_settings, cudaTextureObject_t tex, GPUScene scene, GPUBoundingBox box, float3 from, HitResult hit_result, float3 * step, int3 * dim, GPUVolumeObjectInstance instance, float curr_t)
+float get_distance_to_sdf(RenderingSettings render_settings, cudaTextureObject_t tex, GPUScene scene, GPUBoundingBox box, float3 from, HitResult hit_result, float3 step, int3 dim, GPUVolumeObjectInstance instance, float curr_t)
 {
 	float min_dist = K_INFINITY;
 	float t_near = K_INFINITY, t_far;
@@ -266,3 +268,13 @@ float get_distance_to_sdf(RenderingSettings render_settings, cudaTextureObject_t
 	return min_dist;
 }
 
+__device__
+float3 compute_sdf_normal(float3 p_hit, float t, RenderingSettings render_settings, cudaTextureObject_t tex, float3 step, GPUVolumeObjectInstance curr_obj)
+{
+	float delta = fmaxf(0.002, 10e-6 * t);
+	float curr_dist = get_distance(render_settings, tex, p_hit, step, curr_obj);
+	return normalize(make_float3(
+		get_distance(render_settings, tex, p_hit + make_float3(delta, 0, 0), step, curr_obj) - curr_dist,
+		get_distance(render_settings, tex, p_hit + make_float3(0, delta, 0), step, curr_obj) - curr_dist,
+		get_distance(render_settings, tex, p_hit + make_float3(0, 0, delta), step, curr_obj) - curr_dist));
+}

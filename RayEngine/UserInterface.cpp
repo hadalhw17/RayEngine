@@ -185,19 +185,57 @@ void RUserInterface::render_menu(float &brush_size, float &character_speed, stru
 				glfwTerminate();
 				return;
 			}
+			if (ImGui::CollapsingHeader("Generator options"))
+			{
+				if (ImGui::SliderFloat("Noise frequency", &scene_settings.noise_freuency, 0.f, 2.f, "%.4f", 2.0f))
+				{
+					generate_noise();
+				}
+				if (ImGui::SliderFloat("Noise amplitude", &scene_settings.noise_amplitude, 0.f, 2.f, "%.4f", 2.0f))
+				{
+					generate_noise();
+				}
+				if (ImGui::TreeNode("Volume resolution"))
+				{
+					if (ImGui::SliderInt("X", &scene_settings.volume_resolution.x, 1.f, 255.f, "%.4f"))
+					{
+						generate_noise();
+					}
+					if (ImGui::SliderInt("Y", &scene_settings.volume_resolution.y, 1.f, 255.f, "%.4f"))
+					{
+							generate_noise();
+					}
+					if (ImGui::SliderInt("Z", &scene_settings.volume_resolution.z, 1.f, 255.f, "%.4f"))
+					{
+						generate_noise();
+					}
+					ImGui::TreePop();
+					ImGui::Separator();
+				}
+				if (ImGui::TreeNode("World size"))
+				{
+					if (ImGui::SliderFloat("X##1", &scene_settings.world_size.x, 1.f, 255.f, "%.4f"))
+					{
+						generate_noise();
+					}
+					if (ImGui::SliderFloat("Y##1", &scene_settings.world_size.y, 1.f, 255.f, "%.4f"))
+					{
+						generate_noise();
+					}
+					if (ImGui::SliderFloat("Z##1", &scene_settings.world_size.z, 1.f, 255.f, "%.4f"))
+					{
+						generate_noise();
+					}
+					ImGui::TreePop();
+					ImGui::Separator();
+				}
 
-			if (ImGui::SliderFloat("Noise frequency", &scene_settings.noise_freuency, 1.f, 250.0f, "%.4f", 2.0f))
-			{
-				generate_noise();
+				if (ImGui::Button("Generate noise terrain"))
+				{
+					generate_noise();
+				}
 			}
-			if (ImGui::SliderFloat("Noise amplitude", &scene_settings.noise_amplitude, 1.f, 250.0f, "%.4f", 2.0f))
-			{
-				generate_noise();
-			}
-			if (ImGui::Button("Generate noise terrain"))
-			{
-				generate_noise();
-			}
+			
 			ImGui::EndTabItem();
 		}
 		if (ImGui::BeginTabItem("Renderer Settings"))

@@ -155,7 +155,8 @@ MainWindow::MainWindow()
 	//distance_field[0] = Grid(std::string(PATH_TO_VOLUMES) + std::string("terrain250.rsdf"));
 	distance_field[0] = Grid(std::string("SDFs/Edited.rsdf"));
 	//distance_field[1] = Grid(std::string(PATH_TO_VOLUMES) + std::string("cat250.rsdf"));
-
+	scene_settings.volume_resolution = make_int3(1);
+	scene_settings.world_size = make_float3(1.f);
 	initialize_volume_render(*SceneCam, distance_field, 1, Scene->textures, Scene->textures1, Scene->textures2, render_settings, scene_settings);
 #endif
 	currentFrame = glfwGetTime();
@@ -356,11 +357,11 @@ void MainWindow::RenderFrame()
 	//printf("CUDA mapped PBO: May access %ld bytes\n", num_bytes);
 
 	// clear image
-	cudaMemset(d_output, 0, 1920 * 1080 * 4);
+	cudaMemset(d_output, 0, SCR_WIDTH * SCR_HEIGHT * 4);
 
 	movable_camera->build_camera(SceneCam);
 	// call CUDA kernel, writing results to PBO
-	cuda_render_frame(*SceneCam, d_output, 1920, 1080);
+	cuda_render_frame(*SceneCam, d_output, SCR_WIDTH, SCR_HEIGHT);
 
 	gpuErrchk(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
 
@@ -375,7 +376,7 @@ void MainWindow::RenderFrame()
 	// copy from pbo to texture
 	glBindBuffer(0x88EC, pbo);
 	glBindTexture(GL_TEXTURE_2D, tex);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 1920, 1080, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, 0);
 	glBindBuffer(0x88EC, 0);
 
 	
@@ -702,7 +703,7 @@ int main()
 
 
 	// Create window with graphics context
-	GLFWwindow* window = glfwCreateWindow(1920, 1080, "Ray Engine", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Ray Engine", glfwGetPrimaryMonitor(), NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;

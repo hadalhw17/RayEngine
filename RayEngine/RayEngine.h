@@ -68,6 +68,8 @@ struct SceneSettings
 	float fog_deisity;
 	float noise_freuency;
 	float noise_amplitude;
+	int3 volume_resolution;
+	float3 world_size;
 };
 
 struct GPUVolumeObjectInstance
@@ -147,7 +149,7 @@ struct Material
 {
 	bool uvs = false;
 	bool normals = true;
-	float4 color;
+	float3 color;
 	MaterialType type = COLOR;
 };
 
@@ -184,7 +186,7 @@ struct HitResult
 	float2 uv;
 	bool hits;
 	int obj_index;
-	float4 hit_color;
+	float3 hit_color;
 
 	HOST_DEVICE_FUNCTION
 	HitResult()
