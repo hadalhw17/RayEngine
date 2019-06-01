@@ -32,6 +32,14 @@ inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort =
 
 using edge = std::pair<int, int>;
 
+struct texturess
+{
+	cudaTextureObject_t texture1;
+	cudaTextureObject_t texture2;
+	cudaTextureObject_t texture3;
+};
+
+
 enum TerrainBrushType
 {
 	SPHERE_ADD = 0,
@@ -44,6 +52,7 @@ struct TerrainBrush
 {
 	TerrainBrushType brush_type;
 	float brush_radius;
+	int material_index;
 };
 
 enum RenderQuality

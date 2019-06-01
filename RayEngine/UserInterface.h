@@ -10,9 +10,9 @@ public:
 	void inti_UI(GLFWwindow* window);
 	void clean_UI();
 
-	void render_main_hud(bool show_menu, float &brush_size, float &character_speed, struct RenderingSettings &render_settings, struct SceneSettings& scene_settings);
+	void render_main_hud(bool show_menu, struct TerrainBrush& brush, float &character_speed, struct RenderingSettings &render_settings, struct SceneSettings& scene_settings);
 	void render_main_screen(bool* start_game);
-	void render_menu(float &brush_size, float& character_speed, struct RenderingSettings& render_settings, struct SceneSettings& scene_settings);
+	void render_menu(struct TerrainBrush &brush, float& character_speed, struct RenderingSettings& render_settings, struct SceneSettings& scene_settings);
 
 private:
 	static void ShowExampleAppSimpleOverlay(bool* p_open);

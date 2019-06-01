@@ -83,12 +83,22 @@ __device__
 GPUScene* d_scene;
 
 GPUScene scene;
-
-__forceinline__ __device__
-float sdf_smin(float a, float b, float k = 0.1)
+inline __device__
+float2 sdf_fminf(float2 a, float2 b)
 {
-	float h = fmaxf(k - fabs(a - b), 0.0) / k;
-	return fminf(a, b) - h * h * k * (1.0 / 4.0);
+	return a.x < b.x ? a : b;
+}
+
+inline __device__
+float2 sdf_fmaxf(float2 a, float2 b)
+{
+	return a.x > b.x ? a : b;
+}
+__forceinline__ __device__
+float2 sdf_smin(float2 a, float2 b, float k = 0.1)
+{
+	float h = fmaxf(k - fabs(a.x - b.x), 0.0) / k;
+	return sdf_fminf(a, b) - h * h * k * (1.0 / 4.0);
 }
 
 // Tricubic interpolated texture lookup, using unnormalized coordinates.
@@ -110,7 +120,7 @@ float bspline(float t)
 
 
 __device__
-float cubicTex3DSimple(cudaTextureObject_t	tex, float3 coord)
+float2 cubicTex3DSimple(cudaTextureObject_t	tex, float3 coord)
 {
 	// transform the coordinate from [0,extent] to [-0.5, extent-0.5]
 	const float3 coord_grid = coord - 0.5f;
@@ -118,6 +128,7 @@ float cubicTex3DSimple(cudaTextureObject_t	tex, float3 coord)
 	const float3 fraction = coord_grid - index;
 	index = index + 0.5f;  //move from [-0.5, extent-0.5] to [0, extent]
 
+	float2 fetch;
 	float result = 0.0f;
 	for (float z = -1; z < 2.5f; z++)  //range [-1, 2]
 	{
@@ -131,11 +142,12 @@ float cubicTex3DSimple(cudaTextureObject_t	tex, float3 coord)
 			{
 				float bsplineXYZ = bspline(x - fraction.x) * bsplineYZ;
 				float u = index.x + x;
-				result += bsplineXYZ * tex3D<float>(tex, u, v, w);
+				fetch = bsplineXYZ * tex3D<float2>(tex, u, v, w);
+				result += fetch.x;
 			}
 		}
 	}
-	return result;
+	return make_float2(result, fetch.y);
 }
 
 
@@ -193,16 +205,16 @@ float CUBICTEX3D(cudaTextureObject_t tex, float3 coord)
 
 __device__
 __forceinline__
-float get_distance(RenderingSettings render_settings, cudaTextureObject_t tex,  float3 r_orig, float3 step, GPUVolumeObjectInstance instance)
+float2 get_distance(RenderingSettings render_settings, cudaTextureObject_t tex,  float3 r_orig, float3 step)
 {
-	float dist;
+	float2 dist;
 	switch (render_settings.quality)
 	{
 	case LOW:
-		dist = tex3D<float>(tex, r_orig.x / step.x, r_orig.y / step.y, r_orig.z / step.z);
+		dist = tex3D<float2>(tex, r_orig.x / step.x, r_orig.y / step.y, r_orig.z / step.z);
 		break;
 	case MEDIUM:
-		dist = interpolate<float>(tex, r_orig / step);
+		dist = interpolate<float2>(tex, r_orig / step);
 		break;
 	case HIGH:
 		dist = cubicTex3DSimple(tex, r_orig / step);
@@ -257,8 +269,8 @@ float get_distance_to_sdf(RenderingSettings render_settings, cudaTextureObject_t
 	if (intersect_box)
 	{
 
-		float min_dist_to_sdf = get_distance(render_settings, tex, from, step, instance);
-		min_dist = t_near + min_dist_to_sdf;
+		float2 min_dist_to_sdf = get_distance(render_settings, tex, from, step);
+		min_dist = t_near + min_dist_to_sdf.x;
 	}
 	else
 	{
@@ -272,9 +284,9 @@ __device__
 float3 compute_sdf_normal(float3 p_hit, float t, RenderingSettings render_settings, cudaTextureObject_t tex, float3 step, GPUVolumeObjectInstance curr_obj)
 {
 	float delta = fmaxf(0.002, 10e-6 * t);
-	float curr_dist = get_distance(render_settings, tex, p_hit, step, curr_obj);
+	float curr_dist = get_distance(render_settings, tex, p_hit, step).x;
 	return normalize(make_float3(
-		get_distance(render_settings, tex, p_hit + make_float3(delta, 0, 0), step, curr_obj) - curr_dist,
-		get_distance(render_settings, tex, p_hit + make_float3(0, delta, 0), step, curr_obj) - curr_dist,
-		get_distance(render_settings, tex, p_hit + make_float3(0, 0, delta), step, curr_obj) - curr_dist));
+		get_distance(render_settings, tex, p_hit + make_float3(delta, 0, 0), step).x - curr_dist,
+		get_distance(render_settings, tex, p_hit + make_float3(0, delta, 0), step).x - curr_dist,
+		get_distance(render_settings, tex, p_hit + make_float3(0, 0, delta), step).x - curr_dist));
 }

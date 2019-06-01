@@ -9,7 +9,7 @@
 // Tile material
 ////////////////////////////////////////////////////
 __device__
-void tile_pattern(float4& color, int square)
+void tile_pattern(float3& color, int square)
 {
 	if ((square % 2) == 0) {
 		// black tile

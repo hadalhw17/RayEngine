@@ -72,7 +72,7 @@ void RUserInterface::clean_UI()
 
 
 
-void RUserInterface::render_main_hud(bool show_menu, float &brush_size, float& character_speed, struct RenderingSettings& render_settings, struct SceneSettings& scene_settings)
+void RUserInterface::render_main_hud(bool show_menu, struct TerrainBrush& brush, float& character_speed, struct RenderingSettings& render_settings, struct SceneSettings& scene_settings)
 {
 	if (!show_menu)
 	{
@@ -88,7 +88,7 @@ void RUserInterface::render_main_hud(bool show_menu, float &brush_size, float& c
 	}
 	else
 	{
-		render_menu(brush_size, character_speed, render_settings, scene_settings);
+		render_menu(brush, character_speed, render_settings, scene_settings);
 	}
 
 }
@@ -142,7 +142,7 @@ extern
 void update_render_settings(RenderingSettings render_settings, SceneSettings scene_settings);
 extern
 void generate_noise();
-void RUserInterface::render_menu(float &brush_size, float &character_speed, struct RenderingSettings& render_settings, struct SceneSettings &scene_settings)
+void RUserInterface::render_menu(TerrainBrush &brush, float &character_speed, struct RenderingSettings& render_settings, struct SceneSettings &scene_settings)
 {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -167,7 +167,8 @@ void RUserInterface::render_menu(float &brush_size, float &character_speed, stru
 		ImGui::BeginTabBar("TabBar");
 		if (ImGui::BeginTabItem("Editor Settings"))
 		{
-			ImGui::SliderFloat("Brush size", &brush_size, 0.f, 5.0f, "%.4f", 2.0f);
+			ImGui::SliderFloat("Brush size", &brush.brush_radius, 0.f, 5.0f, "%.4f", 2.0f);
+			ImGui::SliderInt("Material index", &brush.material_index, 0.f, 2, "%.4f");
 			ImGui::SliderFloat("Character speed", &character_speed, 0.f, 2.0f, "%.4f", 2.0f);
 
 			if (ImGui::Button("Save changes"))

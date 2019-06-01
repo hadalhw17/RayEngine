@@ -19,9 +19,7 @@ std::vector<float4> read_ppm(char *filename);
 
 RScene::RScene()
 {
-	textures = std::vector<float4>(read_ppm((char *) "Meshes/3.ppm"));
-	textures1 = std::vector<float4>(read_ppm((char *) "Meshes/2.ppm"));
-	textures2 = std::vector<float4>(read_ppm((char *) "Meshes/3.ppm"));
+
 	//AFloor *floor = new AFloor;
 	//sceneObjects.push_back(floor);
 

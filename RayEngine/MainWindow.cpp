@@ -30,12 +30,12 @@
 #include "Grid.h"
 #include <cuda_gl_interop.h>
 #include <sstream>
+#include "Material.h"
 
 
  
 extern void cuda_render_frame(RCamera sceneCamm, uint* output, uint width, uint heigth);
-extern "C" void initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::vector<float4> textures, std::vector<float4> textures1, std::vector<float4> textures2,
-	RenderingSettings render_settings, SceneSettings scene_settings);
+extern "C" void initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::vector<VoxelMaterial> naterials, RenderingSettings render_settings, SceneSettings scene_settings);
 extern void spawn_obj(RCamera pos, TerrainBrush brush);
 extern void toggle_shadow();
 extern "C" void copy_memory(std::vector<RKDThreeGPU*> tree, RCamera _sceneCam, std::vector<float4> h_triangles,
@@ -56,6 +56,7 @@ RMovableCamera *movable_camera;
 GLFWwindow* window;
 RenderingSettings render_settings;
 SceneSettings scene_settings; 
+TerrainBrush brush;
 
 // vao and vbo handle
 GLuint vao, vbo, ibo;
@@ -157,7 +158,13 @@ MainWindow::MainWindow()
 	//distance_field[1] = Grid(std::string(PATH_TO_VOLUMES) + std::string("cat250.rsdf"));
 	scene_settings.volume_resolution = make_int3(1);
 	scene_settings.world_size = make_float3(1.f);
-	initialize_volume_render(*SceneCam, distance_field, 1, Scene->textures, Scene->textures1, Scene->textures2, render_settings, scene_settings);
+	RMaterial default_material((char*) "Meshes/3.ppm", (char*) "Meshes/2.ppm", (char*) "Meshes/3.ppm");
+	RMaterial cobblestone_material((char*) "Meshes/1.ppm", (char*) "Meshes/1.ppm", (char*) "Meshes/1.ppm");
+	std::vector<VoxelMaterial> materials;
+	materials.push_back(default_material.material);
+	materials.push_back(cobblestone_material.material);
+
+	initialize_volume_render(*SceneCam, distance_field, 1, materials, render_settings, scene_settings);
 #endif
 	currentFrame = glfwGetTime();
 	lastFrame = currentFrame;
@@ -703,7 +710,8 @@ int main()
 
 
 	// Create window with graphics context
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Ray Engine", glfwGetPrimaryMonitor(), NULL);
+	//GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Ray Engine", glfwGetPrimaryMonitor(), NULL);
+	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Ray Engine", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -825,7 +833,7 @@ int main()
 		{
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		}
-		main_window->main_ui->render_main_hud(show_mouse, brush_radius, character_speed, render_settings, scene_settings);
+		main_window->main_ui->render_main_hud(show_mouse, brush, character_speed, render_settings, scene_settings);
 		glfwSwapBuffers(window);
 		main_window->RenderFrame();
 		render_thread(main_window, deltaTime);
@@ -835,8 +843,6 @@ int main()
 		
 		if (should_spawn)
 		{
-			TerrainBrush brush;
-			brush.brush_radius = brush_radius;
 			brush.brush_type = brush_type;
 			spawn_obj(*main_window->SceneCam, brush);
 		}

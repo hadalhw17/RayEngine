@@ -243,6 +243,7 @@
     <ClCompile Include="MainWindow.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Material.cpp" />
     <ClCompile Include="MeshAdjacencyTable.cpp" />
     <ClCompile Include="MovableCamera.cpp" />
     <ClCompile Include="Object.cpp" />
@@ -263,6 +264,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\RayTraceer\rply.h" />
+    <ClInclude Include="Material.h" />
     <ClInclude Include="UserInterface.h" />
     <CudaCompile Include="Atmosphere.cuh" />
     <ClInclude Include="BoundingVolume.h" />

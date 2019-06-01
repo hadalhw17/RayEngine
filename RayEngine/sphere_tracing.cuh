@@ -9,16 +9,30 @@
 #include "Grid.h"
 #include "helper_math.h"
 #include "sdf_functions.cuh"
+#include "Material.h"
 
 texture<float4, cudaTextureType2D, cudaReadModeElementType> d_texture;
 texture<float4, cudaTextureType2D, cudaReadModeElementType> d_texture1;
 texture<float4, cudaTextureType2D, cudaReadModeElementType> d_texture2;
 
+
 cudaArray* d_volumeArray = 0;
 cudaTextureObject_t	texObject; // For 3D texture
 
 
-float* h_grid;
+struct GPUMat
+{
+	texturess textttt;
+};
+
+__device__
+GPUMat *d_materials;
+
+
+GPUMat *h_materials;
+
+
+float2* h_grid;
 
 __device__ __constant__
 struct GPUBoundingBox* d_sdf_volumes;
@@ -28,7 +42,7 @@ GPUBoundingBox* h_volumes;
 struct GPUVolumeObjectInstance* volume_objs;
 
 __device__
-float* d_sdf;
+float2* d_sdf;
 
 __device__ __constant__
 float* dev_sdf_p;
@@ -49,8 +63,6 @@ int d_num_sdf;
 RenderingSettings cuda_render_settings;
 SceneSettings cuda_scene_settings;
 
-__device__
-float4* dev_tex_p;
 float3 spacing;
 
 
@@ -88,76 +100,58 @@ float4 bilinear_filter(float ix, float iy, float4* texture)
 ////////////////////////////////////////////////////
 // Bind normals to texture memory
 ////////////////////////////////////////////////////
-void bind_texture(float4* dev_texture, unsigned int tex_size, size_t pitch)
+void bind_texture(float4* dev_texture1, float4* dev_texture2, float4* dev_texture3, uint2 texture_resolution, size_t pitch, int curr_material)
 {
-	d_texture.normalized = true;                      // access with normalized texture coordinates
-	d_texture.filterMode = cudaFilterModeLinear;        // Point mode, so no 
-	d_texture.addressMode[0] = cudaAddressModeWrap;    // wrap texture coordinates
-	d_texture.addressMode[1] = cudaAddressModeWrap;
-
-	cudaArray *d_tex_array = 0;
+	// Create 3 texture arrays( 1 for each plane(triplanar texture mapping)) 
+	cudaArray* d_textureArray1;
+	cudaArray* d_textureArray2;
+	cudaArray* d_textureArray3;
 	cudaChannelFormatDesc arr_channelDesc = cudaCreateChannelDesc<float4>();
-	cudaMallocArray(&d_tex_array, &arr_channelDesc, 1000, 1000);
 
-	cudaMemcpy2DToArray(d_tex_array, 0, 0, dev_texture, pitch, 1000 * sizeof(float4), 1000, cudaMemcpyDeviceToDevice);
+	// Create array for texture 1
+	gpuErrchk(cudaMallocArray(&d_textureArray1, &arr_channelDesc, 1000, 1000));
+	gpuErrchk(cudaMemcpy2DToArray(d_textureArray1, 0, 0, dev_texture1, pitch, 1000 * sizeof(float4), 1000, cudaMemcpyDeviceToDevice));
+	//Array creation End
 
+	// Create array for texture 2
+	gpuErrchk(cudaMallocArray(&d_textureArray2, &arr_channelDesc, 1000, 1000));
+	gpuErrchk(cudaMemcpy2DToArray(d_textureArray2, 0, 0, dev_texture2, pitch, 1000 * sizeof(float4), 1000, cudaMemcpyDeviceToDevice));
+	//Array creation End
 
-	size_t size = sizeof(float4) * tex_size;
-	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float4>();
-	channelDesc.f = cudaChannelFormatKindFloat;
+	// Create array for texture 3
+	gpuErrchk(cudaMallocArray(&d_textureArray3, &arr_channelDesc, 1000, 1000));
+	gpuErrchk(cudaMemcpy2DToArray(d_textureArray3, 0, 0, dev_texture3, pitch, 1000 * sizeof(float4), 1000, cudaMemcpyDeviceToDevice));
+	//Array creation End
 
-	//gpuErrchk(cudaBindTexture2D(0, (const textureReference*)&d_texture, (const void*)dev_texture, channelDesc, 1000, 1000, 1000 * sizeof(float4)));
-	cudaBindTextureToArray(d_texture, d_tex_array);
+	cudaResourceDesc res_desc1;
+	memset(&res_desc1, 0, sizeof(cudaResourceDesc));
+	res_desc1.resType = cudaResourceTypeArray;
+	res_desc1.res.array.array = d_textureArray1;
+
+	cudaResourceDesc res_desc2;
+	memset(&res_desc2, 0, sizeof(cudaResourceDesc));
+	res_desc2.resType = cudaResourceTypeArray;
+	res_desc2.res.array.array = d_textureArray2;
+
+	cudaResourceDesc res_desc3;
+	memset(&res_desc3, 0, sizeof(cudaResourceDesc));
+	res_desc3.resType = cudaResourceTypeArray;
+	res_desc3.res.array.array = d_textureArray3;
+
+	cudaTextureDesc tex_desc;
+	memset(&tex_desc, 0, sizeof(cudaTextureDesc));
+
+	tex_desc.normalizedCoords = true;                      // access with normalized texture coordinates
+	tex_desc.filterMode = cudaFilterModeLinear;        // Point mode, so no 
+	tex_desc.addressMode[0] = cudaAddressModeWrap;    // wrap texture coordinates
+	tex_desc.addressMode[1] = cudaAddressModeWrap;    // wrap texture coordinates
+	tex_desc.readMode = cudaReadModeElementType;
+
+	gpuErrchk(cudaCreateTextureObject(&h_materials[curr_material].textttt.texture1, &res_desc1, &tex_desc, NULL));
+	gpuErrchk(cudaCreateTextureObject(&h_materials[curr_material].textttt.texture2, &res_desc2, &tex_desc, NULL));
+	gpuErrchk(cudaCreateTextureObject(&h_materials[curr_material].textttt.texture3, &res_desc3, &tex_desc, NULL));
 }
 
-////////////////////////////////////////////////////
-// Bind normals to texture memory
-////////////////////////////////////////////////////
-void bind_texture1(float4* dev_texture, unsigned int tex_size, size_t pitch)
-{
-	d_texture1.normalized = true;                      // access with normalized texture coordinates
-	d_texture1.filterMode = cudaFilterModeLinear;        // Point mode, so no 
-	d_texture1.addressMode[0] = cudaAddressModeWrap;    // wrap texture coordinates
-	d_texture1.addressMode[1] = cudaAddressModeWrap;
-
-	cudaArray* d_tex_array = 0;
-	cudaChannelFormatDesc arr_channelDesc = cudaCreateChannelDesc<float4>();
-	cudaMallocArray(&d_tex_array, &arr_channelDesc, 1000, 1000);
-
-	cudaMemcpy2DToArray(d_tex_array, 0, 0, dev_texture, pitch, 1000 * sizeof(float4), 1000, cudaMemcpyDeviceToDevice);
-
-
-	size_t size = sizeof(float4) * tex_size;
-	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float4>();
-	channelDesc.f = cudaChannelFormatKindFloat;
-
-	//gpuErrchk(cudaBindTexture2D(0, (const textureReference*)&d_texture, (const void*)dev_texture, channelDesc, 1000, 1000, 1000 * sizeof(float4)));
-	cudaBindTextureToArray(d_texture1, d_tex_array);
-}
-////////////////////////////////////////////////////
-// Bind normals to texture memory
-////////////////////////////////////////////////////
-void bind_texture2(float4* dev_texture, unsigned int tex_size, size_t pitch)
-{
-	d_texture2.normalized = true;                      // access with normalized texture coordinates
-	d_texture2.filterMode = cudaFilterModeLinear;        // Point mode, so no 
-	d_texture2.addressMode[0] = cudaAddressModeWrap;    // wrap texture coordinates
-	d_texture2.addressMode[1] = cudaAddressModeWrap;
-
-	cudaArray* d_tex_array = 0;
-	cudaChannelFormatDesc arr_channelDesc = cudaCreateChannelDesc<float4>();
-	cudaMallocArray(&d_tex_array, &arr_channelDesc, 1000, 1000);
-
-	cudaMemcpy2DToArray(d_tex_array, 0, 0, dev_texture, pitch, 1000 * sizeof(float4), 1000, cudaMemcpyDeviceToDevice);
-
-
-	size_t size = sizeof(float4) * tex_size;
-	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float4>();
-	channelDesc.f = cudaChannelFormatKindFloat;
-
-	//gpuErrchk(cudaBindTexture2D(0, (const textureReference*)&d_texture, (const void*)dev_texture, channelDesc, 1000, 1000, 1000 * sizeof(float4)));
-	cudaBindTextureToArray(d_texture2, d_tex_array);
-}
 
 __device__
 float f(float x, float z, float freq, float amp)
@@ -167,7 +161,7 @@ float f(float x, float z, float freq, float amp)
 }
 __device__
 bool single_ray_sphere_trace(RenderingSettings render_settings, SceneSettings scene_settings, cudaTextureObject_t tex, HitResult hit_result, GPUVolumeObjectInstance* instances,
-	float& t_near, float t_far, float3 step, int nearest_shape, float &prel, float threshold)
+	float& t_near, float t_far, float3 step, int nearest_shape, float &prel, float threshold, int &material_index)
 {
 	GPUVolumeObjectInstance curr_obj = instances[nearest_shape];
 	float t = t_near;
@@ -175,6 +169,7 @@ bool single_ray_sphere_trace(RenderingSettings render_settings, SceneSettings sc
 	{
 		float3 from = hit_result.ray_o + (t * hit_result.ray_dir) + curr_obj.location;
 		float min_dist = K_INFINITY;
+		float2 res;
 		if (curr_obj.index == -1)
 		{
 
@@ -183,7 +178,9 @@ bool single_ray_sphere_trace(RenderingSettings render_settings, SceneSettings sc
 		else
 		{
 			//min_dist = get_distance(from, step, dim, curr_obj);
-			min_dist = get_distance(render_settings, tex, from, step, curr_obj);
+			res = get_distance(render_settings, tex, from, step);
+			min_dist = res.x;
+			material_index = res.y;
 		}
 		if (min_dist <= threshold * t)
 		{
@@ -200,7 +197,7 @@ bool single_ray_sphere_trace(RenderingSettings render_settings, SceneSettings sc
 
 __device__
 void sphere_trace_shadow(RenderingSettings render_settings, SceneSettings scene_settings, cudaTextureObject_t tex, GPUVolumeObjectInstance* instances, float3 p_hit, float3 normal, GPUBoundingBox* volumes, int num_sdf,
-	float3 step, int3 dim, float3 light, float3& final_colour, int shape)
+	float3 step, int3 dim, float3 light, float3& final_colour, int material_index)
 {
 	float3 pixel_color = make_float3(0.f);
 
@@ -224,8 +221,9 @@ void sphere_trace_shadow(RenderingSettings render_settings, SceneSettings scene_
 	float t = 0;
 	int step_count = 0;
 	float t_near = 0;
+	int material_ind;
 	bool intersects = single_ray_sphere_trace(render_settings, scene_settings, tex, hit_result, instances,
-		t_near, light_dst, step, 0, sh, K_EPSILON);
+		t_near, light_dst, step, 0, sh, K_EPSILON, material_ind);
 	float amb = __saturatef(0.5 + 0.5 * normal.y);
 	float soft_shadow = __saturatef(sh);
 	float dif = fmaxf(.0f, dot(normal, (-lightDir)));
@@ -258,7 +256,7 @@ float4 powf(float4 a, float b)
 	return make_float4(powf(a.x, b), powf(a.y, b), powf(a.z, b), 0);
 }
 __device__
-float3 triplanar_mapping(float3 norm, float3 p_hit, float4 *texture)
+float3 triplanar_mapping(float3 norm, float3 p_hit, float4 *texture, texturess textures)
 {
 	// in wNorm is the world-space normal of the fragment
 	float3 blending = fabs(norm);
@@ -269,14 +267,14 @@ float3 triplanar_mapping(float3 norm, float3 p_hit, float4 *texture)
 	//float4 x = bilinear_filter( p_hit.y, p_hit.z, texture);
 	//float4 yaxis = bilinear_filter( p_hit.z, p_hit.x, texture);
 	//float4 zaxis = bilinear_filter( p_hit.x, p_hit.y, texture);
+	float4 xaxis = tex2D<float4>(textures.texture1, p_hit.y, p_hit.z);
+	float4 yaxis = tex2D<float4>(textures.texture2, p_hit.z, p_hit.x);
+	float4 zaxis = tex2D<float4>(textures.texture3, p_hit.x, p_hit.y);
 
-	float4 xaxis = tex2D(d_texture, p_hit.y, p_hit.z);
-	float4 yaxis = tex2D(d_texture1, p_hit.z, p_hit.x);
-	float4 zaxis = tex2D(d_texture2, p_hit.x, p_hit.y);
 
 	
 	// blend the results of the 3 planar projections.
-	float3 tex = blending.x * make_float3(xaxis.x, xaxis.y, xaxis.z) + blending.y * make_float3(yaxis.x, yaxis.y, yaxis.z) + blending.z * make_float3(zaxis.x, zaxis.y, zaxis.z);
+	float3 tex = blending.x * make_float3(xaxis.x, xaxis.y, xaxis.z) + blending.y * make_float3(yaxis.y, yaxis.y, yaxis.z) + blending.z * make_float3(zaxis.y, zaxis.y, zaxis.z);
 	return tex;
 
 	//float3 m = powf(fabs(norm), 2);
@@ -288,11 +286,11 @@ float3 triplanar_mapping(float3 norm, float3 p_hit, float4 *texture)
 
 __device__
 void sphere_trace_shade(RenderingSettings render_settings, cudaTextureObject_t tex, SceneSettings scene, float3 * lights, int num_lights, HitResult hit_result, GPUVolumeObjectInstance * instance, float t, GPUBoundingBox * volumes,
- int num_sdf, float3 step, int3 dim, int curr_sdf, float3 &final_colour, int step_count, bool shade, float4 *texture)
+ int num_sdf, float3 step, int3 dim, int material_index, float3 &final_colour, int step_count, bool shade, float4 *texture, const  GPUMat* materials)
 {
 	final_colour = make_float3(0);
 
-	GPUVolumeObjectInstance curr_obj = instance[curr_sdf];
+	GPUVolumeObjectInstance curr_obj;
 	float3 p_hit = hit_result.ray_o + (t)* hit_result.ray_dir;
 	hit_result.ray_o = p_hit;
 
@@ -305,7 +303,15 @@ void sphere_trace_shade(RenderingSettings render_settings, cudaTextureObject_t t
 	/*int square = floor(p_hit.x) + floor(p_hit.z);
 	tile_pattern(final_colour, square);*/
 
-	final_colour = mix(final_colour, triplanar_mapping(n, (p_hit/ step) / render_settings.texture_scale, texture), 0.3);
+	if (material_index == -1)
+	{
+		int square = floor(p_hit.x) + floor(p_hit.z);
+		tile_pattern(final_colour, square);
+	}
+	else
+	{
+		final_colour = mix(final_colour, triplanar_mapping(n, (p_hit/ step) / render_settings.texture_scale, texture, materials[material_index].textttt), 0.3);
+	}
 	//final_colour = nearest_neightbour_filter((p_hit.z / step[0].z) / 250, (p_hit.x / step[0].x)/ 250, texture);
 	
 	if (shade)
@@ -313,7 +319,7 @@ void sphere_trace_shade(RenderingSettings render_settings, cudaTextureObject_t t
 		for (int i = 0; i < num_lights; ++i)
 		{
 			//p_hit = p_hit + K_EPSILON * n;
-			sphere_trace_shadow(render_settings, scene, tex, instance, p_hit, n, volumes, num_sdf, step, dim, lights[i], final_colour, curr_sdf);
+			sphere_trace_shadow(render_settings, scene, tex, instance, p_hit, n, volumes, num_sdf, step, dim, lights[i], final_colour, material_index);
 		}
 	}
 	else
@@ -325,20 +331,20 @@ void sphere_trace_shade(RenderingSettings render_settings, cudaTextureObject_t t
 ////////////////////////////////////////////////////
 // Bind triangles to texture memory
 ////////////////////////////////////////////////////
-void bind_sdf_to_texture(float* dev_sdf_p, int3 dim, int num_sdf)
+void bind_sdf_to_texture(float2* dev_sdf_p, int3 dim, int num_sdf)
 {
 	if (texObject)
 	{
 		gpuErrchk(cudaDestroyTextureObject(texObject));
 		gpuErrchk(cudaFreeArray(d_volumeArray));
 	}
-	cudaChannelFormatDesc arr_channelDesc = cudaCreateChannelDesc<float>();
-	gpuErrchk(cudaMalloc3DArray(&d_volumeArray, &arr_channelDesc, make_cudaExtent(num_sdf * dim.x * sizeof(float), dim.y, dim.z), 0));
+	cudaChannelFormatDesc arr_channelDesc = cudaCreateChannelDesc<float2>();
+	gpuErrchk(cudaMalloc3DArray(&d_volumeArray, &arr_channelDesc, make_cudaExtent(num_sdf * dim.x * sizeof(float2), dim.y, dim.z), 0));
 
 	cudaMemcpy3DParms copyParams = { 0 };
 
 	//Array creation
-	copyParams.srcPtr = make_cudaPitchedPtr(dev_sdf_p, num_sdf * dim.x * sizeof(float), dim.y, dim.z);
+	copyParams.srcPtr = make_cudaPitchedPtr(dev_sdf_p, num_sdf * dim.x * sizeof(float2), dim.y, dim.z);
 	copyParams.dstArray = d_volumeArray;
 	copyParams.extent = make_cudaExtent(num_sdf * dim.x, dim.y, dim.z);
 	copyParams.kind = cudaMemcpyDeviceToDevice;
@@ -365,10 +371,9 @@ void bind_sdf_to_texture(float* dev_sdf_p, int3 dim, int num_sdf)
 
 
 extern "C"
-uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::vector<float4> textures, std::vector<float4> textures1, std::vector<float4> textures2,
-	RenderingSettings render_settings, SceneSettings scene_settings)
+uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::vector<VoxelMaterial> materials, RenderingSettings render_settings, SceneSettings scene_settings)
 {
-	float size_sdf = num_sdf * sdf->voxels.size() * sizeof(float);
+	float size_sdf = num_sdf * sdf->voxels.size() * sizeof(float2);
 	size_t image_size = SCR_WIDTH * SCR_HEIGHT;
 	int size = image_size * sizeof(uchar4);
 
@@ -381,7 +386,6 @@ uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::
 	h_lights[0] = make_float3(0, 25, 0);
 	//h_lights[1] = make_float3(3, 15, 10);
 	Atmosphere* h_atmosphere = new Atmosphere();
-	size_t textures_size = textures.size() * sizeof(float4);
 	float3* h_sdf_steps = new float3[num_sdf];
 	int3* h_sdf_dim = new int3[num_sdf];
 	float3* h_max_sdf = new float3[num_sdf];
@@ -391,7 +395,7 @@ uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::
 	d_num_instances = 1;
 
 
-	h_grid = new float[num_sdf * sdf[0].voxels.size()];
+	h_grid = new float2[num_sdf * sdf[0].voxels.size()];
 
 	for (size_t iz = 0; iz < sdf->sdf_dim.z; ++iz)
 	{
@@ -402,7 +406,7 @@ uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::
 			{
 				for (size_t ix = 0; ix < sdf->sdf_dim.x; ++ix)
 				{
-					h_grid[offset + ix + sdf->sdf_dim.y * num_sdf * (iy + (sdf->sdf_dim.x) * iz)] = sdf[g].voxels.at((ix + sdf->sdf_dim.y * (iy + sdf->sdf_dim.x * iz))).distance;
+					h_grid[offset + ix + sdf->sdf_dim.y * num_sdf * (iy + (sdf->sdf_dim.x) * iz)] = make_float2(sdf[g].voxels.at((ix + sdf->sdf_dim.y * (iy + sdf->sdf_dim.x * iz))).distance, -1);
 				}
 				offset += sdf[g].sdf_dim.x;
 			}
@@ -456,47 +460,55 @@ uchar4* initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::
 	// load triangle data into a CUDA texture
 	bind_sdf_to_texture(d_sdf, sdf[0].sdf_dim, num_sdf);
 
-	if (textures_size > 0)
+	if (materials.size() > 0)
 	{
-		size_t pitch;
-		// allocate memory for the triangle meshes on the GPU
-		//gpuErrchk(cudaMalloc((void**)& dev_tex_p, textures_size));
-		gpuErrchk(cudaMallocPitch((void**)& dev_tex_p, &pitch, 1000 * sizeof(float4), 1000));
+		h_materials = new GPUMat[materials.size()];
+		gpuErrchk(cudaMalloc((void**)& d_materials, materials.size() * sizeof(GPUMat)));
+		int curr_mat = 0;
+		for (auto material : materials)
+		{
+			size_t pitch;
+			float4* tex1;
+			float4* tex2;
+			float4* tex3;
+
+			size_t tex_width = material.texture_resolution.x * sizeof(float4);
+			size_t tex_heighth = material.texture_resolution.y;
+			// allocate memory for the triangle meshes on the GPU
+			//gpuErrchk(cudaMalloc((void**)& dev_tex_p, textures_size));
+			gpuErrchk(cudaMallocPitch((void**)& tex1, &pitch, tex_width, tex_heighth));
 
 
-		// copy triangle data to GPU
-		//gpuErrchk(cudaMemcpy(dev_tex_p, textures.data(), textures_size, cudaMemcpyHostToDevice));
-		gpuErrchk(cudaMemcpy2D(dev_tex_p, pitch, textures.data(), 1000 * sizeof(float4), 1000 * sizeof(float4), 1000,
-			cudaMemcpyHostToDevice));
+			// copy triangle data to GPU
+			//gpuErrchk(cudaMemcpy(dev_tex_p, textures.data(), textures_size, cudaMemcpyHostToDevice));
+			gpuErrchk(cudaMemcpy2D(tex1, pitch, material.texture_aray[0].data(), tex_width, tex_width, tex_heighth,
+				cudaMemcpyHostToDevice));
 
-		// load triangle data into a CUDA texture
-		bind_texture(dev_tex_p, textures_size, pitch);
-
-		// allocate memory for the triangle meshes on the GPU
-		//gpuErrchk(cudaMalloc((void**)& dev_tex_p, textures_size));
-		gpuErrchk(cudaMallocPitch((void**)& dev_tex_p, &pitch, 1000 * sizeof(float4), 1000));
+			// allocate memory for the triangle meshes on the GPU
+			//gpuErrchk(cudaMalloc((void**)& dev_tex_p, textures_size));
+			gpuErrchk(cudaMallocPitch((void**)& tex2, &pitch, tex_width, tex_heighth));
 
 
-		// copy triangle data to GPU
-		//gpuErrchk(cudaMemcpy(dev_tex_p, textures.data(), textures_size, cudaMemcpyHostToDevice));
-		gpuErrchk(cudaMemcpy2D(dev_tex_p, pitch, textures1.data(), 1000 * sizeof(float4), 1000 * sizeof(float4), 1000,
-			cudaMemcpyHostToDevice));
+			// copy triangle data to GPU
+			//gpuErrchk(cudaMemcpy(dev_tex_p, textures.data(), textures_size, cudaMemcpyHostToDevice));
+			gpuErrchk(cudaMemcpy2D(tex2, pitch, material.texture_aray[1].data(), tex_width, tex_width, tex_heighth,
+				cudaMemcpyHostToDevice));
 
-		// load triangle data into a CUDA texture
-		bind_texture1(dev_tex_p, textures_size, pitch);
-
-		// allocate memory for the triangle meshes on the GPU
-		//gpuErrchk(cudaMalloc((void**)& dev_tex_p, textures_size));
-		gpuErrchk(cudaMallocPitch((void**)& dev_tex_p, &pitch, 1000 * sizeof(float4), 1000));
+			// allocate memory for the triangle meshes on the GPU
+			//gpuErrchk(cudaMalloc((void**)& dev_tex_p, textures_size));
+			gpuErrchk(cudaMallocPitch((void**)& tex3, &pitch, tex_width, tex_heighth));
 
 
-		// copy triangle data to GPU
-		//gpuErrchk(cudaMemcpy(dev_tex_p, textures.data(), textures_size, cudaMemcpyHostToDevice));
-		gpuErrchk(cudaMemcpy2D(dev_tex_p, pitch, textures2.data(), 1000 * sizeof(float4), 1000 * sizeof(float4), 1000,
-			cudaMemcpyHostToDevice));
+			// copy triangle data to GPU
+			//gpuErrchk(cudaMemcpy(dev_tex_p, textures.data(), textures_size, cudaMemcpyHostToDevice));
+			gpuErrchk(cudaMemcpy2D(tex3, pitch, material.texture_aray[2].data(), tex_width, tex_width, tex_heighth,
+				cudaMemcpyHostToDevice));
 
-		// load triangle data into a CUDA texture
-		bind_texture2(dev_tex_p, textures_size, pitch);
+			// load triangle data into a CUDA texture
+			bind_texture(tex1, tex2, tex3, material.texture_resolution, pitch, curr_mat);
+			++curr_mat;
+		}
+		gpuErrchk(cudaMemcpy(d_materials, h_materials, materials.size() * sizeof(GPUMat), cudaMemcpyHostToDevice));
 	}
 
 	return d_pixels;
@@ -512,7 +524,6 @@ void free_memory()
 	gpuErrchk(cudaFree(d_sdf_volumes));
 	gpuErrchk(cudaFree(d_render_camera));
 	gpuErrchk(cudaFree(d_volume_instances));
-	gpuErrchk(cudaFree(dev_tex_p));
 }
 
 extern
