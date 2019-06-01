@@ -203,13 +203,6 @@ void sphere_trace_shadow(RenderingSettings render_settings, SceneSettings scene_
 	float3 step, int3 dim, float3 light, float3& final_colour, int shape)
 {
 	float3 pixel_color = make_float3(0.f);
-	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
-	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
-
-	if (imageX >= SCR_WIDTH || imageY >= SCR_HEIGHT)
-		return;
-
-	int index = imageX * SCR_HEIGHT + imageY;
 
 	float light_dst = K_INFINITY;
 	float x = cosf(scene_settings.light_pos.x) * 20.f;
@@ -298,13 +291,6 @@ void sphere_trace_shade(RenderingSettings render_settings, cudaTextureObject_t t
  int num_sdf, float3 step, int3 dim, int curr_sdf, float3 &final_colour, int step_count, bool shade, float4 *texture)
 {
 	final_colour = make_float3(0);
-	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
-	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
-
-	if (imageX >= SCR_WIDTH || imageY >= SCR_HEIGHT)
-		return;
-
-	int index = imageY * SCR_WIDTH + imageX;
 
 	GPUVolumeObjectInstance curr_obj = instance[curr_sdf];
 	float3 p_hit = hit_result.ray_o + (t)* hit_result.ray_dir;

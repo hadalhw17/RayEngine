@@ -18,7 +18,7 @@ void generate_ray(float3& ray_o, float3& ray_dir,
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	if (imageX >= width || imageY >= heigth)
+	if (imageX > width || imageY > heigth)
 		return;
 
 	int index = (imageY * width) + imageX;

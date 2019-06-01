@@ -84,11 +84,11 @@ GPUScene* d_scene;
 
 GPUScene scene;
 
-__forceinline__ HOST_DEVICE_FUNCTION
-float sdf_smin(float a, float b, float k = 32)
+__forceinline__ __device__
+float sdf_smin(float a, float b, float k = 0.1)
 {
-	float res = exp(-k * a) + exp(-k * b);
-	return -log(max(0.0001, res)) / k;
+	float h = fmaxf(k - fabs(a - b), 0.0) / k;
+	return fminf(a, b) - h * h * k * (1.0 / 4.0);
 }
 
 // Tricubic interpolated texture lookup, using unnormalized coordinates.

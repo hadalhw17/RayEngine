@@ -88,7 +88,7 @@ void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings s
 		switch (brush.brush_type)
 		{
 		case SPHERE_ADD:
-			sdf_texute[index] = fminf(sdf_texute[index], sphere_distance(poi - sphere_pos, brush.brush_radius));
+			sdf_texute[index] = sdf_smin(sdf_texute[index], sphere_distance(poi - sphere_pos, brush.brush_radius));
 			break;
 		case SPHERE_SUBTRACT:
 			sdf_texute[index] = fmaxf(sdf_texute[index], -sphere_distance(poi - sphere_pos, brush.brush_radius));
@@ -96,7 +96,7 @@ void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings s
 		case CUBE_ADD:
 			GPUVolumeObjectInstance obj;
 			float3 normal = compute_sdf_normal(poi, 1, render_settings, tex, step, obj);
-			sdf_texute[index] = fminf(sdf_texute[index], aabb_distance(poi - sphere_pos + make_float3(brush.brush_radius), make_float3(brush.brush_radius)));
+			sdf_texute[index] = sdf_smin(sdf_texute[index], aabb_distance(poi - sphere_pos + make_float3(brush.brush_radius), make_float3(brush.brush_radius)));
 			//sdf_texute[index] = fminf(sdf_texute[index], aabb_distance(poi - sphere_pos - normal * brush.brush_radius, make_float3(brush.brush_radius)));
 			break;
 		case CUBE_SUBTRACT:
@@ -156,7 +156,7 @@ void render_sphere_trace(RenderingSettings render_settings, RCamera render_camer
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
 
-	if (imageX >= width || imageY >= heigth)
+	if (imageX > width || imageY > heigth)
 		return;
 
 	int index = imageY * width + imageX;
