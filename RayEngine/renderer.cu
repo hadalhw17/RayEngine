@@ -98,7 +98,7 @@ void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings s
 		case CUBE_ADD:
 			GPUVolumeObjectInstance obj;
 			float3 normal = compute_sdf_normal(poi, 10e-6, render_settings, tex, step, obj);
-			sdf_texute[index] = sdf_smin(sdf_texute[index], make_float2(aabb_distance(poi - sphere_pos + make_float3(brush.brush_radius), make_float3(brush.brush_radius)), mat_index));
+			sdf_texute[index] = sdf_smin(sdf_texute[index], make_float2(aabb_distance(poi - sphere_pos + make_float3(0, 0.5, 0), make_float3(brush.brush_radius, 0.6, brush.brush_radius)), mat_index));
 			//sdf_texute[index] = sdf_smin(sdf_texute[index], make_float2(aabb_distance(poi - (sphere_pos - normal * brush.brush_radius*2) - make_float3(0,4,0), make_float3(brush.brush_radius)), mat_index));
 			break;
 		case CUBE_SUBTRACT:
@@ -719,13 +719,13 @@ void toggle_shadow()
 }
 
 extern
-void spawn_obj(RCamera cam, TerrainBrush brush)
+void spawn_obj(RCamera cam, TerrainBrush brush, int x, int y)
 {
 	dim3 primaryRaysBlockDim(2, 2, 2);
 	dim3 primaryRaysGridDim(sdf_dim.x / 2, sdf_dim.y / 2, sdf_dim.z / 2);
 	float3 ray_o, ray_dir;
-	int imageX = SCR_WIDTH / 2;
-	int imageY = SCR_HEIGHT / 2;
+	int imageX = x;
+	int imageY = y;
 
 	int index = ((imageY * SCR_WIDTH) + imageX);
 	if (index > (SCR_WIDTH - 1) * (SCR_HEIGHT - 1))

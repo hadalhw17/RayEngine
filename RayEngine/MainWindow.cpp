@@ -36,7 +36,7 @@
  
 extern void cuda_render_frame(RCamera sceneCamm, uint* output, uint width, uint heigth);
 extern "C" void initialize_volume_render(RCamera sceneCam, Grid* sdf, int num_sdf, std::vector<VoxelMaterial> naterials, RenderingSettings render_settings, SceneSettings scene_settings);
-extern void spawn_obj(RCamera pos, TerrainBrush brush);
+extern void spawn_obj(RCamera pos, TerrainBrush brush, int x, int y);
 extern void toggle_shadow();
 extern "C" void copy_memory(std::vector<RKDThreeGPU*> tree, RCamera _sceneCam, std::vector<float4> h_triangles,
 	std::vector<float4> h_normals, std::vector<float2> h_uvs, std::vector<GPUSceneObject> objs, std::vector<float4> textures, Grid* grid);
@@ -47,7 +47,10 @@ double lastFrame;
 double deltaTime;
 float click_timer;
 bool shift = false;
+bool ctrl = false;
+bool mouse_right = false;
 bool show_mouse = true;
+bool edit_mode = false;
 
 float brush_radius = 1;
 
@@ -451,16 +454,27 @@ void MainWindow::processInput(float delta_time, GLFWwindow *window)
 		show_mouse = false;
 	}
 
+	if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+	{
+		ctrl = true;
+	}
+	else if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_RELEASE)
+	{
+		ctrl = false;
+	}
+
+	if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS && click_timer > 50)
+	{
+		edit_mode = !edit_mode;
+		click_timer = 0.f;
+	}
+
 	bool overlaps = false;
 	//for (int i = 0; i < main_window->CUDATree.size(); ++i)
 	//{
 	//	if (point_aabb_collision(main_window->Scene->sceneObjects[i]->collision_box,  tmp_cam->position))
 	//		overlaps = true;
 	//}
-
-	click_timer += delta_time;
-
-
 }
 
 
@@ -582,7 +596,7 @@ void MainWindow::build_scene()
 static float2 oldMousePosition;
 
 // mouse event handlers
-int lastX = 0, lastY = 0;
+double lastX = 0, lastY = 0;
 int theButtonState = 0;
 int theModifierState = 0;
 
@@ -590,13 +604,29 @@ void mouse_motion(double xPos, double yPos)
 {
 	if(!show_mouse)
 	{
-		int deltaX = lastX - xPos;
-		int deltaY = lastY - yPos;
-
-		if (deltaX != 0 || deltaY != 0)
+		double deltaX = lastX - xPos;
+		double deltaY = lastY - yPos;
+		if (edit_mode && !ctrl)
 		{
-			movable_camera->change_yaw(-deltaX * 0.005);
-			movable_camera->change_pitch(-deltaY * 0.005);
+			deltaX = 0;
+			deltaY = 0;
+		}
+		else if (edit_mode && ctrl && mouse_right)
+		{
+			deltaX = -deltaX;
+			deltaY = -deltaY;
+		}
+		else if(edit_mode && ctrl && !mouse_right)
+		{
+			deltaX = 0;
+			deltaY = 0;
+		}
+
+
+		if (deltaX != 0.f || deltaY != 0.f)
+		{
+			movable_camera->change_yaw(-deltaX * 0.005f);
+			movable_camera->change_pitch(-deltaY * 0.005f);
 		}
 	}
 	lastX = xPos;
@@ -612,6 +642,7 @@ static void cursorPositionCallback(GLFWwindow *window, double xPos, double yPos)
 {
 	mouse_motion(xPos, yPos);
 }
+
 void cursorEnterCallback(GLFWwindow *widnow, int entered)
 {
 
@@ -619,44 +650,45 @@ void cursorEnterCallback(GLFWwindow *widnow, int entered)
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
+
+	if (action == GLFW_PRESS) mouse_right = true;
+	else mouse_right = false;
+
 	if (show_mouse)
 		return;
 	if (action == GLFW_PRESS)
 	{
-		if (click_timer > 10.f)
+		switch (button)
 		{
-			switch (button)
+		case GLFW_MOUSE_BUTTON_1:
+			if (shift)
 			{
-			case GLFW_MOUSE_BUTTON_1:
-				if (shift)
-				{
-					brush_type = TerrainBrushType::SPHERE_SUBTRACT;
-				}
-				else
-				{
-					brush_type = TerrainBrushType::SPHERE_ADD;
-				}
-				break;
-			case GLFW_MOUSE_BUTTON_2:
-				if (shift)
-				{
-					brush_type = TerrainBrushType::CUBE_SUBTRACT;
-				}
-				else
-				{
-					brush_type = TerrainBrushType::CUBE_ADD;
-				}
-				break;
-			default:
-				break;
+				brush_type = TerrainBrushType::SPHERE_SUBTRACT;
 			}
-			click_timer = 0.f;
-			should_spawn = true;
+			else
+			{
+				brush_type = TerrainBrushType::SPHERE_ADD;
+			}
+			break;
+		case GLFW_MOUSE_BUTTON_2:
+			if (shift)
+			{
+				brush_type = TerrainBrushType::CUBE_SUBTRACT;
+			}
+			else
+			{
+				brush_type = TerrainBrushType::CUBE_ADD;
+			}
+			break;
+		default:
+			break;
 		}
+		should_spawn = true;
 	}
 	else
 	{
 		should_spawn = false;
+		click_timer = 100;
 	}
 	
 }
@@ -713,7 +745,7 @@ int main()
 
 	// Create window with graphics context
 	//GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Ray Engine", glfwGetPrimaryMonitor(), NULL);
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Ray Engine", NULL, NULL);
+	window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Ray Engine", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -782,15 +814,7 @@ int main()
 		deltaTime = currentFrame - lastFrame;
 		//lastFrame = currentFrame;
 		frame_counter++;
-		if (deltaTime >= 1.0)
-		{
-			std::stringstream ss;
-			ss << "Ray Engine " << frame_counter << " FPS";
-			glfwSetWindowTitle(window, ss.str().c_str());
-			frame_counter = 0;
-			lastFrame++;
 
-		}
 
 		// render
 		// ------
@@ -827,7 +851,7 @@ int main()
 		processInput(deltaTime, window);
 		glfwPollEvents();
 		
-		if (show_mouse)
+		if (show_mouse || edit_mode)
 		{
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
@@ -843,12 +867,23 @@ int main()
 
 
 		
-		if (should_spawn)
+		if (should_spawn && edit_mode && !ctrl && click_timer > 10.f)
 		{
 			brush.brush_type = brush_type;
-			spawn_obj(*main_window->SceneCam, brush);
+			spawn_obj(*main_window->SceneCam, brush, lastX, SCR_HEIGHT - lastY);
+			click_timer = 0.f;
 		}
+		click_timer += deltaTime;
 
+		if (deltaTime >= 1.0)
+		{
+			std::stringstream ss;
+			ss << "Ray Engine " << frame_counter << " FPS";
+			glfwSetWindowTitle(window, ss.str().c_str());
+			frame_counter = 0;
+			lastFrame++;
+
+		}
 	}
 	// Cleanup
 	main_window->main_ui->clean_UI();

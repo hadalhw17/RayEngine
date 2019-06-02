@@ -81,7 +81,7 @@ void RUserInterface::render_main_hud(bool show_menu, struct TerrainBrush& brush,
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 		ShowExampleAppSimpleOverlay(&overlay);
-		render_crosshair(&overlay);
+		//render_crosshair(&overlay);
 		// Rendering
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
