@@ -1,0 +1,69 @@
+#pragma once
+
+#include "RayEngine.h"
+#include <vector>
+
+
+class RRayTracer;
+class RScene;
+class RKDTreeCPU;
+class RKDThreeGPU;
+struct RCamera;
+struct float4;
+struct GLFWwindow;
+class TextRenderer;
+class RMovableCamera;
+
+namespace RayEngine
+{
+	class RAY_ENGINE_API MainWindow
+	{
+
+	public:
+		MainWindow();
+		virtual ~MainWindow();
+
+		void RenderFrame();
+		void processInput(float delta_time, GLFWwindow* window);
+
+
+		RRayTracer* RayTracer;
+		RScene* Scene;
+		std::vector<RKDTreeCPU*>Tree;
+		RCamera* SceneCam;
+		TextRenderer* Text;
+
+		std::vector<RKDThreeGPU*> CUDATree;
+		std::vector<float4> triangles;
+		std::vector<float4> normals;
+		std::vector<float2> uvs;
+		uchar4* pixels;
+
+		double x_pos = 0;
+		double y_pos;
+		double z_pos = 0;
+		double x_look_at = 0;
+		double y_look_at = 0;
+		double z_look_at = 0.8;
+		double xDelta = 0;
+		double yDelta = 0;
+		double oldMouseX = 0;
+		double oldMouseY = 0;
+
+
+
+
+		void init_triangles();
+		void setup_camera();
+		void build_scene();
+		class RUserInterface* main_ui;
+
+		void Run();
+
+		// Should be defined in the !client!
+		MainWindow* create_application();
+
+	private:
+
+	};
+}
