@@ -1,12 +1,16 @@
 #pragma once
-#include "SceneObject.h"
-class AGlass :
-	public RSceneObject
+#include "MeshObject.h"
+
+namespace RayEngine
 {
-public:
-	AGlass();
-	~AGlass();
+	class AGlass :
+		public RMeshObject
+	{
+	public:
+		AGlass();
+		~AGlass();
 
-	virtual void tick(float delta_time);
-};
+		virtual void tick(float delta_time);
+	};
 
+}

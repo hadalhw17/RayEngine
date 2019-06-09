@@ -1,9 +1,10 @@
 #pragma once
 #include "helper_math.h"
 #include <vector>
+#include "RayEngine/RayEngine.h"
 
 
-class RTextureObject
+class RAY_ENGINE_API RTextureObject
 {
 public:
 	RTextureObject(char* filename)

@@ -1,6 +1,9 @@
 #pragma once
 #include "cuda_runtime_api.h"
 #include "stdio.h"
+#include <string>
+#include <functional>
+#include <vector_types.h>
 
 #ifdef RE_PLATFORM_WINDOWS
 	#ifdef RE_BUILD_DLL
@@ -12,6 +15,10 @@
 #else
 	#error Ray Engine currently only supports Windows!
 #endif
+
+#define BIND_EVENT_FN(x) std::bind(&x, this, std::placeholders::_1)
+
+#define BIT(x) (1 << x)
 #define sphere_tracing
 #include <utility>
 
@@ -21,7 +28,7 @@
 #define M_PI_2		1.57079632679489661923  // pi/2
 
 #define HOST_DEVICE_FUNCTION __device__ __host__
-
+#define NOMINMAX
 
 // settings
 #define SCR_WIDTH 1920
@@ -35,6 +42,15 @@
 #include <cassert>
 #define RAY_ENGINE_ASSERT(condition, msg) {assert((msg, condition));}
 #endif // !RAY_ENGINE_ASSERT
+
+#define RAY_LOG
+#ifdef RAY_LOG
+	#define RE_LOG(msg) std::cout << msg << std::endl;
+	#define REE_LOG(msg) std::cout << "!!!" << msg << "!!!" << std::endl;
+#else 
+	#define RE_LOG(msg)
+	#define REE_LOG(msg)
+#endif
 
 
 
@@ -64,6 +80,17 @@ struct texturess
 {
 	cudaTextureObject_t texture[3];
 };
+
+namespace RayEngine
+{
+	struct WindowData
+	{
+		size_t width, heigth;
+		std::string title;
+		std::function<void(class Event&)> function_callback;
+	};
+}
+
 
 enum BiomeTypes
 {

@@ -13,10 +13,6 @@
 #include "../TextureObject.h"
 #include "../PerlinNoise.h"
 
-texture<float4, cudaTextureType2D, cudaReadModeElementType> d_texture;
-texture<float4, cudaTextureType2D, cudaReadModeElementType> d_texture1;
-texture<float4, cudaTextureType2D, cudaReadModeElementType> d_texture2;
-
 
 cudaArray* d_volumeArray = 0;
 cudaArray* d_normalArray = 0;
@@ -267,13 +263,13 @@ void sphere_trace_shadow(const RenderingSettings& render_settings, const SceneSe
 inline __device__
 float3 powf(float3 a, float b)
 {
-	return make_float3(powf(a.x, b), powf(a.y, b), powf(a.z, b));
+	return make_float3(pow(a.x, b), pow(a.y, b), pow(a.z, b));
 }
 
 inline __device__
 float4 powf(float4 a, float b)
 {
-	return make_float4(powf(a.x, b), powf(a.y, b), powf(a.z, b), 0);
+	return make_float4(pow(a.x, b), pow(a.y, b), pow(a.z, b), 0);
 }
 __device__
 float3 triplanar_mapping(const float3& norm, const float3& p_hit, const texturess& textures)
@@ -287,7 +283,7 @@ float3 triplanar_mapping(const float3& norm, const float3& p_hit, const textures
 	float4 xaxis = tex2D<float4>(textures.texture[0], fabs(p_hit.y), fabs(p_hit.z));
 	float4 yaxis = tex2D<float4>(textures.texture[1], fabs(p_hit.z), fabs(p_hit.x));
 	float4 zaxis = tex2D<float4>(textures.texture[2], fabs(p_hit.x), fabs(p_hit.y));
-	
+
 
 	// blend the results of the 3 planar projections.
 	float3 tex = blending.x * make_float3(xaxis.x, xaxis.y, xaxis.z) + blending.y * make_float3(yaxis.x, yaxis.y, yaxis.z) + blending.z * make_float3(zaxis.x, zaxis.y, zaxis.z);
@@ -301,7 +297,7 @@ float fbm(float2& p, const unsigned* __restrict__ d_permutationTable)
 	m2.m[0] = make_float2(0.8, -0.6);
 	m2.m[1] = make_float2(0.6, 0.8);
 	float f = 0.0;
-	f += 0.5000 * d_permutationTable[int(clamp((p.x + 256 * p.y),0.f,  255.f * 255.f))]; p = mul(m2, p) * 2.02;
+	f += 0.5000 * d_permutationTable[int(clamp((p.x + 256 * p.y), 0.f, 255.f * 255.f))]; p = mul(m2, p) * 2.02;
 	f += 0.2500 * d_permutationTable[int(clamp((p.x + 256 * p.y), 0.f, 255.f * 255.f))]; p = mul(m2, p) * 2.03;
 	f += 0.1250 * d_permutationTable[int(clamp((p.x + 256 * p.y), 0.f, 255.f * 255.f))]; p = mul(m2, p) * 2.01;
 	f += 0.0625 * d_permutationTable[int(clamp((p.x + 256 * p.y), 0.f, 255.f * 255.f))];
@@ -475,7 +471,7 @@ void bind_sdf_norm_to_texture(float2* dev_sdf_p, const uint3& dim, const int& nu
 
 extern "C"
 void initialize_volume_render(RCamera& sceneCam, const Grid& sdf, const int& num_sdf, const std::vector<VoxelMaterial>& materials, const RenderingSettings& render_settings,
-	const SceneSettings& scene_settings, const RPerlinNoise& noise)
+	const SceneSettings& scene_settings, const RayEngine::RPerlinNoise& noise)
 {
 	float size_sdf = num_sdf * sdf.voxels.size() * sizeof(float2);
 	h_camera = &sceneCam;
@@ -613,3 +609,4 @@ void update_render_settings(const RenderingSettings& render_settings, const Scen
 	cuda_render_settings = render_settings;
 	cuda_scene_settings = scene_settings;
 }
+

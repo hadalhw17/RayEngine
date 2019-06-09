@@ -62,7 +62,7 @@ void generate_ray(float3& ray_o, float3& ray_dir,
 // Ray-box intersection
 ////////////////////////////////////////////////////
 __device__
-bool gpu_ray_box_intersect(const GPUBoundingBox &bbox, const float3 &ray_o, const float3 &ray_dir, float& t_near, float& t_far)
+bool gpu_ray_box_intersect(const GPUBoundingBox& bbox, const float3& ray_o, const float3& ray_dir, float& t_near, float& t_far)
 {
 	float3 dirfrac = make_float3(1.0f / ray_dir.x, 1.0f / ray_dir.y, 1.0f / ray_dir.z);
 
@@ -176,7 +176,7 @@ float2 get_uvs(const int tri_index, const float u, const float v)
 // Between ray and triangle
 ////////////////////////////////////////////////////
 __device__
-bool gpu_ray_tri_intersect(float3 v0, float3 e1, float3 e2, int tri_index, GPUSceneObject curr_obj, HitResult & hit_result)
+bool gpu_ray_tri_intersect(float3 v0, float3 e1, float3 e2, int tri_index, GPUSceneObject curr_obj, HitResult& hit_result)
 {
 	float3 h, s, q;
 	float a, f, u, v;
@@ -373,8 +373,8 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU* node,
 // Trace for shadows
 ////////////////////////////////////////////////////
 __device__
-void trace_shadow(RKDTreeNodeGPU * tree, GPUSceneObject * scene_objs, int num_objs,
-	int* root_index, int* index_list, HitResult & hit_result)
+void trace_shadow(RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
+	int* root_index, int* index_list, HitResult& hit_result)
 {
 	for (int i = 0; i < num_objs; ++i)
 	{
@@ -384,9 +384,9 @@ void trace_shadow(RKDTreeNodeGPU * tree, GPUSceneObject * scene_objs, int num_ob
 }
 
 __device__
-void trace_scene(RKDTreeNodeGPU * tree,
-	const RCamera render_camera, GPUSceneObject * scene_objs, int num_objs,
-	int* root_index, int* indexList, HitResult & hit_result)
+void trace_scene(RKDTreeNodeGPU* tree,
+	const RCamera render_camera, GPUSceneObject* scene_objs, int num_objs,
+	int* root_index, int* indexList, HitResult& hit_result)
 {
 	// Perform ray-box intersection test.
 	for (int i = 0; i < num_objs; i++)
@@ -435,8 +435,8 @@ float4* device_trace_ray(RKDTreeNodeGPU* tree, float3 ray_o, float3 ray_dir,
 // Cast ray from a pixel
 ////////////////////////////////////////////////////
 __device__
-float4 * trace_pixel(RKDTreeNodeGPU * tree, float4 * pixels,
-	const RCamera render_camera, GPUSceneObject * scene_objs, int num_objs,
+float4* trace_pixel(RKDTreeNodeGPU* tree, float4* pixels,
+	const RCamera render_camera, GPUSceneObject* scene_objs, int num_objs,
 	int root_index, int num_faces, int* indexList, uint width, uint heigth)
 {
 	float3 ray_o, ray_dir;

@@ -2,7 +2,7 @@
 
 #ifdef RE_PLATFORM_WINDOWS
 
-	extern RayEngine::MainWindow* create_application();
+	extern RayEngine::Application* create_application();
 
 	int main(int argc, char** argv)
 	{

@@ -45,7 +45,7 @@ T bilinear(
 
 template<typename T>
 __device__
-T interpolate(const cudaTextureObject_t &tex, const float3& location)
+T interpolate(const cudaTextureObject_t& tex, const float3& location)
 {
 	float gx, gy, gz, tx, ty, tz;
 	unsigned gxi, gyi, gzi;
@@ -114,14 +114,14 @@ float bspline(float t)
 	const float a = 2.0f - t;
 
 	if (t < 1.0f) return 2.0f / 3.0f - 0.5f * t * t * a;
-	else if (t < 2.0f) return a * a* a / 6.0f;
+	else if (t < 2.0f) return a * a * a / 6.0f;
 	else return 0.0f;
 }
 
 
 
 __device__
-float2 cubicTex3DSimple(const cudaTextureObject_t &tex, const float3 &coord)
+float2 cubicTex3DSimple(const cudaTextureObject_t& tex, const float3& coord)
 {
 	// transform the coordinate from [0,extent] to [-0.5, extent-0.5]
 	const float3 coord_grid = coord - 0.5f;
@@ -155,7 +155,7 @@ float2 cubicTex3DSimple(const cudaTextureObject_t &tex, const float3 &coord)
 
 template<class T> inline
 __device__
-void bspline_weights(T fraction, T & w0, T & w1, T & w2, T & w3)
+void bspline_weights(T fraction, T& w0, T& w1, T& w2, T& w3)
 {
 	const T one_frac = 1.0f - fraction;
 	const T squared = fraction * fraction;
@@ -169,7 +169,7 @@ void bspline_weights(T fraction, T & w0, T & w1, T & w2, T & w3)
 
 
 __device__
-float CUBICTEX3D(const cudaTextureObject_t &tex, const float3 &coord)
+float CUBICTEX3D(const cudaTextureObject_t& tex, const float3& coord)
 {
 	// shift the coordinate from [0,extent] to [-0.5, extent-0.5]
 	const float3 coord_grid = coord - 0.5f;
@@ -205,7 +205,7 @@ float CUBICTEX3D(const cudaTextureObject_t &tex, const float3 &coord)
 
 
 __device__
-float2 get_distance(const RenderingSettings &render_settings, const cudaTextureObject_t &tex,  const float3 &r_orig, const float3 &step)
+float2 get_distance(const RenderingSettings& render_settings, const cudaTextureObject_t& tex, const float3& r_orig, const float3& step)
 {
 	float2 dist;
 	switch (render_settings.quality)
@@ -222,21 +222,21 @@ float2 get_distance(const RenderingSettings &render_settings, const cudaTextureO
 	default:
 		break;
 	}
-	
+
 	return dist;
 }
 
 
 HOST_DEVICE_FUNCTION
 __forceinline__
-float sphere_distance(const float3 &p, const float &radius)
+float sphere_distance(const float3& p, const float& radius)
 {
 	return length(p) - radius;
 }
 
 HOST_DEVICE_FUNCTION
 __forceinline__
-float aabb_distance(const float3 &p,  const float3 &s)
+float aabb_distance(const float3& p, const float3& s)
 {
 	float3 d = fabs(p) - s;
 	return length(max(d, make_float3(0.0)))
@@ -247,7 +247,7 @@ float aabb_distance(const float3 &p,  const float3 &s)
 
 HOST_DEVICE_FUNCTION
 __forceinline__
-float get_distance_scene(const float3 &r_orig, const GPUVolumeObjectInstance &instance, const GPUBoundingBox * volumes)
+float get_distance_scene(const float3& r_orig, const GPUVolumeObjectInstance& instance, const GPUBoundingBox* volumes)
 {
 
 	float min_dist_to_sdf = sphere_distance(r_orig, 2);
@@ -257,8 +257,8 @@ float get_distance_scene(const float3 &r_orig, const GPUVolumeObjectInstance &in
 
 
 __device__
-float get_distance_to_sdf(const RenderingSettings &render_settings, const cudaTextureObject_t &tex, const GPUScene &scene, const GPUBoundingBox &box,
-	const float3 &from, const HitResult &hit_result, const float3 &step, const int3 &dim, const GPUVolumeObjectInstance &instance, const float &curr_t)
+float get_distance_to_sdf(const RenderingSettings& render_settings, const cudaTextureObject_t& tex, const GPUScene& scene, const GPUBoundingBox& box,
+	const float3& from, const HitResult& hit_result, const float3& step, const int3& dim, const GPUVolumeObjectInstance& instance, const float& curr_t)
 {
 	float min_dist = K_INFINITY;
 	float t_near = K_INFINITY, t_far;
@@ -283,8 +283,8 @@ float get_distance_to_sdf(const RenderingSettings &render_settings, const cudaTe
 
 
 __device__
-float3 compute_sdf_normal(const float3 &p_hit, const float &t, const RenderingSettings &render_settings, const cudaTextureObject_t &tex, 
-	const float3 &step, const GPUVolumeObjectInstance &curr_obj)
+float3 compute_sdf_normal(const float3& p_hit, const float& t, const RenderingSettings& render_settings, const cudaTextureObject_t& tex,
+	const float3& step, const GPUVolumeObjectInstance& curr_obj)
 {
 	float delta = fminf(0.001 * t, 0.002);
 	float curr_dist = get_distance(render_settings, tex, p_hit, step).x;
@@ -295,8 +295,8 @@ float3 compute_sdf_normal(const float3 &p_hit, const float &t, const RenderingSe
 }
 
 __device__
-float3 compute_sdf_normal_tet(const float3 &p_hit, const float &t, const RenderingSettings &render_settings, 
-	const cudaTextureObject_t &tex, const float3 &step, const GPUVolumeObjectInstance &curr_obj)
+float3 compute_sdf_normal_tet(const float3& p_hit, const float& t, const RenderingSettings& render_settings,
+	const cudaTextureObject_t& tex, const float3& step, const GPUVolumeObjectInstance& curr_obj)
 {
 	float delta = fminf(0.001 * t, 0.002);
 	const int zero = fminf(0, t);

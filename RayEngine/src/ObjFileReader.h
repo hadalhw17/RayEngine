@@ -22,44 +22,46 @@
 #include <iostream>
 #include "MeshAdjacencyTable.h"
 
-/// Tokenize a string into a list by splitting at 'delim'
-std::vector<std::string> tokenize(const std::string &string, const std::string &delim, bool includeEmpty)
+namespace RayEngine
 {
-	std::string::size_type lastPos = 0, pos = string.find_first_of(delim, lastPos);
-	std::vector<std::string> tokens;
+	/// Tokenize a string into a list by splitting at 'delim'
+	std::vector<std::string> tokenize(const std::string& string, const std::string& delim, bool includeEmpty)
+	{
+		std::string::size_type lastPos = 0, pos = string.find_first_of(delim, lastPos);
+		std::vector<std::string> tokens;
 
-	while (lastPos != std::string::npos) {
-		if (pos != lastPos || includeEmpty)
-			tokens.push_back(string.substr(lastPos, pos - lastPos));
-		lastPos = pos;
-		if (lastPos != std::string::npos) {
-			lastPos += 1;
-			pos = string.find_first_of(delim, lastPos);
+		while (lastPos != std::string::npos) {
+			if (pos != lastPos || includeEmpty)
+				tokens.push_back(string.substr(lastPos, pos - lastPos));
+			lastPos = pos;
+			if (lastPos != std::string::npos) {
+				lastPos += 1;
+				pos = string.find_first_of(delim, lastPos);
+			}
 		}
+
+		return tokens;
 	}
 
-	return tokens;
-}
+	/// Convert a string into an unsigned integer value
+	unsigned int toUInt(const std::string& str) {
+		char* end_ptr = nullptr;
+		unsigned int result = (int)strtoul(str.c_str(), &end_ptr, 10);
+		if (*end_ptr != '\0')
+			std::cout << ("Could not parse integer value \"%s\"", str) << std::endl;
+		return result;
+	}
 
-/// Convert a string into an unsigned integer value
-unsigned int toUInt(const std::string &str) {
-	char *end_ptr = nullptr;
-	unsigned int result = (int)strtoul(str.c_str(), &end_ptr, 10);
-	if (*end_ptr != '\0')
-		std::cout << ("Could not parse integer value \"%s\"", str) << std::endl;
-	return result;
-}
-
-/**
- * \brief Loader for Wavefront OBJ triangle meshes
- */
+	/**
+	 * \brief Loader for Wavefront OBJ triangle meshes
+	 */
 	class WavefrontOBJ {
 	public:
 
 
-		RStaticMesh *loadObjFromFile(const char *fileName)
+		RStaticMesh* loadObjFromFile(const char* fileName)
 		{
-			RStaticMesh *mesh = new RStaticMesh();
+			RStaticMesh* mesh = new RStaticMesh();
 			typedef std::unordered_map<OBJVertex, uint32_t, OBJVertexHash> VertexMap;
 
 			std::ifstream is(fileName);
@@ -116,7 +118,7 @@ unsigned int toUInt(const std::string &str) {
 					}
 					/* Convert to an indexed vertex list */
 					for (int i = 0; i < nVertices; ++i) {
-						const OBJVertex &v = verts[i];
+						const OBJVertex& v = verts[i];
 						VertexMap::const_iterator it = vertexMap.find(v);
 						if (it == vertexMap.end()) {
 							vertexMap[v] = (uint32_t)vertices.size();
@@ -131,14 +133,14 @@ unsigned int toUInt(const std::string &str) {
 			}
 
 			mesh->faces = new float3[indices.size() / 3];
-			memcpy(mesh->faces, indices.data(), sizeof(uint32_t)*indices.size());
+			memcpy(mesh->faces, indices.data(), sizeof(uint32_t) * indices.size());
 			for (uint32_t i = 0; i < indices.size() / 3; ++i)
 			{
 				mesh->faces[i].x = indices[i * 3];
 				mesh->faces[i].y = indices[i * 3 + 1];
 				mesh->faces[i].z = indices[i * 3 + 2];
 			}
-				
+
 
 			mesh->verts = new float3[vertices.size()];
 			for (uint32_t i = 0; i < vertices.size(); ++i)
@@ -183,7 +185,7 @@ unsigned int toUInt(const std::string &str) {
 
 			inline OBJVertex() { }
 
-			inline OBJVertex(const std::string &string) {
+			inline OBJVertex(const std::string& string) {
 				std::vector<std::string> tokens = tokenize(string, "/", true);
 
 				if (tokens.size() < 1 || tokens.size() > 3)
@@ -198,18 +200,19 @@ unsigned int toUInt(const std::string &str) {
 					n = toUInt(tokens[2]);
 			}
 
-			inline bool operator==(const OBJVertex &v) const {
+			inline bool operator==(const OBJVertex& v) const {
 				return v.p == p && v.n == n && v.uv == uv;
 			}
 		};
 
 		/// Hash function for OBJVertex
 		struct OBJVertexHash : std::unary_function<OBJVertex, size_t> {
-			std::size_t operator()(const OBJVertex &v) const {
+			std::size_t operator()(const OBJVertex& v) const {
 				size_t hash = std::hash<uint32_t>()(v.p);
 				hash = hash * 37 + std::hash<uint32_t>()(v.uv);
 				hash = hash * 37 + std::hash<uint32_t>()(v.n);
 				return hash;
 			}
 		};
-};
+	};
+}

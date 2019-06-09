@@ -6,10 +6,10 @@ class Atmosphere
 {
 public:
 	__device__ __host__
-	Atmosphere(
-		float3 sd = make_float3(0, -1, 0),
-		float er = 6360e3, float ar = 6420e3,
-		float hr = 79945, float hm = 1200) :
+		Atmosphere(
+			float3 sd = make_float3(0, -1, 0),
+			float er = 6360e3, float ar = 6420e3,
+			float hr = 79945, float hm = 1200) :
 		sunDirection(sd),
 		earthRadius(er),
 		atmosphereRadius(ar),
@@ -36,7 +36,7 @@ public:
 	float Hm;               // Same as above but for Mie scattering (Hm) 
 
 
-	 const float3 betaR;
-	 const float3 betaM;
-	 
+	const float3 betaR;
+	const float3 betaM;
+
 };

@@ -100,9 +100,11 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>$(CudaToolkitDir)/include;C:\dev\RayEngine\RayEngine\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\dev\RayEngine\RayEngine\Platform\OpenGL;C:\dev\RayEngine\RayEngine\includes\imgui;C:\dev\RayEngine\RayEngine\src;$(CudaToolkitDir)/include;C:\dev\RayEngine\RayEngine\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>Default</LanguageStandard>
       <PreprocessorDefinitions>RE_BUILD_DLL;RE_PLATFORM_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>repch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -138,9 +140,13 @@
     <ClCompile Include="includes\imgui\imgui.cpp" />
     <ClCompile Include="includes\imgui\imgui_demo.cpp" />
     <ClCompile Include="includes\imgui\imgui_draw.cpp" />
-    <ClCompile Include="includes\imgui\imgui_impl_glfw.cpp" />
-    <ClCompile Include="includes\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="includes\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Platform\OpenGL\imgui_glfw_implementation.cpp" />
+    <ClCompile Include="Platform\OpenGL\imgui_opengl_imlementation.cpp" />
+    <ClCompile Include="Platform\Windows\WindowsInput.cpp" />
+    <ClCompile Include="src\Layers\SceneLayer.cpp" />
+    <ClCompile Include="src\Layers\Layer.cpp" />
+    <ClCompile Include="src\Layers\LayerStack.cpp" />
     <ClCompile Include="src\BoundingVolume.cpp" />
     <ClCompile Include="src\Camera.cpp" />
     <ClCompile Include="src\Character.cpp" />
@@ -154,7 +160,8 @@
     <ClCompile Include="src\KDTree.cpp" />
     <ClCompile Include="src\KDTreeGPUUtills.cpp" />
     <ClCompile Include="src\Light.cpp" />
-    <ClCompile Include="src\RayEngine\MainWindow.cpp" />
+    <ClCompile Include="src\MeshObject.cpp" />
+    <ClCompile Include="src\RayEngine\Application.cpp" />
     <ClCompile Include="src\Material.cpp" />
     <ClCompile Include="src\MeshAdjacencyTable.cpp" />
     <ClCompile Include="src\MovableCamera.cpp" />
@@ -166,17 +173,32 @@
     <ClCompile Include="src\Ray.cpp" />
     <ClCompile Include="src\RayEngine\RayEngine.cpp" />
     <ClCompile Include="src\RayTracer.cpp" />
+    <ClCompile Include="src\repch.cpp" />
     <ClCompile Include="src\rply.c" />
     <ClCompile Include="src\RStaticMesh.cpp" />
+    <ClCompile Include="src\RTScene.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneObject.cpp" />
+    <ClCompile Include="src\SDFScene.cpp" />
     <ClCompile Include="src\Source.cpp" />
     <ClCompile Include="src\Sphere.cpp" />
     <ClCompile Include="src\TextureObject.cpp" />
     <ClCompile Include="src\Triangle.cpp" />
     <ClCompile Include="src\UserInterface.cpp" />
+    <ClCompile Include="src\Layers\UILayer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="includes\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="includes\imgui\imgui_internal.h" />
+    <ClInclude Include="includes\imgui\imstb_rectpack.h" />
+    <ClInclude Include="Platform\OpenGL\imgui_glfw_implementation.h" />
+    <ClInclude Include="Platform\OpenGL\imgui_opengl_imlementation.h" />
+    <ClInclude Include="Platform\Windows\WindowsInput.h" />
+    <ClInclude Include="src\Input.h" />
+    <ClInclude Include="src\KeyCodes.h" />
+    <ClInclude Include="src\Layers\SceneLayer.h" />
+    <ClInclude Include="src\Layers\Layer.h" />
+    <ClInclude Include="src\Layers\LayerStack.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="src\BoundingVolume.h" />
     <ClInclude Include="src\Camera.h" />
@@ -191,8 +213,14 @@
     <ClInclude Include="src\cuda-src\ray_functions.cuh" />
     <ClInclude Include="src\cuda-src\sdf_functions.cuh" />
     <ClInclude Include="src\cuda-src\sphere_tracing.cuh" />
+    <ClInclude Include="src\Events\ApplicationEvent.h" />
+    <ClInclude Include="src\Events\Event.h" />
+    <ClInclude Include="src\Events\KeyEvent.h" />
+    <ClInclude Include="src\Events\MouseEvent.h" />
     <ClInclude Include="src\kd_tree_functions.cuh" />
     <ClInclude Include="src\material_functions.cuh" />
+    <ClInclude Include="src\MeshObject.h" />
+    <ClInclude Include="src\MouseButtonCodes.h" />
     <ClInclude Include="src\RayCore.h" />
     <ClInclude Include="src\RayEngine\EntryPoint.h" />
     <ClInclude Include="src\ray_functions.cuh" />
@@ -207,7 +235,7 @@
     <ClInclude Include="src\KDTree.h" />
     <ClInclude Include="src\KDTreeGPUUtills.h" />
     <ClInclude Include="src\Light.h" />
-    <ClInclude Include="src\RayEngine\MainWindow.h" />
+    <ClInclude Include="src\RayEngine\Application.h" />
     <ClInclude Include="src\Material.h" />
     <ClInclude Include="src\MeshAdjacencyTable.h" />
     <ClInclude Include="src\MovableCamera.h" />
@@ -219,12 +247,15 @@
     <ClInclude Include="src\Ray.h" />
     <ClInclude Include="src\RayEngine\RayEngine.h" />
     <ClInclude Include="src\RayTracer.h" />
+    <ClInclude Include="src\repch.h" />
     <ClInclude Include="src\resource.h" />
     <ClInclude Include="src\rply.h" />
     <ClInclude Include="src\rplyfile.h" />
     <ClInclude Include="src\RStaticMesh.h" />
+    <ClInclude Include="src\RTScene.h" />
     <ClInclude Include="src\Scene.h" />
     <ClInclude Include="src\SceneObject.h" />
+    <ClInclude Include="src\SDFScene.h" />
     <ClInclude Include="src\Source.h" />
     <ClInclude Include="src\Sphere.h" />
     <ClInclude Include="src\TextureObject.h" />
@@ -235,13 +266,7 @@
     <ClInclude Include="includes\GL\glew.h" />
     <ClInclude Include="includes\imgui\imconfig.h" />
     <ClInclude Include="includes\imgui\imgui.h" />
-    <ClInclude Include="includes\imgui\imgui_impl_glfw.h" />
-    <ClInclude Include="includes\imgui\imgui_impl_metal.h" />
-    <ClInclude Include="includes\imgui\imgui_impl_opengl3.h" />
-    <ClInclude Include="includes\imgui\imgui_internal.h" />
-    <ClInclude Include="includes\imgui\imstb_rectpack.h" />
-    <ClInclude Include="includes\imgui\imstb_textedit.h" />
-    <ClInclude Include="includes\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\Layers\UILayer.h" />
     <CudaCompile Include="src\cuda-src\Atmosphere.cu" />
     <CudaCompile Include="src\cuda-src\renderer.cu" />
   </ItemGroup>

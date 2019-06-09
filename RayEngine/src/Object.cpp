@@ -1,11 +1,13 @@
 #include "Object.h"
 
 
-
-RObject::RObject()
+namespace RayEngine
 {
-}
+	RObject::RObject()
+	{
+	}
 
-RObject::~RObject()
-{
+	RObject::~RObject()
+	{
+	}
 }

@@ -1,12 +1,16 @@
 #pragma once
-#include "SceneObject.h"
-class ACow :
-	public RSceneObject
+#include "MeshObject.h"
+
+namespace RayEngine
 {
-public:
-	ACow();
-	~ACow();
+	class ACow :
+		public RMeshObject
+	{
+	public:
+		ACow();
+		~ACow();
 
-	virtual void tick(float delta_time);
-};
+		virtual void tick(float delta_time);
+	};
 
+}

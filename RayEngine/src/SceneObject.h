@@ -5,19 +5,22 @@
 #include "RStaticMesh.h"
 #include "GPUBoundingBox.h"
 
-
-class RSceneObject
+namespace RayEngine
 {
-public:
-	RSceneObject(const char *file_name);
-	~RSceneObject();
+	class RSceneObject
+	{
+	public:
+		RSceneObject();
+		
+		virtual ~RSceneObject();
 
-	virtual void tick(float delta_time);
+		virtual void tick(float delta_time);
 
-	std::vector<class RObjectComponent *> components;
-	RStaticMesh *root_component;
+		std::vector<class RObjectComponent*> components;
+		//RStaticMesh* root_component;
 
-	GPUSceneObject object_properties;
-	GPUBoundingBox collision_box;
-};
+		GPUSceneObject object_properties;
+		GPUBoundingBox collision_box;
+	};
 
+}

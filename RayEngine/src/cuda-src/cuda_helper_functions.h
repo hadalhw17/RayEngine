@@ -46,8 +46,8 @@ float4 mul(const float3x4& M, const float4& v)
 }
 
 
-inline __device__ 
-uint rgbaFloatToInt(float3 &rgba)
+inline __device__
+uint rgbaFloatToInt(float3& rgba)
 {
 	rgba.x = __saturatef(rgba.x);   // clamp to [0.0, 1.0]
 	rgba.y = __saturatef(rgba.y);
@@ -57,15 +57,15 @@ uint rgbaFloatToInt(float3 &rgba)
 }
 
 inline __device__
-float3 mix(const float3 &target, const float3 &second, const float &t)
+float3 mix(const float3& target, const float3& second, const float& t)
 {
-	return make_float3(__saturatef(target.x + (t) * second.x),
-		__saturatef(target.y + (t) * second.y),
-		__saturatef(target.z + (t) * second.z));
+	return make_float3(__saturatef(target.x + (t)* second.x),
+		__saturatef(target.y + (t)* second.y),
+		__saturatef(target.z + (t)* second.z));
 }
 
 inline __device__
-float3 sqrtf(const float3 &target)
+float3 sqrtf(const float3& target)
 {
 	return make_float3(sqrtf(target.x),
 		sqrtf(target.y),
@@ -76,7 +76,7 @@ float3 sqrtf(const float3 &target)
 // Compute light intensity
 ////////////////////////////////////////////////////
 HOST_DEVICE_FUNCTION
-void illuminate(const float3& P, const float3 &light_pos, float3& lightDir, float3& lightIntensity, float& distance,const float &intensity)
+void illuminate(const float3& P, const float3& light_pos, float3& lightDir, float3& lightIntensity, float& distance, const float& intensity)
 {
 	// Return not to devide by zero.
 	if (distance == 0)
@@ -95,7 +95,7 @@ void illuminate(const float3& P, const float3 &light_pos, float3& lightDir, floa
 // Clip color
 ////////////////////////////////////////////////////
 __device__
-float3 clip(const float3 &color)
+float3 clip(const float3& color)
 {
 	//float Red = color.x, Green = color.y, Blue = color.z, special = color.w;
 	//float alllight = color.x + color.y + color.z;
@@ -123,7 +123,7 @@ float3 clip(const float3 &color)
 // Normal visualisation material
 ////////////////////////////////////////////////////
 __forceinline__ HOST_DEVICE_FUNCTION
-void simple_shade(float3& color, const float3 &normal, float3 &ray_dir)
+void simple_shade(float3& color, const float3& normal, float3& ray_dir)
 {
 	color += make_float3(fmaxf(0.f, dot(normal, -ray_dir) / 2)); // facing ratio 
 }
@@ -132,7 +132,7 @@ void simple_shade(float3& color, const float3 &normal, float3 &ray_dir)
 // Sky material represent ray directions
 ////////////////////////////////////////////////////
 HOST_DEVICE_FUNCTION
-void sky_mat(float3& color, const float3 &ray_dir)
+void sky_mat(float3& color, const float3& ray_dir)
 {
 	//// Visualise ray directions on the sky.
 	//color = make_float4(ray_dir, 0);
@@ -156,19 +156,19 @@ void swap(T& a, T& b)
 
 
 __forceinline__ HOST_DEVICE_FUNCTION
-float vmax(const float3 &v)
+float vmax(const float3& v)
 {
 	return fmaxf(fmaxf(v.x, v.y), v.z);
 }
 
 __forceinline__ HOST_DEVICE_FUNCTION
-float3 max(const float3 &a, const float3 &b)
+float3 max(const float3& a, const float3& b)
 {
 	return make_float3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
 }
 
 __forceinline__ HOST_DEVICE_FUNCTION
-float3 min(const float3 &a, const float3 &b)
+float3 min(const float3& a, const float3& b)
 {
 	return make_float3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z));
 }
@@ -207,7 +207,7 @@ float3 uniformSampleHemisphere(const float& r1, const float& r2)
 // NVIDIA's
 // Selection sort used when depth gets too big or the number of elements drops
 // below a threshold.
-__device__ 
+__device__
 void selection_sort(float2* data, int left, int right)
 {
 	for (int i = left; i <= right; ++i) {

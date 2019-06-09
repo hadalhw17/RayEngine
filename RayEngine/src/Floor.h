@@ -1,13 +1,17 @@
 #pragma once
 
-#include "SceneObject.h"
-class AFloor :
-	public RSceneObject
+#include "MeshObject.h"
+
+namespace RayEngine
 {
-public:
-	AFloor();
-	~AFloor();
+	class AFloor :
+		public RMeshObject
+	{
+	public:
+		AFloor();
+		~AFloor();
 
-	virtual void tick(float delta_time);
-};
+		virtual void tick(float delta_time);
+	};
 
+}

@@ -2,13 +2,13 @@
 
 #include "TextureObject.h"
 
-struct VoxelMaterial
+struct RAY_ENGINE_API VoxelMaterial
 {
 	uint2 texture_resolution;
 	std::vector<RTextureObject> texture_aray;
 };
 
-class RMaterial
+class RAY_ENGINE_API RMaterial
 {
 public:
 	RMaterial(const RTextureObject& texture1, const RTextureObject& texture2, const RTextureObject& texture3);

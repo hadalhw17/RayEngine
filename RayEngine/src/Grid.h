@@ -4,13 +4,14 @@
 
 #include <vector>
 #include <string>
+#include "RayEngine/RayEngine.h"
 
 class RMeshAdjacencyTable;
 class RKDTreeCPU;
 class GPUBoundingBox;
 class RStaticMesh;
 
-struct GridNode
+struct RAY_ENGINE_API GridNode
 {
 	float3 point;
 	float distance;
@@ -30,7 +31,7 @@ struct GridNode
 
 };
 
-class Grid
+class RAY_ENGINE_API Grid
 {
 public:
 	Grid();
