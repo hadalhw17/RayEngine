@@ -30,11 +30,61 @@ RScene::~RScene()
 {
 	clear_memory();
 }
+void RScene::on_attach()
+{
+	build_scene();
+}
+void RScene::on_detach()
+{
+}
+void RScene::on_update()
+{
+	rebuild_scene();
+	update_camera();
+}
+void RScene::on_event(RayEngine::Event& event)
+{
+	main_character.on_event(event);
+}
+bool RScene::on_mouse_button_pressed(RayEngine::MouseButtonPresedEvent& e)
+{
+	return false;
+}
+bool RScene::on_mouse_button_relseased(RayEngine::MouseButtonReleasedEvent& e)
+{
+	return false;
+}
+bool RScene::on_mouse_moved(RayEngine::MouseMovedEvent& e)
+{
+	return false;
+}
+bool RScene::on_mouse_scrolled(RayEngine::MouseScrolledEvent& e)
+{
+	return false;
+}
+bool RScene::on_window_reseized(RayEngine::WindowResizedEvent& e)
+{
+	return false;
+}
+bool RScene::on_key_released(RayEngine::KeyReleaseEvent& e)
+{
+	return false;
+}
+bool RScene::on_key_pressed(RayEngine::KeyPressedEvent& e)
+{
+	return false;
+}
+bool RScene::on_key_typed(RayEngine::KeyTypedEvent& e)
+{
+	return false;
+}
 float RScene::moveCounter = 0.f;
 
 
 void RScene::Tick(float delta_time)
 {
+	main_character.tick(delta_time);
+
 	rebuild_scene();
 	std::vector<GPUSceneObject> tmp_objs;
 	for (auto obj : scene_objects)
@@ -47,7 +97,6 @@ void RScene::Tick(float delta_time)
 
 void RScene::update_camera()
 {
-	//main_character->camera = &camera;
 	main_character.camera.build_camera(scene_camera);
 }
 

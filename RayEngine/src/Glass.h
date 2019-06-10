@@ -10,7 +10,7 @@ namespace RayEngine
 		AGlass();
 		~AGlass();
 
-		virtual void tick(float delta_time);
+		virtual void tick(float delta_time) override;
 	};
 
 }

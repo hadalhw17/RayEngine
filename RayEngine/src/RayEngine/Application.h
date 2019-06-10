@@ -15,6 +15,8 @@ struct GLFWwindow;
 class TextRenderer;
 class RMovableCamera;
 
+
+
 namespace RayEngine
 {
 	class RAY_ENGINE_API Application
@@ -50,6 +52,10 @@ namespace RayEngine
 		double deltaTime;
 		RenderingSettings render_settings;
 		WindowData window_data;
+
+		void app_toggle_shadow();
+		bool app_sdf_collision(RCamera cam);
+		void app_spawn_obj(RCamera pos, TerrainBrush brush, int x, int y);
 
 		//------------------------Layer functions--------------------------
 		void push_layer(RLayer* layer);

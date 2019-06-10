@@ -37,12 +37,9 @@ void Grid::load_volume_floam_file(const std::string filename)
 	{
 		// Nove reader to the begining of the file.
 		volume_stream.seekg(0, std::ios::beg);
-
 		// Read volume dimentions from the file.
 		volume_stream.read(reinterpret_cast<char*>(&sdf_dim.x), sizeof(int));
-
 		volume_stream.read(reinterpret_cast<char*>(&sdf_dim.y), sizeof(int));
-
 		volume_stream.read(reinterpret_cast<char*>(&sdf_dim.z), sizeof(int));
 
 		// Write spacings of the volume to the memory.
@@ -59,8 +56,12 @@ void Grid::load_volume_floam_file(const std::string filename)
 			{
 				for (size_t ix = 0; ix < sdf_dim.x; ix++)
 				{
-					volume_stream.read(reinterpret_cast<char*>(&voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].distance), sizeof(float));
-					volume_stream.read(reinterpret_cast<char*>(&voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].material), sizeof(float));
+					float2 in;
+					volume_stream.read(reinterpret_cast<char*>(&in), sizeof(float2));
+					voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].distance = in.x;
+					voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].material = in.y;
+					//volume_stream.read(reinterpret_cast<char*>(&voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].distance), sizeof(float));
+					//volume_stream.read(reinterpret_cast<char*>(&voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].material), sizeof(float));
 					voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].point = make_float3(ix * spacing.x, iy * spacing.y, iz * spacing.z);
 				}
 			}

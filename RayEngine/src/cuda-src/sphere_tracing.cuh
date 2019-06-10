@@ -138,7 +138,7 @@ void bind_texture(float4** dev_texture1, const uint2& texture_resolution, const 
 	tex_desc.addressMode[0] = cudaAddressModeWrap;    // wrap texture coordinates
 	tex_desc.addressMode[1] = cudaAddressModeWrap;    // wrap texture coordinates
 	tex_desc.readMode = cudaReadModeElementType;
-
+	h_materials[curr_material].textttt.resolution[i] = texture_resolution;
 	gpuErrchk(cudaCreateTextureObject(&h_materials[curr_material].textttt.texture[i], &res_desc1, &tex_desc, NULL));
 }
 
@@ -274,7 +274,6 @@ float4 powf(float4 a, float b)
 __device__
 float3 triplanar_mapping(const float3& norm, const float3& p_hit, const texturess& textures)
 {
-	// in wNorm is the world-space normal of the fragment
 	float3 blending = fabs(norm);
 	blending = normalize(fmaxf(blending, make_float3(0.00001))); // Force weights to sum to 1.0
 	const float b = (blending.x + blending.y + blending.z);
@@ -283,7 +282,6 @@ float3 triplanar_mapping(const float3& norm, const float3& p_hit, const textures
 	float4 xaxis = tex2D<float4>(textures.texture[0], fabs(p_hit.y), fabs(p_hit.z));
 	float4 yaxis = tex2D<float4>(textures.texture[1], fabs(p_hit.z), fabs(p_hit.x));
 	float4 zaxis = tex2D<float4>(textures.texture[2], fabs(p_hit.x), fabs(p_hit.y));
-
 
 	// blend the results of the 3 planar projections.
 	float3 tex = blending.x * make_float3(xaxis.x, xaxis.y, xaxis.z) + blending.y * make_float3(yaxis.x, yaxis.y, yaxis.z) + blending.z * make_float3(zaxis.x, zaxis.y, zaxis.z);
@@ -332,14 +330,15 @@ void sphere_trace_shade(const RenderingSettings& render_settings, const cudaText
 	float3 p_hit = hit_result.ray_o + (t)* hit_result.ray_dir;
 	hit_result.ray_o = p_hit;
 
-	if (isinf(p_hit.x) || isinf(p_hit.y) || isinf(p_hit.z)) return; // Validate hit point
+	//---------------------- Validate hit point and normal---------------------------
+	if (!point_in_aabb(volumes[0], p_hit)) return;
+	if (isinf(p_hit.x) || isinf(p_hit.y) || isinf(p_hit.z)) return;
 	float3 n = compute_sdf_normal(p_hit, t, render_settings, tex, step, curr_obj);
-	if (n.x != n.x || n.y != n.y || n.z != n.z) return; // Validate normal
-	//if (p_hit.y <= volumes[0].Max.y/2 * 0.5) final_colour = make_float3(0, 0, 1);
-	//else if (p_hit.y > volumes[0].Max.y * 0.5 && p_hit.y < volumes[0].Max.y * 0.6) final_colour = make_float3(0, 1, 0);
-	//else if (p_hit.y >= volumes[0].Max.y/2 * 0.6) final_colour = make_float3(1, 0 ,0);
+	if (n.x != n.x || n.y != n.y || n.z != n.z) return;
+	//-------------------------------------------------------------------------------
 
-	if (material_index == -1 || material_index >= 2)
+
+	if (material_index == -1)
 	{
 		int square = floor(p_hit.x) + floor(p_hit.z);
 		tile_pattern(final_colour, square);
@@ -511,7 +510,7 @@ void initialize_volume_render(RCamera& sceneCam, const Grid& sdf, const int& num
 		h_sdf_steps[g] = (&sdf)[g].spacing;
 		h_sdf_dim[g] = (&sdf)[g].sdf_dim;
 		h_max_sdf[g] = (&sdf)[g].box_max;
-		h_volumes[g] = GPUBoundingBox(make_float3(0.f), (&sdf)[g].box_max);
+		h_volumes[g] = GPUBoundingBox(make_float3(0.f) + 0.5f * h_sdf_steps[g], (&sdf)[g].box_max - 0.5f * h_sdf_steps[g]);
 
 	}
 

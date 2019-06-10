@@ -7,6 +7,11 @@
 #include "SceneObject.h"
 #include "MovableCamera.h"
 #include "Character.h"
+#include "Events/Event.h"
+#include "Events/KeyEvent.h"
+#include "Events/MouseEvent.h"
+#include "Events/ApplicationEvent.h"
+#include "RayEngine/Application.h"
 
 
 class RKDTree;
@@ -21,24 +26,37 @@ class RayEngine::RSceneObject;
 class RAY_ENGINE_API RScene
 {
 public:
-	static float moveCounter;
-	HOST_DEVICE_FUNCTION RScene();
+	RScene();
 	RScene(RCharacter& character);
+	~RScene();
 
-	HOST_DEVICE_FUNCTION ~RScene();
+	virtual void on_attach();
+	virtual void on_detach();
+	virtual void on_update();
+	virtual void on_event(RayEngine::Event& event);
 
-	HOST_DEVICE_FUNCTION
+	virtual bool on_mouse_button_pressed(RayEngine::MouseButtonPresedEvent& e);
+	virtual bool on_mouse_button_relseased(RayEngine::MouseButtonReleasedEvent& e);
+	virtual bool on_mouse_moved(RayEngine::MouseMovedEvent& e);
+	virtual bool on_mouse_scrolled(RayEngine::MouseScrolledEvent& e);
+	virtual bool on_window_reseized(RayEngine::WindowResizedEvent& e);
+	virtual bool on_key_released(RayEngine::KeyReleaseEvent& e);
+	virtual bool on_key_pressed(RayEngine::KeyPressedEvent& e);
+	virtual bool on_key_typed(RayEngine::KeyTypedEvent& e);
+
 	virtual void rebuild_scene() {}
-	inline RCharacter& get_character() { return main_character; }
-
-	class RCharacter& main_character;
-
-	void Tick(float delta_time);
+	virtual void build_scene() = 0;
 
 	void update_camera();
+	void Tick(float delta_time);
+
+	inline RCharacter& get_character() { return main_character; }
 	inline RCamera& get_camera() { return scene_camera; }
-	virtual void build_scene() = 0;
 	inline RMovableCamera& get_smart_camera() { return main_character.camera; }
+	
+public:
+	static float moveCounter;
+	RCharacter& main_character;
 	SceneSettings scene_settings;
 	RCamera scene_camera;
 	std::vector<RayEngine::RSceneObject*> scene_objects;

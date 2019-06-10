@@ -10,7 +10,7 @@ namespace RayEngine
 		ACow();
 		~ACow();
 
-		virtual void tick(float delta_time);
+		virtual void tick(float delta_time) override;
 	};
 
 }

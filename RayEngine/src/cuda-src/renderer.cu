@@ -35,10 +35,6 @@ __constant__ float3x4 c_invViewMatrix;  // inverse view matrix
 float2x2 m2;
 
 
-
-
-
-
 __global__
 void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings scene_settings, TerrainBrush brush, cudaTextureObject_t tex, HitResult hit_result, const GPUVolumeObjectInstance* instances,
 	float3 step, float2* sdf_texute, GPUBoundingBox* volumes, uint3 tex_dim)
@@ -517,16 +513,6 @@ void gpu_bruteforce_ray_cast(float4* image_buffer, const RCamera render_camera, 
 }
 
 
-__device__
-bool point_in_aabb(const GPUBoundingBox& tBox, const float3& vecPoint)
-{
-	return
-		vecPoint.x > tBox.Min.x && vecPoint.x < tBox.Max.x &&
-		vecPoint.y > tBox.Min.y && vecPoint.y < tBox.Max.y &&
-		vecPoint.z > tBox.Min.z && vecPoint.z < tBox.Max.z;
-
-}
-
 
 ////////////////////////////////////////////////////
 // Perform ray-casting with kd-tree
@@ -1004,8 +990,7 @@ void save_map()
 		for (unsigned int iy = 0; iy < sdf_dim.y; iy++)
 			for (unsigned int ix = 0; ix < sdf_dim.x; ix++) {
 
-				volume_file_stream.write(reinterpret_cast<const char*> (&h_grid[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].x), sizeof(float));
-				volume_file_stream.write(reinterpret_cast<const char*> (&h_grid[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].y), sizeof(float));
+				volume_file_stream.write(reinterpret_cast<const char*> (&h_grid[ix + sdf_dim.y * (iy + sdf_dim.x * iz)]), sizeof(float2));
 
 			}
 

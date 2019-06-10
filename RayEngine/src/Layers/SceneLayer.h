@@ -30,7 +30,7 @@ namespace RayEngine
 		RScene* m_scene;
 
 		float m_time;
-		double lastX = 0, lastY = 0;
+		
 	private:
 		virtual bool on_mouse_button_pressed(RayEngine::MouseButtonPresedEvent& e) override;
 		virtual bool on_mouse_button_relseased(RayEngine::MouseButtonReleasedEvent& e) override;

@@ -42,6 +42,9 @@
 
 extern void cuda_render_frame(uint* output, const uint& width, const uint& heigth);
 extern void free_memory();
+extern void toggle_shadow();
+extern bool sdf_collision(RCamera cam);
+extern void spawn_obj(RCamera pos, TerrainBrush brush, int x, int y);
 
 
 namespace RayEngine
@@ -350,6 +353,21 @@ namespace RayEngine
 		}
 	}
 
+
+	void Application::app_toggle_shadow()
+	{
+		toggle_shadow();
+	}
+
+	bool Application::app_sdf_collision(RCamera cam)
+	{
+		return sdf_collision(cam);
+	}
+
+	void Application::app_spawn_obj(RCamera pos, TerrainBrush brush, int x, int y)
+	{
+		spawn_obj(pos, brush, x, y);
+	}
 
 	void Application::push_layer(RLayer* layer)
 	{

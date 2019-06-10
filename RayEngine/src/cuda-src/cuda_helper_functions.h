@@ -230,3 +230,13 @@ void selection_sort(float2* data, int left, int right)
 		}
 	}
 }
+
+__device__
+bool point_in_aabb(const GPUBoundingBox& tBox, const float3& vecPoint)
+{
+	return
+		vecPoint.x > tBox.Min.x && vecPoint.x < tBox.Max.x &&
+		vecPoint.y > tBox.Min.y && vecPoint.y < tBox.Max.y &&
+		vecPoint.z > tBox.Min.z && vecPoint.z < tBox.Max.z;
+
+}

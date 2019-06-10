@@ -78,6 +78,7 @@ using edge = std::pair<int, int>;
 
 struct texturess
 {
+	uint2 resolution[3];
 	cudaTextureObject_t texture[3];
 };
 

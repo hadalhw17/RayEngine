@@ -4,6 +4,8 @@
 #include "RayEngine/RayEngine.h"
 #include "RStaticMesh.h"
 #include "GPUBoundingBox.h"
+#include "Events/Event.h"
+
 
 namespace RayEngine
 {
@@ -11,7 +13,7 @@ namespace RayEngine
 	{
 	public:
 		RSceneObject();
-		
+
 		virtual ~RSceneObject();
 
 		virtual void tick(float delta_time);

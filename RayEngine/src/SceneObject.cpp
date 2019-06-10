@@ -19,5 +19,6 @@ namespace RayEngine
 
 	void RSceneObject::tick(float delta_time)
 	{
+		
 	}
 }
