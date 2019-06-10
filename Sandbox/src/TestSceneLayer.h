@@ -9,3 +9,16 @@ public:
 		:RayEngine::RSceneLayer(scene) {}
 };
 
+#include <Meta.h>
+namespace meta {
+
+	template <>
+	inline auto registerMembers<TestSceneLayer>()
+	{
+		return members(
+			member("brush_radius", &TestSceneLayer::brush_radius),
+			member("brush", &TestSceneLayer::brush),
+			member("m_scene", &TestSceneLayer::m_scene)
+		);
+	}
+} // end of na

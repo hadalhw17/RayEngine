@@ -20,9 +20,22 @@ namespace RayEngine
 		std::vector<RLayer*>::iterator begin() { return m_layers.begin(); }
 		std::vector<RLayer*>::iterator end() { return m_layers.end(); }
 
-	private:
 		std::vector<RLayer*> m_layers;
 		std::vector<RLayer*>::iterator m_layer_insert;
+	private:
 	};
 
 }
+
+#include <Meta.h>
+namespace meta {
+
+	template <>
+	inline auto registerMembers<RayEngine::RLayerStack>()
+	{
+		return members(
+			member("m_layers", &RayEngine::RLayerStack::m_layers),
+			member("m_layer_insert", &RayEngine::RLayerStack::m_layer_insert)
+		);
+	}
+} // end of namespace meta

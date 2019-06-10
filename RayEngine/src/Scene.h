@@ -29,6 +29,7 @@ public:
 
 	HOST_DEVICE_FUNCTION
 	virtual void rebuild_scene() {}
+	inline RCharacter& get_character() { return main_character; }
 
 	class RCharacter& main_character;
 
@@ -39,10 +40,22 @@ public:
 	virtual void build_scene() = 0;
 	inline RMovableCamera& get_smart_camera() { return main_character.camera; }
 	SceneSettings scene_settings;
-protected:
 	RCamera scene_camera;
+	std::vector<RayEngine::RSceneObject*> scene_objects;
+protected:
 	std::vector<float4> read_ppm(char* filename);
-	std::vector<RayEngine::RSceneObject*> sceneObjects;
 	virtual void clear_memory() {}
 	void setup_camera();
 };
+
+#include <Meta.h>
+namespace meta {
+
+	template <>
+	inline auto registerMembers<RScene>()
+	{
+		return members(
+			member("should not use this one!", &RScene::scene_settings)
+		);
+	}
+} // end of namespace meta

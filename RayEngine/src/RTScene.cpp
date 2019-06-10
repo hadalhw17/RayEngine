@@ -15,7 +15,7 @@ void RTScene::initialise_scene()
 	init_triangles();
 
 	std::vector<GPUSceneObject> tmp_objs;
-	for (auto objs : sceneObjects)
+	for (auto objs : scene_objects)
 	{
 		tmp_objs.push_back(objs->object_properties);
 	}
@@ -47,16 +47,16 @@ void RTScene::build_scene()
 	for (auto t : GetSceneTree())
 	{
 		RKDThreeGPU* gpu_tree = new RKDThreeGPU(t);
-		sceneObjects.at(i)->object_properties.index_list_size = gpu_tree->GetIndexList().size();
+		scene_objects.at(i)->object_properties.index_list_size = gpu_tree->GetIndexList().size();
 
 		CUDATree.push_back(gpu_tree);
 		++i;
 	}
-	for (i = 0; i < sceneObjects.size(); i++)
+	for (i = 0; i < scene_objects.size(); i++)
 	{
 		for (int k = 0; k < i; k++)
 		{
-			sceneObjects.at(i)->object_properties.offset += sceneObjects.at(k)->object_properties.index_list_size - sceneObjects.at(k)->object_properties.num_nodes;
+			scene_objects.at(i)->object_properties.offset += scene_objects.at(k)->object_properties.index_list_size - scene_objects.at(k)->object_properties.num_nodes;
 		}
 	}
 	RE_LOG("Done building scene");
@@ -91,7 +91,7 @@ void RTScene::load_meshes_from_file(std::vector<char*> files)
 {
 	for (auto file : files)
 	{
-		sceneObjects.push_back(new RMeshObject((char*)file));
+		scene_objects.push_back(new RMeshObject((char*)file));
 	}
 
 }
@@ -100,7 +100,7 @@ void RTScene::build_gpu_structs()
 {
 	int first_index = 0;
 	int i = 0;
-	for (auto obj : sceneObjects)
+	for (auto obj : scene_objects)
 	{
 		if (RMeshObject * mesh_obj = dynamic_cast<RMeshObject*>(obj))
 		{
@@ -124,9 +124,9 @@ std::pair<size_t, size_t> RTScene::merge_meshes()
 	std::vector<float3> tmp_norms = {};
 	std::vector<float2> tmp_uvs = {};
 	size_t stride = 0;
-	for (int counter = 0; counter < sceneObjects.size(); counter++)
+	for (int counter = 0; counter < scene_objects.size(); counter++)
 	{
-		if (RMeshObject * mesh_obj = dynamic_cast<RMeshObject*>(sceneObjects.at(counter)))
+		if (RMeshObject * mesh_obj = dynamic_cast<RMeshObject*>(scene_objects.at(counter)))
 		{
 			for (size_t i = 0; i < mesh_obj->root_component->get_num_faces(); i++)
 			{
@@ -180,7 +180,7 @@ std::pair<size_t, size_t> RTScene::merge_meshes()
 void RTScene::build_tree()
 {
 	tree = {};
-	for (auto obj : sceneObjects)
+	for (auto obj : scene_objects)
 	{
 		if (RMeshObject * mesh_obj = dynamic_cast<RMeshObject*>(obj))
 		{

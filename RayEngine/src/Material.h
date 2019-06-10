@@ -8,6 +8,21 @@ struct RAY_ENGINE_API VoxelMaterial
 	std::vector<RTextureObject> texture_aray;
 };
 
+#include <Meta.h>
+namespace meta {
+
+	template <>
+	inline auto registerMembers<VoxelMaterial>()
+	{
+		return members(
+			member("texture_resolution", &VoxelMaterial::texture_resolution),
+			member("texture_aray", &VoxelMaterial::texture_aray)
+		);
+	}
+
+} // end of namespace meta
+
+
 class RAY_ENGINE_API RMaterial
 {
 public:
@@ -17,4 +32,17 @@ public:
 
 	VoxelMaterial material;
 };
+
+#include <Meta.h>
+namespace meta {
+
+	template <>
+	inline auto registerMembers<RMaterial>()
+	{
+		return members(
+			member("material", &RMaterial::material)
+		);
+	}
+
+} // end of namespace meta
 

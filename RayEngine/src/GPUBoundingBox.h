@@ -51,3 +51,16 @@
 
 		float3 Min, Max;
 	};
+
+	namespace meta {
+
+		template <>
+		inline auto registerMembers<GPUBoundingBox>()
+		{
+			return members(
+				member("Min", &GPUBoundingBox::Min),
+				member("Max", &GPUBoundingBox::Max)
+			);
+		}
+
+	} // end of namespace meta

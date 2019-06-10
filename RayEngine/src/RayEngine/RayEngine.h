@@ -6,14 +6,14 @@
 #include <vector_types.h>
 
 #ifdef RE_PLATFORM_WINDOWS
-	#ifdef RE_BUILD_DLL
-		#define RAY_ENGINE_API __declspec(dllexport)
-		#include "device_launch_parameters.h"
-	#else
-		#define	RAY_ENGINE_API __declspec(dllimport)
-	#endif	
+#ifdef RE_BUILD_DLL
+#define RAY_ENGINE_API __declspec(dllexport)
+#include "device_launch_parameters.h"
 #else
-	#error Ray Engine currently only supports Windows!
+#define	RAY_ENGINE_API __declspec(dllimport)
+#endif	
+#else
+#error Ray Engine currently only supports Windows!
 #endif
 
 #define BIND_EVENT_FN(x) std::bind(&x, this, std::placeholders::_1)
@@ -45,11 +45,11 @@
 
 #define RAY_LOG
 #ifdef RAY_LOG
-	#define RE_LOG(msg) std::cout << msg << std::endl;
-	#define REE_LOG(msg) std::cout << "!!!" << msg << "!!!" << std::endl;
+#define RE_LOG(msg) std::cout << msg << std::endl;
+#define REE_LOG(msg) std::cout << "!!!" << msg << "!!!" << std::endl;
 #else 
-	#define RE_LOG(msg)
-	#define REE_LOG(msg)
+#define RE_LOG(msg)
+#define REE_LOG(msg)
 #endif
 
 
@@ -157,7 +157,7 @@ struct GPUVolumeObjectInstance
 	float3 rotation;
 
 	HOST_DEVICE_FUNCTION
-	GPUVolumeObjectInstance()
+		GPUVolumeObjectInstance()
 	{
 		index = -1;
 		location = float3();
@@ -165,7 +165,7 @@ struct GPUVolumeObjectInstance
 	}
 
 	HOST_DEVICE_FUNCTION
-	GPUVolumeObjectInstance(int _index, float3 _location, float3 _roatation)
+		GPUVolumeObjectInstance(int _index, float3 _location, float3 _roatation)
 	{
 		index = _index;
 		location = _location;
@@ -199,7 +199,7 @@ enum Axis
 	Z_Axis = 2		// Z Axis.
 };
 
-enum BoxFace 
+enum BoxFace
 {
 	LEFT = 0,		// Left.
 	FRONT = 1,		// Front.
@@ -209,9 +209,9 @@ enum BoxFace
 	BOTTOM = 5		// Bottom.
 };
 
-struct RGBType 
-{ 
-	float r, g, b; 
+struct RGBType
+{
+	float r, g, b;
 };
 
 enum MaterialType
@@ -267,10 +267,128 @@ struct HitResult
 	float3 hit_color;
 
 	HOST_DEVICE_FUNCTION
-	HitResult()
+		HitResult()
 	{
 		t = K_INFINITY;
 		hits = false;
 		obj_index = -1;
 	}
 };
+
+
+#include <Meta.h>
+namespace meta {
+
+	template <>
+	inline auto registerMembers<float2>()
+	{
+		return members(
+			member("x", &float2::x),
+			member("y", &float2::y)
+		);
+	}
+
+	template <>
+	inline auto registerMembers<float3>()
+	{
+		return members(
+			member("x", &float3::x),
+			member("y", &float3::y),
+			member("z", &float3::z)
+		);
+	}
+	template <>
+	inline auto registerMembers<float4>()
+	{
+		return members(
+			member("x", &float4::x),
+			member("y", &float4::y),
+			member("z", &float4::z),
+			member("w", &float4::w)
+		);
+	}
+
+	template <>
+	inline auto registerMembers<uint2>()
+	{
+		return members(
+			member("x", &uint2::x),
+			member("y", &uint2::y)
+		);
+	}
+
+	template <>
+	inline auto registerMembers<uint3>()
+	{
+		return members(
+			member("x", &uint3::x),
+			member("y", &uint3::y),
+			member("z", &uint3::z)
+		);
+	}
+	template <>
+	inline auto registerMembers<uint4>()
+	{
+		return members(
+			member("x", &uint4::x),
+			member("y", &uint4::y),
+			member("z", &uint4::z),
+			member("w", &uint4::w)
+		);
+	}
+
+	template <>
+	inline auto registerMembers<SceneSettings>()
+	{
+		return members(
+			member("x", &SceneSettings::light_pos),
+			member("y", &SceneSettings::soft_shadow_k),
+			member("z", &SceneSettings::light_intensity),
+			member("w", &SceneSettings::enable_fog),
+			member("w", &SceneSettings::fog_deisity),
+			member("w", &SceneSettings::noise_freuency),
+			member("w", &SceneSettings::noise_amplitude),
+			member("w", &SceneSettings::noise_redistrebution),
+			member("w", &SceneSettings::terracing),
+			member("w", &SceneSettings::volume_resolution),
+			member("w", &SceneSettings::world_size)
+		);
+	}
+
+	template <>
+	inline auto registerMembers<TerrainBrush>()
+	{
+		return members(
+			//member("brush_type", &TerrainBrush::brush_type),
+			member("brush_radius", &TerrainBrush::brush_radius),
+			member("material_index", &TerrainBrush::material_index)
+		);
+	}
+
+	template <>
+	inline auto registerMembers<GPUSceneObject>()
+	{
+		return members(
+			member("index_of_first_prim", &GPUSceneObject::index_of_first_prim),
+			member("num_prims", &GPUSceneObject::num_prims),
+			member("is_character", &GPUSceneObject::is_character),
+			member("offset", &GPUSceneObject::offset),
+			member("num_nodes", &GPUSceneObject::num_nodes),
+			member("rotation", &GPUSceneObject::rotation),
+			member("material", &GPUSceneObject::material),
+			member("location", &GPUSceneObject::location)
+		);
+	}
+
+	template <>
+	inline auto registerMembers<Material>()
+	{
+		return members(
+			member("index_of_first_prim", &Material::uvs),
+			member("num_prims", &Material::normals),
+			member("is_character", &Material::color)
+		);
+	}
+
+} // end of namespace meta
+

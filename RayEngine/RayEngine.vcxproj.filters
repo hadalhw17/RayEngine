@@ -177,6 +177,9 @@
     <ClCompile Include="src\MeshObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="vendor\MetaStuff\include\StringCast.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="includes\imgui\imconfig.h">
@@ -394,6 +397,24 @@
     <ClInclude Include="src\MeshObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="vendor\MetaStuff\include\detail\MetaHolder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vendor\MetaStuff\include\detail\template_helpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vendor\MetaStuff\include\Member.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vendor\MetaStuff\include\Meta.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vendor\MetaStuff\include\JsonCast.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vendor\MetaStuff\include\StringCast.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\cuda-src\Atmosphere.cu" />
@@ -407,6 +428,18 @@
   <ItemGroup>
     <None Include="includes\imgui\imgui_impl_metal.mm">
       <Filter>vendor</Filter>
+    </None>
+    <None Include="vendor\MetaStuff\include\detail\template_helpers.inl">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="vendor\MetaStuff\include\Member.inl">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="vendor\MetaStuff\include\Meta.inl">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="vendor\MetaStuff\include\JsonCast.inl">
+      <Filter>Header Files</Filter>
     </None>
   </ItemGroup>
 </Project>

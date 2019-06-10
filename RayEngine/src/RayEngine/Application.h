@@ -64,6 +64,7 @@ namespace RayEngine
 		class RSceneLayer& get_scene_layer();
 		//-----------------------------------------------------------------
 		void set_event_callback(std::function<void(Event&)> e) { window_data.function_callback = e; }
+		RLayerStack m_layer_stack;
 
 
 		//---------------------Should be defined in the !client!------------------------
@@ -92,7 +93,19 @@ namespace RayEngine
 		struct cudaGraphicsResource* cuda_pbo_resource; // CUDA Graphics Resource (to transfer PBO)
 		// map PBO to get CUDA device pointer
 		unsigned int* d_output;
-		RLayerStack m_layer_stack;
 	};
 
 }
+
+
+#include <Meta.h>
+namespace meta {
+
+	template <>
+	inline auto registerMembers<RayEngine::Application>()
+	{
+		return members(
+			member("m_layer_stack", &RayEngine::Application::m_layer_stack)
+		);
+	}
+} // end of namespace meta

@@ -31,6 +31,26 @@ public:
 		materials.push_back(snow_material.material);
 		RayEngine::Application& app = RayEngine::Application::get();
 		init_cuda_res();
+
+
 	}
+
 };
 
+
+namespace meta {
+
+	template <>
+	inline auto registerMembers<TestScene>()
+	{
+		return members(
+			member("noise", &TestScene::noise),
+			member("materials", &TestScene::materials),
+			member("distance_field", &TestScene::distance_field),
+			member("scene_camera", &TestScene::scene_camera),
+			//member("scene_objects", &TestScene::scene_objects),
+			member("scene_settings", &TestScene::scene_settings)
+		);
+	}
+
+} // end of namespace meta

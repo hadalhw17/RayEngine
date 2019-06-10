@@ -15,3 +15,19 @@ public:
 };
 
 
+#include <Meta.h>
+
+namespace meta {
+
+	template <>
+	inline auto registerMembers<RCharacter>()
+	{
+		return members(
+			member("components", &RCharacter::components),
+			member("object_properties", &RCharacter::object_properties),
+			member("collision_box", &RCharacter::collision_box),
+			member("camera", &RCharacter::camera)
+		);
+	}
+
+} // end of namespace meta

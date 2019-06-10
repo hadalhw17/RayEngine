@@ -16,12 +16,38 @@ class RAY_ENGINE_API SDFScene :
 public:
 	SDFScene();
 	SDFScene(RCharacter& character);
+
+	inline RayEngine::RPerlinNoise& get_noise() { return noise; }
+	inline std::vector<VoxelMaterial>& get_materials() { return materials; }
+	inline Grid& get_distance_field() { return distance_field; }
+	Grid distance_field;
+	RayEngine::RPerlinNoise noise;
+	std::vector<VoxelMaterial> materials;
+	virtual void write_to_file();
+	
 protected:
 	virtual void build_scene() override;
 protected:
 	void init_cuda_res();
-	RayEngine::RPerlinNoise noise;
-	std::vector<VoxelMaterial> materials;
-	Grid distance_field;
+
+protected:
 };
+
+#include <Meta.h>
+namespace meta {
+
+	template <>
+	inline auto registerMembers<SDFScene>()
+	{
+		return members(
+			member("noise", &SDFScene::noise),
+			member("materials", &SDFScene::materials),
+			member("distance_field", &SDFScene::distance_field),
+			member("scene_camera", &SDFScene::scene_camera),
+			member("scene_objects", &SDFScene::scene_objects),
+			member("scene_settings", &SDFScene::scene_settings)
+		);
+	}
+
+} // end of namespace meta
 

@@ -20,7 +20,9 @@ namespace RayEngine
 		virtual void on_event(Event& event);
 
 		inline const std::string& get_name() const { return m_debug_name; }
+		inline void set_name(std::string& name) { m_debug_name = name; }
 
+		std::string m_debug_name;
 	private:
 		virtual bool on_mouse_button_pressed(MouseButtonPresedEvent& e) = 0;
 		virtual bool on_mouse_button_relseased(MouseButtonReleasedEvent& e) = 0;
@@ -32,9 +34,19 @@ namespace RayEngine
 		virtual bool on_key_typed(KeyTypedEvent& e) = 0;
 
 	protected:
-		std::string m_debug_name;
 
 	};
 
 }
 
+#include <Meta.h>
+namespace meta {
+
+	template <>
+	inline auto registerMembers<RayEngine::RLayer>()
+	{
+		return members(
+			member("m_debug_name", &RayEngine::RLayer::m_debug_name)
+		);
+	}
+} // end of na

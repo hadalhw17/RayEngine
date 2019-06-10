@@ -60,6 +60,7 @@ void Grid::load_volume_floam_file(const std::string filename)
 				for (size_t ix = 0; ix < sdf_dim.x; ix++)
 				{
 					volume_stream.read(reinterpret_cast<char*>(&voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].distance), sizeof(float));
+					volume_stream.read(reinterpret_cast<char*>(&voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].material), sizeof(float));
 					voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].point = make_float3(ix * spacing.x, iy * spacing.y, iz * spacing.z);
 				}
 			}

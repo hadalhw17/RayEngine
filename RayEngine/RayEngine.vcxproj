@@ -100,7 +100,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>C:\dev\RayEngine\RayEngine\Platform\OpenGL;C:\dev\RayEngine\RayEngine\includes\imgui;C:\dev\RayEngine\RayEngine\src;$(CudaToolkitDir)/include;C:\dev\RayEngine\RayEngine\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\dev\RayEngine\RayEngine\vendor\MetaStuff\include;C:\dev\RayEngine\RayEngine\Platform\OpenGL;C:\dev\RayEngine\RayEngine\includes\imgui;C:\dev\RayEngine\RayEngine\src;$(CudaToolkitDir)/include;C:\dev\RayEngine\RayEngine\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>Default</LanguageStandard>
       <PreprocessorDefinitions>RE_BUILD_DLL;RE_PLATFORM_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -186,6 +186,7 @@
     <ClCompile Include="src\Triangle.cpp" />
     <ClCompile Include="src\UserInterface.cpp" />
     <ClCompile Include="src\Layers\UILayer.cpp" />
+    <ClCompile Include="vendor\MetaStuff\include\StringCast.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="includes\imgui\imgui_impl_glfw.h" />
@@ -267,6 +268,12 @@
     <ClInclude Include="includes\imgui\imconfig.h" />
     <ClInclude Include="includes\imgui\imgui.h" />
     <ClInclude Include="src\Layers\UILayer.h" />
+    <ClInclude Include="vendor\MetaStuff\include\JsonCast.h" />
+    <ClInclude Include="vendor\MetaStuff\include\StringCast.h" />
+    <ClInclude Include="vendor\MetaStuff\include\detail\MetaHolder.h" />
+    <ClInclude Include="vendor\MetaStuff\include\detail\template_helpers.h" />
+    <ClInclude Include="vendor\MetaStuff\include\Member.h" />
+    <ClInclude Include="vendor\MetaStuff\include\Meta.h" />
     <CudaCompile Include="src\cuda-src\Atmosphere.cu" />
     <CudaCompile Include="src\cuda-src\renderer.cu" />
   </ItemGroup>
@@ -275,6 +282,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="includes\imgui\imgui_impl_metal.mm" />
+    <None Include="vendor\MetaStuff\include\JsonCast.inl" />
+    <None Include="vendor\MetaStuff\include\detail\template_helpers.inl" />
+    <None Include="vendor\MetaStuff\include\Member.inl" />
+    <None Include="vendor\MetaStuff\include\Meta.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

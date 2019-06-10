@@ -500,7 +500,7 @@ void initialize_volume_render(RCamera& sceneCam, const Grid& sdf, const int& num
 			{
 				for (size_t ix = 0; ix < sdf_dim.x; ++ix)
 				{
-					h_grid[ix + sdf_dim.y * (iy + sdf_dim.x * iz)] = make_float2((&sdf)[0].voxels.at((ix + sdf_dim.y * (iy + sdf_dim.x * iz))).distance, -1.f);
+					h_grid[ix + sdf_dim.y * (iy + sdf_dim.x * iz)] = make_float2((&sdf)[0].voxels.at((ix + sdf_dim.y * (iy + sdf_dim.x * iz))).distance, (&sdf)[0].voxels.at((ix + sdf_dim.y * (iy + sdf_dim.x * iz))).material);
 				}
 			}
 		}

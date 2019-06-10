@@ -1005,6 +1005,7 @@ void save_map()
 			for (unsigned int ix = 0; ix < sdf_dim.x; ix++) {
 
 				volume_file_stream.write(reinterpret_cast<const char*> (&h_grid[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].x), sizeof(float));
+				volume_file_stream.write(reinterpret_cast<const char*> (&h_grid[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].y), sizeof(float));
 
 			}
 
@@ -1028,10 +1029,9 @@ void load_map()
 	{
 		for (size_t iy = 0; iy < sdf_dim.y; ++iy)
 		{
-
 			for (size_t ix = 0; ix < sdf_dim.x; ++ix)
 			{
-				h_grid[ix + sdf_dim.y * (iy + sdf_dim.x * iz)] = make_float2(distance_field->voxels.at((ix + sdf_dim.y * (iy + sdf_dim.x * iz))).distance, -1.f);
+				h_grid[ix + sdf_dim.y * (iy + sdf_dim.x * iz)] = make_float2(distance_field->voxels.at((ix + sdf_dim.y * (iy + sdf_dim.x * iz))).distance, distance_field->voxels.at((ix + sdf_dim.y * (iy + sdf_dim.x * iz))).material);
 			}
 
 		}

@@ -27,6 +27,10 @@ namespace RayEngine
 		float brush_radius = 1;
 		TerrainBrushType brush_type;
 		TerrainBrush brush;
+		RScene* m_scene;
+
+		float m_time;
+		double lastX = 0, lastY = 0;
 	private:
 		virtual bool on_mouse_button_pressed(RayEngine::MouseButtonPresedEvent& e) override;
 		virtual bool on_mouse_button_relseased(RayEngine::MouseButtonReleasedEvent& e) override;
@@ -43,9 +47,20 @@ namespace RayEngine
 		void init_triangles();
 
 	private:
-		class RScene* m_scene;
 
-		float m_time;
-		double lastX = 0, lastY = 0;
 	};
 }
+
+#include <Meta.h>
+namespace meta {
+
+	template <>
+	inline auto registerMembers<RayEngine::RSceneLayer>()
+	{
+		return members(
+			member("brush_radius", &RayEngine::RSceneLayer::brush_radius),
+			member("brush", &RayEngine::RSceneLayer::brush),
+			member("m_scene", &RayEngine::RSceneLayer::m_scene)
+		);
+	}
+} // end of na

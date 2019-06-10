@@ -37,7 +37,7 @@ void RScene::Tick(float delta_time)
 {
 	rebuild_scene();
 	std::vector<GPUSceneObject> tmp_objs;
-	for (auto obj : sceneObjects)
+	for (auto obj : scene_objects)
 	{
 		obj->tick(delta_time);
 		tmp_objs.push_back(obj->object_properties);
