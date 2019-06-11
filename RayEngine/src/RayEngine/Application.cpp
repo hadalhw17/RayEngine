@@ -17,7 +17,7 @@
 #include "Application.h"
 #include "../MovableCamera.h"
 #include <thread>
-#include "../Grid.h"
+#include "../SDF/Grid.h"
 #include <sstream>
 #include "../Material.h"
 #include "../PerlinNoise.h"

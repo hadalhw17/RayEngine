@@ -8,6 +8,7 @@
 #include "Camera.h"
 #include "Scene.h"
 #include "RayEngine/RayEngine.h"
+#include "SDFScene.h"
 
 namespace RayEngine
 {
@@ -15,7 +16,7 @@ namespace RayEngine
 		public RayEngine::RLayer
 	{
 	public:
-		RSceneLayer(RScene& scene);
+		RSceneLayer(SDFScene& scene);
 		virtual ~RSceneLayer() {}
 
 		virtual void on_attach() override;
@@ -27,7 +28,7 @@ namespace RayEngine
 		float brush_radius = 1;
 		TerrainBrushType brush_type;
 		TerrainBrush brush;
-		RScene* m_scene;
+		SDFScene* m_scene;
 
 		float m_time;
 		

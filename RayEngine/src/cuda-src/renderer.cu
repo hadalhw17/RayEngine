@@ -17,7 +17,7 @@
 #include <curand_kernel.h>
 #include "../GPUBoundingBox.h"
 #include "../RayEngine/RayEngine.h"
-#include "../Grid.h"
+#include "../SDF/Grid.h"
 #include "Atmosphere.cuh"
 #include "ray_functions.cuh"
 #include "cuda_helper_functions.h"
@@ -45,6 +45,7 @@ void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings s
 	if (x >= tex_dim.x || y >= tex_dim.y || z >= tex_dim.z)
 		return;
 	float scene_t_near, scene_t_far;
+	hit_result.ray_o -= instances[0].location;
 	bool intersect_scene = gpu_ray_box_intersect(volumes[0], hit_result.ray_o, hit_result.ray_dir, scene_t_near, scene_t_far);
 	bool intersect_sdf = false;
 	float prel;
@@ -357,7 +358,7 @@ void render_sphere_trace(const RenderingSettings render_settings, const RCamera 
 	float scene_t_near, scene_t_far, smallest_dist = K_INFINITY;
 	int  nearest_shape = 0;
 	int num_intersected = 0;
-
+	hit_result.ray_o -= instances[0].location;
 	// Interate over every object and test for intersection with their aabb.
 #pragma unroll 1
 	for (int i = 0; i < num_instances; ++i)
@@ -378,7 +379,6 @@ void render_sphere_trace(const RenderingSettings render_settings, const RCamera 
 	{
 
 	}
-	hit_result.ray_o -= instances[0].location;
 	int material_index;
 	if (!single_ray_sphere_trace(render_settings, scene, tex, hit_result, instances,
 		smallest_dist, scene_t_far, step, nearest_shape, prel, 0.001, material_index))

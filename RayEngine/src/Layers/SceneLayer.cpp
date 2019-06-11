@@ -16,7 +16,7 @@
 
 namespace RayEngine
 {
-	RSceneLayer::RSceneLayer(RScene& scene)
+	RSceneLayer::RSceneLayer(SDFScene& scene)
 		: RLayer("Scene Layer")
 	{
 		m_scene = &scene;

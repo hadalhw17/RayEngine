@@ -5,7 +5,7 @@
 #include <Material.h>
 #include <PerlinNoise.h>
 #include <RayEngine/Application.h>
-#include <Grid.h>
+#include <SDF/Grid.h>
 
 
 class  TestScene :
@@ -15,7 +15,9 @@ public:
 	TestScene(RCharacter &character)
 	:SDFScene(character)
 	{
-		distance_field = Grid(std::string("SDFs/Edited.rsdf"));
+		Grid* distance_field = new Grid(std::string("SDFs/Edited.rsdf"));
+		world_chunk = RayEngine::RChunk(*distance_field);
+		//world_chunk.set_location(make_float3(10, 0, 100));
 		//distance_field[1] = Grid(std::string(PATH_TO_VOLUMES) + std::string("cat250.rsdf"));
 		scene_settings.volume_resolution = make_uint3(1);
 		scene_settings.world_size = make_float3(1.f);
@@ -46,7 +48,7 @@ namespace meta {
 		return members(
 			member("noise", &TestScene::noise),
 			member("materials", &TestScene::materials),
-			member("distance_field", &TestScene::distance_field),
+			member("world_chunk", &TestScene::world_chunk),
 			member("scene_camera", &TestScene::scene_camera),
 			//member("scene_objects", &TestScene::scene_objects),
 			member("scene_settings", &TestScene::scene_settings)

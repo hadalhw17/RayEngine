@@ -6,7 +6,7 @@
 #include "cuda_runtime_api.h"
 #include "sdf_functions.cuh"
 #include "../material_functions.cuh"
-#include "../Grid.h"
+#include "../SDF/Chunk.h"
 #include "helper_math.h"
 #include "sdf_functions.cuh"
 #include "../Material.h"
@@ -467,11 +467,65 @@ void bind_sdf_norm_to_texture(float2* dev_sdf_p, const uint3& dim, const int& nu
 	gpuErrchk(cudaCreateTextureObject(&normalObject, &res_desc, &tex_desc, NULL));
 }
 
+extern "C"
+void cuda_update_chunk(const RayEngine::RChunk& world_chunk, const RayEngine::RPerlinNoise& noise)
+{
+	printf("RENDER: updating chunk");
+
+	gpuErrchk(cudaFree(d_sdf_volumes));
+	gpuErrchk(cudaFree(d_sdf));
+	const Grid& sdf = world_chunk.get_sdf();
+	float size_sdf = sdf.voxels.size() * sizeof(float2);
+	float3 h_sdf_steps;
+	uint3 h_sdf_dim;
+	float3 h_max_sdf;
+	h_volumes = new GPUBoundingBox();
+
+	volume_objs = new GPUVolumeObjectInstance();
+	volume_objs[0] = GPUVolumeObjectInstance(0, world_chunk.get_location(), make_float3(0));
+	d_num_instances = 1;
+
+	sdf_spacing = (&sdf)[0].spacing;
+	sdf_dim = (&sdf)[0].sdf_dim;
+
+	h_grid = new float2[(&sdf)[0].voxels.size()];
+	//h_grid = sdf[0].voxels.data();
+	for (size_t iz = 0; iz < sdf_dim.z; ++iz)
+	{
+		for (size_t iy = 0; iy < sdf_dim.y; ++iy)
+		{
+			for (size_t ix = 0; ix < sdf_dim.x; ++ix)
+			{
+				h_grid[ix + sdf_dim.y * (iy + sdf_dim.x * iz)] = make_float2((&sdf)[0].voxels.at((ix + sdf_dim.y * (iy + sdf_dim.x * iz))).distance, (&sdf)[0].voxels.at((ix + sdf_dim.y * (iy + sdf_dim.x * iz))).material);
+			}
+		}
+	}
+
+
+	h_sdf_steps = (&sdf)[0].spacing;
+	h_sdf_dim = (&sdf)[0].sdf_dim;
+	h_max_sdf = (&sdf)[0].box_max;
+	h_volumes = new GPUBoundingBox(make_float3(0.f) + 0.5f * h_sdf_steps, (&sdf)[0].box_max - 0.5f * h_sdf_steps);
+
+	gpuErrchk(cudaMalloc((void**)& d_sdf, size_sdf));
+
+	gpuErrchk(cudaMalloc(&d_sdf_volumes, sizeof(GPUBoundingBox)));
+	gpuErrchk(cudaMalloc(&d_volume_instances, 200 * sizeof(GPUVolumeObjectInstance)));
+
+
+	gpuErrchk(cudaMemcpy(d_sdf, h_grid, size_sdf, cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(d_volume_instances, volume_objs, sizeof(GPUVolumeObjectInstance), cudaMemcpyHostToDevice));
+	gpuErrchk(cudaMemcpy(d_sdf_volumes, h_volumes, sizeof(GPUBoundingBox), cudaMemcpyHostToDevice));
+
+	bind_sdf_to_texture(&d_sdf, (&sdf)[0].sdf_dim, 1);
+
+}
 
 extern "C"
-void initialize_volume_render(RCamera& sceneCam, const Grid& sdf, const int& num_sdf, const std::vector<VoxelMaterial>& materials, const RenderingSettings& render_settings,
+void initialize_volume_render(RCamera& sceneCam, const RayEngine::RChunk& world_chunk, const int& num_sdf, const std::vector<VoxelMaterial>& materials, const RenderingSettings& render_settings,
 	const SceneSettings& scene_settings, const RayEngine::RPerlinNoise& noise)
 {
+	const Grid& sdf = world_chunk.get_sdf();
 	float size_sdf = num_sdf * sdf.voxels.size() * sizeof(float2);
 	h_camera = &sceneCam;
 	num_light = 1;
@@ -483,9 +537,11 @@ void initialize_volume_render(RCamera& sceneCam, const Grid& sdf, const int& num
 	uint3* h_sdf_dim = new uint3[num_sdf];
 	float3* h_max_sdf = new float3[num_sdf];
 	h_volumes = new GPUBoundingBox[num_sdf];
+
 	volume_objs = new GPUVolumeObjectInstance[200];
-	volume_objs[0] = GPUVolumeObjectInstance(0, make_float3(0, 0, 0), make_float3(0));
+	volume_objs[0] = GPUVolumeObjectInstance(0, world_chunk.get_location(), make_float3(0));
 	d_num_instances = 1;
+
 	sdf_spacing = (&sdf)[0].spacing;
 	sdf_dim = (&sdf)[0].sdf_dim;
 

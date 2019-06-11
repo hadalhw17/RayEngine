@@ -19,7 +19,7 @@
 
 #include "cuda_runtime_api.h"
 #include "helper_math.h"
-#include "Grid.h"
+#include "SDF/Grid.h"
 
 float4 _clip(float4 color)
 {

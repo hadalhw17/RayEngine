@@ -1,7 +1,7 @@
 #pragma once
 #include "Scene.h"
 #include "RayEngine/RayEngine.h"
-#include "Grid.h"
+#include "SDF/Chunk.h"
 #include "PerlinNoise.h"
 #include "Character.h"
 #include "TextureObject.h"
@@ -19,16 +19,21 @@ public:
 
 	inline RayEngine::RPerlinNoise& get_noise() { return noise; }
 	inline std::vector<VoxelMaterial>& get_materials() { return materials; }
-	inline Grid& get_distance_field() { return distance_field; }
-	Grid distance_field;
+	inline RayEngine::RChunk& get_world_chunk() { return world_chunk; }
+	void move_chunk(float3 chunk_location);
+
+	void update_chunk();
+
 	RayEngine::RPerlinNoise noise;
 	std::vector<VoxelMaterial> materials;
 	virtual void write_to_file();
 	
+	RayEngine::RChunk world_chunk;
 protected:
 	virtual void build_scene() override;
-protected:
 	void init_cuda_res();
+
+protected:
 
 protected:
 };
@@ -42,7 +47,7 @@ namespace meta {
 		return members(
 			member("noise", &SDFScene::noise),
 			member("materials", &SDFScene::materials),
-			member("distance_field", &SDFScene::distance_field),
+			member("world_chunk", &SDFScene::world_chunk),
 			member("scene_camera", &SDFScene::scene_camera),
 			member("scene_objects", &SDFScene::scene_objects),
 			member("scene_settings", &SDFScene::scene_settings)

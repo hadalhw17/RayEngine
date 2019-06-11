@@ -154,7 +154,6 @@
     <ClCompile Include="src\Floor.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\Glass.cpp" />
-    <ClCompile Include="src\Grid.cpp" />
     <ClCompile Include="src\jpeg.cpp" />
     <ClCompile Include="src\KDThreeGPU.cpp" />
     <ClCompile Include="src\KDTree.cpp" />
@@ -180,6 +179,8 @@
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneObject.cpp" />
     <ClCompile Include="src\SDFScene.cpp" />
+    <ClCompile Include="src\SDF\Grid.cpp" />
+    <ClCompile Include="src\SDF\Chunk.cpp" />
     <ClCompile Include="src\Source.cpp" />
     <ClCompile Include="src\Sphere.cpp" />
     <ClCompile Include="src\TextureObject.cpp" />
@@ -229,7 +230,6 @@
     <ClInclude Include="src\Floor.h" />
     <ClInclude Include="src\Glass.h" />
     <ClInclude Include="src\GPUBoundingBox.h" />
-    <ClInclude Include="src\Grid.h" />
     <ClInclude Include="src\helper_math.h" />
     <ClInclude Include="src\jpeg.h" />
     <ClInclude Include="src\jpeglib.h" />
@@ -258,6 +258,8 @@
     <ClInclude Include="src\Scene.h" />
     <ClInclude Include="src\SceneObject.h" />
     <ClInclude Include="src\SDFScene.h" />
+    <ClInclude Include="src\SDF\Grid.h" />
+    <ClInclude Include="src\SDF\Chunk.h" />
     <ClInclude Include="src\Source.h" />
     <ClInclude Include="src\Sphere.h" />
     <ClInclude Include="src\TextureObject.h" />

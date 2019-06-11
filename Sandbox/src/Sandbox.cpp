@@ -23,8 +23,8 @@ public:
 		: Application()
 	{
 		TextCharacter *main_chacter =  new TextCharacter();
-		TestScene scene = TestScene(*main_chacter);
-		TestSceneLayer *scene_layer = new TestSceneLayer(scene);
+		TestScene *scene = new  TestScene(*main_chacter);
+		TestSceneLayer *scene_layer = new TestSceneLayer(*scene);
 
 		//std::cout << "Serializing scene:" << '\n';
 		//json root;

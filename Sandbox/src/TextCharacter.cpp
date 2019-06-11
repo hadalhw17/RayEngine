@@ -24,6 +24,12 @@ void TextCharacter::on_update()
 		scene_layer.brush.brush_type = scene_layer.brush_type;
 		app.app_spawn_obj(scene_layer.m_scene->get_camera(), scene_layer.brush, last_x, SCR_HEIGHT - last_y);
 	}
+	else if(app.should_spawn && !app.edit_mode && !app.ctrl)
+	{
+		SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
+		scene.move_chunk({ camera.position.x, 0, camera.position.z });
+		scene.update_chunk();
+	}
 	//-----------------------------------------------------------------------------------------------------
 }
 

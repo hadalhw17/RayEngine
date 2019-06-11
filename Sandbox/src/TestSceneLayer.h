@@ -7,6 +7,8 @@ class TestSceneLayer :
 public:
 	TestSceneLayer(TestScene& scene)
 		:RayEngine::RSceneLayer(scene) {}
+
+	virtual bool on_mouse_button_pressed(RayEngine::MouseButtonPresedEvent& e) override;
 };
 
 #include <Meta.h>
