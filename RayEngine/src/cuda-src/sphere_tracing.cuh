@@ -25,8 +25,7 @@ struct GPUMat
 	texturess textttt;
 };
 
-const unsigned tableSize = 256;
-const unsigned tableSizeMask = tableSize - 1;
+
 
 __device__
 float3* d_gradients;
@@ -226,7 +225,7 @@ void sphere_trace_shadow(const RenderingSettings& render_settings, const SceneSe
 	float light_dst = K_INFINITY;
 	float x = scene_settings.light_pos.x;
 	float z = scene_settings.light_pos.x;
-	float3 lightpos = make_float3(x, scene_settings.light_pos.y, x), lightDir;
+	float3 lightpos = make_float3(x, scene_settings.light_pos.y, x) - instances[0].location, lightDir;
 	float3 lightInt;
 	illuminate(p_hit, lightpos, lightDir, lightInt, light_dst, scene_settings.light_intensity);
 
@@ -302,13 +301,7 @@ float fbm(float2& p, const unsigned* __restrict__ d_permutationTable)
 	return f / 0.9375;
 }
 
-__device__
-BiomeTypes biomes(const float& lh, const float& elev)
-{
-	if (lh <= (0.2 * elev)) return BIOME_OCEAN;
-	if (lh >= 0.8 * elev) return BiomeTypes::BIOME_SNOW;
 
-}
 
 
 inline __device__

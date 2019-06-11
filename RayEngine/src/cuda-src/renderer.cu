@@ -102,206 +102,7 @@ float noised(float3 x, curandState* rand_state)
 	return (1.0 - ((n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0);
 }
 
-__device__
-float gradientDotV(
-	size_t perm, // a value between 0 and 255 
-	float x, float y, float z)
-{
-	switch (perm & 15) {
-	case  0: return  x + y; // (1,1,0) 
-	case  1: return -x + y; // (-1,1,0) 
-	case  2: return  x - y; // (1,-1,0) 
-	case  3: return -x - y; // (-1,-1,0) 
-	case  4: return  x + z; // (1,0,1) 
-	case  5: return -x + z; // (-1,0,1) 
-	case  6: return  x - z; // (1,0,-1) 
-	case  7: return -x - z; // (-1,0,-1) 
-	case  8: return  y + z; // (0,1,1), 
-	case  9: return -y + z; // (0,-1,1), 
-	case 10: return  y - z; // (0,1,-1), 
-	case 11: return -y - z; // (0,-1,-1) 
-	case 12: return  y + x; // (1,1,0) 
-	case 13: return -x + y; // (-1,1,0) 
-	case 14: return -y + z; // (0,-1,1) 
-	case 15: return -y - z; // (0,-1,-1) 
-	}
-}
 
-inline __device__
-float smoothstep(const float& t)
-{
-	return t * t * (3 - 2 * t);
-}
-
-inline __device__
-float quintic(const float& t)
-{
-	return t * t * t * (t * (t * 6 - 15) + 10);
-}
-
-inline __device__
-float smoothstepDeriv(const float& t)
-{
-	return t * (6 - 6 * t);
-}
-
-inline __device__
-float quinticDeriv(const float& t)
-{
-	return 30 * t * t * (t * (t - 2) + 1);
-}
-
-/* inline */
-__device__
-uint8_t hash(const unsigned*& perm, const int& x, const int& y, const int& z)
-{
-	return perm[perm[perm[x] + y] + z];
-}
-
-__device__
-float3 eval(const unsigned*& perm, const float3& p, float3& derivs)
-{
-	int xi0 = ((int)floor(p.x)) & tableSizeMask;
-	int yi0 = ((int)floor(p.y)) & tableSizeMask;
-	int zi0 = ((int)floor(p.z)) & tableSizeMask;
-
-	int xi1 = (xi0 + 1) & tableSizeMask;
-	int yi1 = (yi0 + 1) & tableSizeMask;
-	int zi1 = (zi0 + 1) & tableSizeMask;
-
-	float tx = p.x - ((int)floorf(p.x));
-	float ty = p.y - ((int)floorf(p.y));
-	float tz = p.z - ((int)floorf(p.z));
-
-	float u = smoothstep(tx);
-	float v = smoothstep(ty);
-	float w = smoothstep(tz);
-
-	// generate vectors going from the grid points to p
-	float x0 = tx, x1 = tx - 1;
-	float y0 = ty, y1 = ty - 1;
-	float z0 = tz, z1 = tz - 1;
-
-	float a = gradientDotV(hash(perm, xi0, yi0, zi0), x0, y0, z0);
-	float b = gradientDotV(hash(perm, xi1, yi0, zi0), x1, y0, z0);
-	float c = gradientDotV(hash(perm, xi0, yi1, zi0), x0, y1, z0);
-	float d = gradientDotV(hash(perm, xi1, yi1, zi0), x1, y1, z0);
-	float e = gradientDotV(hash(perm, xi0, yi0, zi1), x0, y0, z1);
-	float f = gradientDotV(hash(perm, xi1, yi0, zi1), x1, y0, z1);
-	float g = gradientDotV(hash(perm, xi0, yi1, zi1), x0, y1, z1);
-	float h = gradientDotV(hash(perm, xi1, yi1, zi1), x1, y1, z1);
-
-	float du = smoothstepDeriv(tx);
-	float dv = smoothstepDeriv(ty);
-	float dw = smoothstepDeriv(tz);
-
-	float k0 = a;
-	float k1 = (b - a);
-	float k2 = (c - a);
-	float k3 = (e - a);
-	float k4 = (a + d - b - c);
-	float k5 = (a + f - b - e);
-	float k6 = (a + g - c - e);
-	float k7 = (b + c + e + h - a - d - f - g);
-
-	derivs.x = du * (k1 + k4 * v + k5 * w + k7 * v * w);
-	derivs.y = dv * (k2 + k4 * u + k6 * w + k7 * v * w);
-	derivs.z = dw * (k3 + k5 * u + k6 * v + k7 * v * w);
-
-	return make_float3(k0 + k1 * u + k2 * v + k3 * w + k4 * u * v + k5 * u * w + k6 * v * w + k7 * u * v * w);
-}
-
-__device__
-float terrainH(const float2x2& m2, const float2& x, const unsigned*& perm, float3& p3, float3& derivs, const float& freq, const float& amp)
-{
-	float2  p = x * 0.003;
-	p3 = make_float3(p.x, 0, p.y);
-	float a = 0.0;
-	float b = 1.0;
-	float2  d = make_float2(0.0);
-	for (int i = 0; i < freq + 6; i++)
-	{
-		float3 n = eval(perm, p3, derivs);
-		d.x += n.y;
-		d.y += n.z;
-		a += b * n.x / (1.0 + dot(d, d));
-		b *= 0.5;
-		p = mul(m2, p) * 2.0;
-		p3 = make_float3(p.x, 0, p.y);
-	}
-
-	return amp * a;
-}
-__device__
-float terrainM(float2x2 m2, float2 x, const unsigned*& perm, float3& p3, float3& derivs, float freq, float amp)
-{
-	float2  p = x * 0.003;
-	p3 = make_float3(p.x, 0, p.y);
-	float a = 0.0;
-	float b = 1.0;
-	float2  d = make_float2(0.0);
-	for (int i = 0; i < freq; i++)
-	{
-		float3 n = eval(perm, p3, derivs);
-		d.x += n.y;
-		d.y += n.z;
-		a += b * n.x / (1.0 + dot(d, d));
-		b *= 0.5;
-		p = mul(m2, p) * 2.0;
-		p3 = make_float3(p.x, 0, p.y);
-	}
-	return a;
-}
-__device__
-float terrainL(float2x2 m2, float2 x, const unsigned*& perm, float3& p3, float3& derivs)
-{
-	float2  p = x * 0.003;
-	p3 = make_float3(p.x, 0, p.y);
-	float a = 0.0;
-	float b = 1.0;
-	float2  d = make_float2(0.0);
-	for (int i = 0; i < 3; i++)
-	{
-		float3 n = eval(perm, p3, derivs);
-		d.x += n.y;
-		d.y += n.z;
-		a += b * n.x / (1.0 + dot(d, d));
-		b *= 0.5;
-		p = mul(m2, p) * 2.0;
-		p3 = make_float3(p.x, 0, p.y);
-	}
-
-	return 120.0 * a;
-}
-
-__device__
-float get_terrain_distance(float2x2 m2, float3 poi, float3 coord, SceneSettings scene_settings, float3 transform, GPUBoundingBox volume, const unsigned* perm)
-{
-	float lh = 0.0f;
-	float ly = 0.0f;
-	float3 derivs;
-	float3 nc = make_float3(coord.x / scene_settings.world_size.x, 0, coord.z / scene_settings.world_size.z);
-	//lh = f(poi.x, poi.z, scene_settings.noise_freuency, scene_settings.noise_amplitude + 10);
-	float3 tr_coord = coord - transform;
-	lh = terrainM(m2, make_float2(poi.x - transform.x, poi.z - transform.z), perm, tr_coord, derivs, scene_settings.noise_freuency, scene_settings.noise_amplitude);
-	//lh = eval(perm, nc  * scene_settings.noise_freuency, derivs).y;
-	lh = pow(lh + 1, scene_settings.noise_redistrebution);
-	lh = round(lh * scene_settings.terracing) / scene_settings.terracing;
-
-	lh *= scene_settings.noise_amplitude;
-	//lh += volumes[0].Max.y / 2;
-	ly = poi.y;
-	if (biomes(lh, volume.Max.y) == BIOME_OCEAN)
-	{
-		lh = (0.2 * volume.Max.y) - 1;
-	}
-	float sign = -1;
-	if (ly > lh)
-	{
-		sign = 1;
-	}
-	return sign * fabs(length(poi - make_float3(poi.x, lh, poi.z)));
-}
 __global__
 void generate_noise(float2x2 m2, RenderingSettings render_settings, SceneSettings scene_settings, GPUVolumeObjectInstance* instances,
 	float2* sdf_texute, float2* normal_texture, uint3 tex_dim, float3 spacing, GPUBoundingBox* volumes, curandState* rand_state, const unsigned* perm, float3* grads, float3 pos)
@@ -385,20 +186,18 @@ void render_sphere_trace(const RenderingSettings render_settings, const RCamera 
 		}
 	}
 	float prel;
+	bool intersect_sdf = false;
+	int material_index = -1;
+
+	// Traverse volume texture.
 	if (intersect_scene)
 	{
-
+		intersect_sdf = single_ray_sphere_trace(render_settings, scene, tex, hit_result, instances,
+			smallest_dist, scene_t_far, step, nearest_shape, prel, 0.001, material_index);
 	}
-	int material_index;
-	if (!single_ray_sphere_trace(render_settings, scene, tex, hit_result, instances,
-		smallest_dist, scene_t_far, step, nearest_shape, prel, 0.001, material_index))
-	{
-		pixel_colour = mix(pixel_colour, make_float3(1, 0.65, 0), prel);
-		sky_mat(pixel_colour, hit_result.ray_dir);
-		if (scene.enable_fog)
-			apply_fog(pixel_colour, K_INFINITY, scene.fog_deisity, hit_result.ray_o, hit_result.ray_dir);
-	}
-	else
+	
+	// Shade texture.
+	if (intersect_scene && intersect_sdf)
 	{
 		sphere_trace_shade(render_settings, tex, normal_tex, scene, lights, num_lights, hit_result, instances, smallest_dist, volumes,
 			num_instances, step, dim, material_index, pixel_colour, 0, shade, materials, d_permutationTable);
@@ -407,16 +206,72 @@ void render_sphere_trace(const RenderingSettings render_settings, const RCamera 
 
 	}
 
-	// gamma	
-	//pixel_colour = powf(clamp(pixel_colour, 0.0, 1.0), 0.45);
+	// In case if missed bounding volume or sdf.
+	if (!intersect_sdf || !intersect_scene)
+	{
+		bool intersect_terrain = false;
+		float t = 0;
+		float2x2 m2;
+		m2.m[0] = make_float2(0.8, -0.6);
+		m2.m[1] = make_float2(0.6, 0.8);
+		float t_min = 99999999;
+		while (t < 1000)
+		{
+			float3 poi = hit_result.ray_o + t * hit_result.ray_dir;
+			float3 transform = instances[0].location;
+			float distance = get_terrain_distance(m2, poi, poi, scene, -transform, volumes[0], d_permutationTable);
+			if (distance < 0.0001)
+			{
+				intersect_terrain = true;
+				t_min = t;
+				break;
+			}
+			t += distance;
+		}
+		if (intersect_terrain)
+		{
+			pixel_colour = {0, 0, 0};
+			float3 n_poi = hit_result.ray_o + t_min * hit_result.ray_dir;
+			float3 terrain_normal = compute_terrain_normal(m2, n_poi, t_min, scene, d_permutationTable, volumes[0], instances[0]);
 
-	// contrast, desat, tint and vignetting	
-	//pixel_colour = pixel_colour * 0.3 + 0.7 * pixel_colour * pixel_colour * (make_float3(3.0) - 2.0 * pixel_colour);
-	//pixel_colour = mix(pixel_colour, make_float3(pixel_colour.x + pixel_colour.y + pixel_colour.z) * 0.33, 0.2);
-	//pixel_colour *= 1.25 * make_float3(1.02, 1.05, 1.0);
+			pixel_colour = mix(pixel_colour, triplanar_mapping(terrain_normal, (n_poi) / render_settings.texture_scale, materials[0].textttt), 0.2);
+
+			switch (biomes(n_poi.y, volumes[0].Max.y))
+			{
+			case BiomeTypes::BIOME_OCEAN:
+				pixel_colour = make_float3(0.1f, 0.1f, 0.8f);
+				break;
+			case BiomeTypes::BIOME_SNOW:
+				// snow
+				float h = smoothstep(55.0, 80.0, n_poi.y / (volumes[0].Max.y / 2) + 25.0 * fbm(0.01 * make_float2(n_poi.x, n_poi.z) / volumes[0].Max.y / 2, d_permutationTable));
+				float e = smoothstep(1.0 - 0.5 * h, 1.0 - 0.1 * h, terrain_normal.y);
+				float o = 0.3 + 0.7 * smoothstep(0.0, 0.1, terrain_normal.x + h * h);
+				float s = h * e * o;
+				pixel_colour = mix(pixel_colour, 0.29 * make_float3(0.62, 0.65, 0.7), smoothstep(0.1, 0.9, s));
+				break;
+			default:
+				pixel_colour = make_float3(0.f);
+				break;
+			}
+			simple_shade(pixel_colour, terrain_normal, hit_result.ray_dir);
+
+		}
+		else
+		{
+			pixel_colour = mix(pixel_colour, make_float3(1, 0.65, 0), prel);
+			sky_mat(pixel_colour, hit_result.ray_dir);
+		}
+		if (scene.enable_fog)
+			apply_fog(pixel_colour, K_INFINITY, scene.fog_deisity, hit_result.ray_o, hit_result.ray_dir);
+	}
+
+	// Gamma.	
 	if (render_settings.gamma) pixel_colour = powf(pixel_colour, 1.0 / 2.2);
+	// Vignetting.
 	if (render_settings.vignetting) pixel_colour *= 0.5 + 0.5 * powf(16.0 * u * v * (1.0 - u) * (1.0 - v), render_settings.vignetting_k);
+	// Fix colour clipping.
 	pixel_colour = clip(pixel_colour);
+	// Convert to sRGB.
 	pixels[index] = rgbaFloatToInt(pixel_colour);
 	return;
 }
@@ -1026,12 +881,13 @@ void load_map(std::string filename)
 		{
 			x = atoi(index.c_str());
 			is = std::istringstream(index);
-			while (getline(is, index, '_'))
+			std::string y_str;
+			while (getline(is, y_str, '_'))
 			{
-				if (atoi(index.c_str()))
+				if (atoi(y_str.c_str()))
 				{
-					y = atoi(index.c_str());
-					break;
+					y = atoi(y_str.c_str());
+					//break;
 				}
 			}
 			break;
@@ -1085,7 +941,7 @@ void load_map(std::string filename)
 	bind_sdf_to_texture(&d_sdf, sdf_dim, 1);
 	gpuErrchk(cudaDeviceSynchronize());
 
-	delete distance_field, h_volumes;
+	delete distance_field, volume_objs;
 }
 
 

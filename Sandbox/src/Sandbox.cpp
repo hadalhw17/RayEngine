@@ -26,16 +26,10 @@ public:
 		TestScene *scene = new  TestScene(*main_chacter);
 		TestSceneLayer *scene_layer = new TestSceneLayer(*scene);
 
-		//std::cout << "Serializing scene:" << '\n';
-		//json root;
-		//root = meta::serialize(scene);
-		//std::cout << std::setw(4) << root << std::endl;
+
 		push_layer(scene_layer);
 		push_overlay(new RayEngine::RUILayer());
-		std::cout << "Serializing character:" << '\n';
-		json root;
-		root = meta::serialize(*main_chacter);
-		std::cout << std::setw(4) << root << std::endl;
+
 	}
 
 	~Sandbox()

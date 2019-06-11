@@ -20,6 +20,191 @@ struct GPUScene
 	}
 };
 
+const unsigned tableSize = 256;
+const unsigned tableSizeMask = tableSize - 1;
+
+__device__
+float gradientDotV(
+	size_t perm, // a value between 0 and 255 
+	float x, float y, float z)
+{
+	switch (perm & 15) {
+	case  0: return  x + y; // (1,1,0) 
+	case  1: return -x + y; // (-1,1,0) 
+	case  2: return  x - y; // (1,-1,0) 
+	case  3: return -x - y; // (-1,-1,0) 
+	case  4: return  x + z; // (1,0,1) 
+	case  5: return -x + z; // (-1,0,1) 
+	case  6: return  x - z; // (1,0,-1) 
+	case  7: return -x - z; // (-1,0,-1) 
+	case  8: return  y + z; // (0,1,1), 
+	case  9: return -y + z; // (0,-1,1), 
+	case 10: return  y - z; // (0,1,-1), 
+	case 11: return -y - z; // (0,-1,-1) 
+	case 12: return  y + x; // (1,1,0) 
+	case 13: return -x + y; // (-1,1,0) 
+	case 14: return -y + z; // (0,-1,1) 
+	case 15: return -y - z; // (0,-1,-1) 
+	}
+}
+
+inline __device__
+float smoothstep(const float& t)
+{
+	return t * t * (3 - 2 * t);
+}
+
+inline __device__
+float quintic(const float& t)
+{
+	return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+inline __device__
+float smoothstepDeriv(const float& t)
+{
+	return t * (6 - 6 * t);
+}
+
+inline __device__
+float quinticDeriv(const float& t)
+{
+	return 30 * t * t * (t * (t - 2) + 1);
+}
+
+
+/* inline */
+__device__
+uint8_t hash(const unsigned*& perm, const int& x, const int& y, const int& z)
+{
+	return perm[perm[perm[x] + y] + z];
+}
+
+__device__
+float3 eval(const unsigned*& perm, const float3& p, float3& derivs)
+{
+	int xi0 = ((int)floor(p.x)) & tableSizeMask;
+	int yi0 = ((int)floor(p.y)) & tableSizeMask;
+	int zi0 = ((int)floor(p.z)) & tableSizeMask;
+
+	int xi1 = (xi0 + 1) & tableSizeMask;
+	int yi1 = (yi0 + 1) & tableSizeMask;
+	int zi1 = (zi0 + 1) & tableSizeMask;
+
+	float tx = p.x - ((int)floorf(p.x));
+	float ty = p.y - ((int)floorf(p.y));
+	float tz = p.z - ((int)floorf(p.z));
+
+	float u = smoothstep(tx);
+	float v = smoothstep(ty);
+	float w = smoothstep(tz);
+
+	// generate vectors going from the grid points to p
+	float x0 = tx, x1 = tx - 1;
+	float y0 = ty, y1 = ty - 1;
+	float z0 = tz, z1 = tz - 1;
+
+	float a = gradientDotV(hash(perm, xi0, yi0, zi0), x0, y0, z0);
+	float b = gradientDotV(hash(perm, xi1, yi0, zi0), x1, y0, z0);
+	float c = gradientDotV(hash(perm, xi0, yi1, zi0), x0, y1, z0);
+	float d = gradientDotV(hash(perm, xi1, yi1, zi0), x1, y1, z0);
+	float e = gradientDotV(hash(perm, xi0, yi0, zi1), x0, y0, z1);
+	float f = gradientDotV(hash(perm, xi1, yi0, zi1), x1, y0, z1);
+	float g = gradientDotV(hash(perm, xi0, yi1, zi1), x0, y1, z1);
+	float h = gradientDotV(hash(perm, xi1, yi1, zi1), x1, y1, z1);
+
+	float du = smoothstepDeriv(tx);
+	float dv = smoothstepDeriv(ty);
+	float dw = smoothstepDeriv(tz);
+
+	float k0 = a;
+	float k1 = (b - a);
+	float k2 = (c - a);
+	float k3 = (e - a);
+	float k4 = (a + d - b - c);
+	float k5 = (a + f - b - e);
+	float k6 = (a + g - c - e);
+	float k7 = (b + c + e + h - a - d - f - g);
+
+	derivs.x = du * (k1 + k4 * v + k5 * w + k7 * v * w);
+	derivs.y = dv * (k2 + k4 * u + k6 * w + k7 * v * w);
+	derivs.z = dw * (k3 + k5 * u + k6 * v + k7 * v * w);
+
+	return make_float3(k0 + k1 * u + k2 * v + k3 * w + k4 * u * v + k5 * u * w + k6 * v * w + k7 * u * v * w);
+}
+
+
+__device__
+BiomeTypes biomes(const float& lh, const float& elev)
+{
+	if (lh <= (0.2 * elev)) return BIOME_OCEAN;
+	if (lh >= 0.8 * elev) return BiomeTypes::BIOME_SNOW;
+
+}
+
+__device__
+float terrainH(const float2x2& m2, const float2& x, const unsigned*& perm, float3& p3, float3& derivs, const float& freq, const float& amp)
+{
+	float2  p = x * 0.003;
+	p3 = make_float3(p.x, 0, p.y);
+	float a = 0.0;
+	float b = 1.0;
+	float2  d = make_float2(0.0);
+	for (int i = 0; i < freq + 6; i++)
+	{
+		float3 n = eval(perm, p3, derivs);
+		d.x += n.y;
+		d.y += n.z;
+		a += b * n.x / (1.0 + dot(d, d));
+		b *= 0.5;
+		p = mul(m2, p) * 2.0;
+		p3 = make_float3(p.x, 0, p.y);
+	}
+
+	return amp * a;
+}
+__device__
+float terrainM(float2x2 m2, float2 x, const unsigned*& perm, float3& p3, float3& derivs, float freq, float amp)
+{
+	float2  p = x * 0.003;
+	p3 = make_float3(p.x, 0, p.y);
+	float a = 0.0;
+	float b = 1.0;
+	float2  d = make_float2(0.0);
+	for (int i = 0; i < freq; i++)
+	{
+		float3 n = eval(perm, p3, derivs);
+		d.x += n.y;
+		d.y += n.z;
+		a += b * n.x / (1.0 + dot(d, d));
+		b *= 0.5;
+		p = mul(m2, p) * 2.0;
+		p3 = make_float3(p.x, 0, p.y);
+	}
+	return a;
+}
+__device__
+float terrainL(float2x2 m2, float2 x, const unsigned*& perm, float3& p3, float3& derivs)
+{
+	float2  p = x * 0.003;
+	p3 = make_float3(p.x, 0, p.y);
+	float a = 0.0;
+	float b = 1.0;
+	float2  d = make_float2(0.0);
+	for (int i = 0; i < 3; i++)
+	{
+		float3 n = eval(perm, p3, derivs);
+		d.x += n.y;
+		d.y += n.z;
+		a += b * n.x / (1.0 + dot(d, d));
+		b *= 0.5;
+		p = mul(m2, p) * 2.0;
+		p3 = make_float3(p.x, 0, p.y);
+	}
+
+	return 120.0 * a;
+}
+
 template<typename T>
 __device__
 T bilinear(
@@ -281,6 +466,35 @@ float get_distance_to_sdf(const RenderingSettings& render_settings, const cudaTe
 	return min_dist;
 }
 
+__device__
+float get_terrain_distance(float2x2 m2, float3 poi, float3 coord, SceneSettings scene_settings, float3 transform, GPUBoundingBox volume, const unsigned* perm)
+{
+	float lh = 0.0f;
+	float ly = 0.0f;
+	float3 derivs;
+	float3 nc = make_float3(coord.x / scene_settings.world_size.x, 0, coord.z / scene_settings.world_size.z);
+	//lh = f(poi.x, poi.z, scene_settings.noise_freuency, scene_settings.noise_amplitude + 10);
+	float3 tr_coord = coord - transform;
+	lh = terrainM(m2, make_float2(poi.x - transform.x, poi.z - transform.z), perm, tr_coord, derivs, scene_settings.noise_freuency, scene_settings.noise_amplitude);
+	//lh = eval(perm, nc  * scene_settings.noise_freuency, derivs).y;
+	lh = pow(lh + 1, scene_settings.noise_redistrebution);
+	lh = round(lh * scene_settings.terracing) / scene_settings.terracing;
+
+	lh *= scene_settings.noise_amplitude;
+	//lh += volumes[0].Max.y / 2;
+	ly = poi.y;
+	if (biomes(lh, volume.Max.y) == BIOME_OCEAN)
+	{
+		lh = (0.2 * volume.Max.y) - 1;
+	}
+	float sign = -1;
+	if (ly > lh)
+	{
+		sign = 1;
+	}
+	return sign * fabs(length(poi - make_float3(poi.x, lh, poi.z)));
+}
+
 
 __device__
 float3 compute_sdf_normal(const float3& p_hit, const float& t, const RenderingSettings& render_settings, const cudaTextureObject_t& tex,
@@ -308,4 +522,17 @@ float3 compute_sdf_normal_tet(const float3& p_hit, const float& t, const Renderi
 		n += e * get_distance(render_settings, tex, p_hit + e * delta, step).x;
 	}
 	return normalize(n);
+}
+
+__device__
+float3 compute_terrain_normal(const float2x2& m2, const float3& p_hit, const float& t, const SceneSettings &scene_settings,
+	const unsigned *permutation, GPUBoundingBox volume, const GPUVolumeObjectInstance& curr_obj)
+{
+	float delta = fminf(0.001 * t, 0.002);
+	float3 transform = curr_obj.location;
+	float curr_dist = get_terrain_distance(m2, p_hit, p_hit, scene_settings, transform, volume, permutation) - curr_dist;
+	return normalize(make_float3(
+		get_terrain_distance(m2, p_hit + make_float3(delta, 0, 0), p_hit + make_float3(delta, 0, 0),scene_settings, -transform, volume, permutation) - curr_dist,
+		get_terrain_distance(m2, p_hit + make_float3(0, delta, 0), p_hit + make_float3(0, delta, 0), scene_settings,-transform, volume, permutation) - curr_dist,
+		get_terrain_distance(m2, p_hit + make_float3(0, 0, delta), p_hit + make_float3(0, 0, delta), scene_settings,-transform, volume, permutation) - curr_dist));
 }
