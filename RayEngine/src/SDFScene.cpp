@@ -11,7 +11,8 @@ extern "C" void initialize_volume_render(RCamera& sceneCam, const RayEngine::RCh
 	const SceneSettings& scene_settings, const RayEngine::RPerlinNoise& nosie);
 extern "C"
 void cuda_update_chunk(const RayEngine::RChunk& world_chunk, const RayEngine::RPerlinNoise& noise);
-
+extern "C"
+void cuda_update_chunk_gen(const RayEngine::RChunk& world_chunk, const RayEngine::RPerlinNoise& noise);
 SDFScene::SDFScene()
 {
 
@@ -45,6 +46,11 @@ void SDFScene::init_cuda_res()
 void SDFScene::update_chunk()
 {
 	cuda_update_chunk(world_chunk, noise);
+}
+
+void SDFScene::generate_chunk()
+{
+	cuda_update_chunk_gen(world_chunk, noise);
 }
 
 void SDFScene::write_to_file()

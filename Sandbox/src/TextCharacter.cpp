@@ -13,6 +13,15 @@ void TextCharacter::on_detach()
 {
 }
 
+bool point_in_aabb(const GPUBoundingBox& tBox, const float3& vecPoint)
+{
+	return
+		vecPoint.x > tBox.Min.x && vecPoint.x < tBox.Max.x &&
+		vecPoint.y > tBox.Min.y && vecPoint.y < tBox.Max.y &&
+		vecPoint.z > tBox.Min.z && vecPoint.z < tBox.Max.z;
+
+}
+
 void TextCharacter::on_update()
 {
 	RayEngine::Application& app = RayEngine::Application::get();
@@ -24,11 +33,18 @@ void TextCharacter::on_update()
 		scene_layer.brush.brush_type = scene_layer.brush_type;
 		app.app_spawn_obj(scene_layer.m_scene->get_camera(), scene_layer.brush, last_x, SCR_HEIGHT - last_y);
 	}
-	else if(app.should_spawn && !app.edit_mode && !app.ctrl)
+	//else if(app.should_spawn && !app.edit_mode && !app.ctrl)
+	//{
+
+	//}
+	SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
+	GPUBoundingBox world_box = GPUBoundingBox(make_float3(0.f) + scene.get_world_chunk().get_location(),
+		scene_layer.m_scene->get_world_chunk().get_sdf().box_max + scene.get_world_chunk().get_location());
+
+	if (!point_in_aabb(world_box, camera.position))
 	{
-		SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
 		scene.move_chunk({ camera.position.x, 0, camera.position.z });
-		scene.update_chunk();
+		scene.generate_chunk();
 	}
 	//-----------------------------------------------------------------------------------------------------
 }

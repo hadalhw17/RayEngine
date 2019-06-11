@@ -23,6 +23,7 @@ public:
 	void move_chunk(float3 chunk_location);
 
 	void update_chunk();
+	void generate_chunk();
 
 	RayEngine::RPerlinNoise noise;
 	std::vector<VoxelMaterial> materials;

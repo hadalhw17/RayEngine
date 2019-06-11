@@ -467,6 +467,9 @@ void bind_sdf_norm_to_texture(float2* dev_sdf_p, const uint3& dim, const int& nu
 	gpuErrchk(cudaCreateTextureObject(&normalObject, &res_desc, &tex_desc, NULL));
 }
 
+
+
+
 extern "C"
 void cuda_update_chunk(const RayEngine::RChunk& world_chunk, const RayEngine::RPerlinNoise& noise)
 {

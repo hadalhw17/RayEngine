@@ -281,10 +281,9 @@ void generate_noise(float2x2 m2, RenderingSettings render_settings, SceneSetting
 		return;
 	volumes[0] = GPUBoundingBox(make_float3(0), make_float3((tex_dim.x - 1) * spacing.x, (tex_dim.y - 1) * spacing.y, (tex_dim.z - 1) * spacing.z));
 
-	//instances->location = make_float3(pos.x - (volumes[0].dx() / 2), 0, pos.z - (volumes[0].dz() / 2));
-	instances->location = pos;
-	//volumes[0].Min += instances->location;
-	//volumes[0].Max += instances->location;
+
+	instances[0].location = pos;
+
 	int index = x + (tex_dim.x) * (y + (tex_dim.z) * z);
 	float3 poi = (make_float3(x, y, z)) * spacing;
 	float3 coord = ((make_float3(x + 0.5f, 10, z + 0.5)) * spacing);
@@ -294,7 +293,8 @@ void generate_noise(float2x2 m2, RenderingSettings render_settings, SceneSetting
 	float3 derivs;
 	float3 nc = make_float3(coord.x / scene_settings.world_size.x, 0, coord.z / scene_settings.world_size.z);
 	//lh = f(poi.x, poi.z, scene_settings.noise_freuency, scene_settings.noise_amplitude + 10);
-	lh = terrainM(m2, make_float2(poi.x, poi.z), perm, coord, derivs, scene_settings.noise_freuency, scene_settings.noise_amplitude);
+	float3 tr_coord = coord - pos;
+	lh = terrainM(m2, make_float2(poi.x - pos.x, poi.z - pos.z), perm, tr_coord, derivs, scene_settings.noise_freuency, scene_settings.noise_amplitude);
 	//lh = eval(perm, nc  * scene_settings.noise_freuency, derivs).y;
 	lh = pow(lh + 1, scene_settings.noise_redistrebution);
 	lh = round(lh * scene_settings.terracing) / scene_settings.terracing;
@@ -1071,30 +1071,30 @@ bool sdf_collision(RCamera cam)
 	gpuErrchk(cudaMemcpy(&h_overlaps, collides, sizeof(bool), cudaMemcpyDeviceToHost));
 	gpuErrchk(cudaMemcpy(&h_in_volume, in_volume, sizeof(bool), cudaMemcpyDeviceToHost));
 
-	//if (!h_in_volume)
-	//{
-	//	m2.m[0] = make_float2(0.8, -0.6);
-	//	m2.m[1] = make_float2(0.6, 0.8);
-	//	sdf_dim = cuda_scene_settings.volume_resolution;
-	//	gpuErrchk(cudaFree(d_sdf));
-	//	gpuErrchk(cudaMalloc((void**)& d_sdf, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
-
-	//	gpuErrchk(cudaFree(d_sdf_norm));
-	//	gpuErrchk(cudaMalloc((void**)& d_sdf_norm, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
-	//	//sdf_spacing = cuda_scene_settings.volume_spacing;
-	//	sdf_spacing = make_float3(cuda_scene_settings.world_size.x / sdf_dim.x, cuda_scene_settings.world_size.y / sdf_dim.y, cuda_scene_settings.world_size.z / sdf_dim.z);
-	//	dim3 primaryRaysBlockDim(2, 2, 2);
-	//	dim3 primaryRaysGridDim(sdf_dim.x / 2, sdf_dim.y / 2, sdf_dim.z / 2);
-	//	//cudaMalloc(&rand_state, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(curandState));
-	//	//register_random << <primaryRaysGridDim, primaryRaysBlockDim >> > (rand_state, sdf_dim);
-	//	generate_noise << < primaryRaysGridDim, primaryRaysBlockDim >> > (m2, cuda_render_settings, cuda_scene_settings, d_volume_instances,
-	//		d_sdf, d_sdf_norm, sdf_dim, sdf_spacing, d_sdf_volumes, rand_state, d_permutationTable, d_gradients, cam.campos);
-
-	//	//cudaFree(rand_state);
-	//	gpuErrchk(cudaDeviceSynchronize());
-	//	bind_sdf_to_texture(d_sdf, sdf_dim, 1);
-	//	bind_sdf_norm_to_texture(d_sdf_norm, sdf_dim, 1);
-	//}
-
 	return h_overlaps;
+}
+
+extern "C"
+void cuda_update_chunk_gen(const RayEngine::RChunk& world_chunk, const RayEngine::RPerlinNoise& noise)
+{
+	m2.m[0] = make_float2(0.8, -0.6);
+	m2.m[1] = make_float2(0.6, 0.8);
+	sdf_dim = cuda_scene_settings.volume_resolution;
+	gpuErrchk(cudaFree(d_sdf));
+	gpuErrchk(cudaMalloc((void**)& d_sdf, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
+
+	gpuErrchk(cudaFree(d_sdf_norm));
+	gpuErrchk(cudaMalloc((void**)& d_sdf_norm, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
+	//sdf_spacing = cuda_scene_settings.volume_spacing;
+	sdf_spacing = make_float3(cuda_scene_settings.world_size.x / sdf_dim.x, cuda_scene_settings.world_size.y / sdf_dim.y, cuda_scene_settings.world_size.z / sdf_dim.z);
+	dim3 primaryRaysBlockDim(2, 2, 2);
+	dim3 primaryRaysGridDim(sdf_dim.x / 2, sdf_dim.y / 2, sdf_dim.z / 2);
+	//cudaMalloc(&rand_state, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(curandState));
+	//register_random << <primaryRaysGridDim, primaryRaysBlockDim >> > (rand_state, sdf_dim);
+	generate_noise << < primaryRaysGridDim, primaryRaysBlockDim >> > (m2, cuda_render_settings, cuda_scene_settings, d_volume_instances,
+		d_sdf, d_sdf_norm, sdf_dim, sdf_spacing, d_sdf_volumes, rand_state, d_permutationTable, d_gradients, world_chunk.get_location());
+
+	//cudaFree(rand_state);
+	gpuErrchk(cudaDeviceSynchronize());
+	bind_sdf_to_texture(&d_sdf, sdf_dim, 1);
 }
