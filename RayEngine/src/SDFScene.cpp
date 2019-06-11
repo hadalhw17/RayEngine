@@ -26,7 +26,7 @@ SDFScene::SDFScene(RCharacter& character)
 void SDFScene::move_chunk(float3 chunk_location)
 {
 	float3 new_location = chunk_location - world_chunk.get_sdf().box_max / 2;
-	world_chunk.set_location(new_location);
+	world_chunk.set_location(world_chunk.get_location() + chunk_location);
 }
 
 void SDFScene::build_scene()

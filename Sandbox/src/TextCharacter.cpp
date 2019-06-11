@@ -17,9 +17,19 @@ bool point_in_aabb(const GPUBoundingBox& tBox, const float3& vecPoint)
 {
 	return
 		vecPoint.x > tBox.Min.x && vecPoint.x < tBox.Max.x &&
-		vecPoint.y > tBox.Min.y && vecPoint.y < tBox.Max.y &&
 		vecPoint.z > tBox.Min.z && vecPoint.z < tBox.Max.z;
 
+}
+
+float3 position_chunk(const GPUBoundingBox& tBox, const float3& vecPoint)
+{
+	float3 new_pos = make_float3(0);
+	if (vecPoint.x < tBox.Min.x) new_pos.x -= 300;
+	else if (vecPoint.x > tBox.Max.x) new_pos.x += 300;
+	if (vecPoint.z < tBox.Min.z) new_pos.z -= 300;
+	else if (vecPoint.z > tBox.Max.z) new_pos.z += 300;
+	
+	return new_pos;
 }
 
 void TextCharacter::on_update()
@@ -33,19 +43,22 @@ void TextCharacter::on_update()
 		scene_layer.brush.brush_type = scene_layer.brush_type;
 		app.app_spawn_obj(scene_layer.m_scene->get_camera(), scene_layer.brush, last_x, SCR_HEIGHT - last_y);
 	}
-	//else if(app.should_spawn && !app.edit_mode && !app.ctrl)
-	//{
-
-	//}
+	else if(app.should_spawn && !app.edit_mode && !app.ctrl)
+	{
+		
+	}
 	SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
 	GPUBoundingBox world_box = GPUBoundingBox(make_float3(0.f) + scene.get_world_chunk().get_location(),
 		scene_layer.m_scene->get_world_chunk().get_sdf().box_max + scene.get_world_chunk().get_location());
 
 	if (!point_in_aabb(world_box, camera.position))
 	{
-		scene.move_chunk({ camera.position.x, 0, camera.position.z });
+		float3 rounded_pos = { round(camera.position.x * 300) / 300, 0, round(camera.position.z * 300) / 300 };
+		float3 pos = position_chunk(world_box, rounded_pos);
+		scene.move_chunk({ round(pos.x * 300) / 300, 0, round(pos.z * 300) / 300 });
 		scene.generate_chunk();
 	}
+
 	//-----------------------------------------------------------------------------------------------------
 }
 

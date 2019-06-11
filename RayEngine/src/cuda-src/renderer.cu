@@ -270,6 +270,35 @@ float terrainL(float2x2 m2, float2 x, const unsigned*& perm, float3& p3, float3&
 
 	return 120.0 * a;
 }
+
+__device__
+float get_terrain_distance(float2x2 m2, float3 poi, float3 coord, SceneSettings scene_settings, float3 transform, GPUBoundingBox volume, const unsigned* perm)
+{
+	float lh = 0.0f;
+	float ly = 0.0f;
+	float3 derivs;
+	float3 nc = make_float3(coord.x / scene_settings.world_size.x, 0, coord.z / scene_settings.world_size.z);
+	//lh = f(poi.x, poi.z, scene_settings.noise_freuency, scene_settings.noise_amplitude + 10);
+	float3 tr_coord = coord - transform;
+	lh = terrainM(m2, make_float2(poi.x - transform.x, poi.z - transform.z), perm, tr_coord, derivs, scene_settings.noise_freuency, scene_settings.noise_amplitude);
+	//lh = eval(perm, nc  * scene_settings.noise_freuency, derivs).y;
+	lh = pow(lh + 1, scene_settings.noise_redistrebution);
+	lh = round(lh * scene_settings.terracing) / scene_settings.terracing;
+
+	lh *= scene_settings.noise_amplitude;
+	//lh += volumes[0].Max.y / 2;
+	ly = poi.y;
+	if (biomes(lh, volume.Max.y) == BIOME_OCEAN)
+	{
+		lh = (0.2 * volume.Max.y) - 1;
+	}
+	float sign = -1;
+	if (ly > lh)
+	{
+		sign = 1;
+	}
+	return sign * fabs(length(poi - make_float3(poi.x, lh, poi.z)));
+}
 __global__
 void generate_noise(float2x2 m2, RenderingSettings render_settings, SceneSettings scene_settings, GPUVolumeObjectInstance* instances,
 	float2* sdf_texute, float2* normal_texture, uint3 tex_dim, float3 spacing, GPUBoundingBox* volumes, curandState* rand_state, const unsigned* perm, float3* grads, float3 pos)
@@ -288,31 +317,9 @@ void generate_noise(float2x2 m2, RenderingSettings render_settings, SceneSetting
 	float3 poi = (make_float3(x, y, z)) * spacing;
 	float3 coord = ((make_float3(x + 0.5f, 10, z + 0.5)) * spacing);
 
-	float lh = 0.0f;
-	float ly = 0.0f;
-	float3 derivs;
-	float3 nc = make_float3(coord.x / scene_settings.world_size.x, 0, coord.z / scene_settings.world_size.z);
-	//lh = f(poi.x, poi.z, scene_settings.noise_freuency, scene_settings.noise_amplitude + 10);
-	float3 tr_coord = coord - pos;
-	lh = terrainM(m2, make_float2(poi.x - pos.x, poi.z - pos.z), perm, tr_coord, derivs, scene_settings.noise_freuency, scene_settings.noise_amplitude);
-	//lh = eval(perm, nc  * scene_settings.noise_freuency, derivs).y;
-	lh = pow(lh + 1, scene_settings.noise_redistrebution);
-	lh = round(lh * scene_settings.terracing) / scene_settings.terracing;
-
-	lh *= scene_settings.noise_amplitude;
-	//lh += volumes[0].Max.y / 2;
-	ly = poi.y;
-	if (biomes(lh, volumes[0].Max.y) == BIOME_OCEAN)
-	{
-		lh = (0.2 * volumes[0].Max.y) - 1;
-	}
-	float sign = -1;
-	if (ly > lh)
-	{
-		sign = 1;
-	}
-
-	sdf_texute[index] = make_float2(sign * fabs(length(poi - make_float3(poi.x, lh, poi.z))), 0);
+	float distance = get_terrain_distance(m2, poi, coord, scene_settings, -pos, volumes[0], perm);
+	
+	sdf_texute[index] = make_float2(distance, 0);
 }
 
 __device__
@@ -1044,10 +1051,10 @@ void load_map()
 
 
 __global__
-void sdf_collision_test(RCamera cam, RenderingSettings render_settings, cudaTextureObject_t tex, GPUBoundingBox* box, float3 step, volatile bool* overlaps, volatile bool* in_volume)
+void sdf_collision_test(RCamera cam, RenderingSettings render_settings, cudaTextureObject_t tex, GPUBoundingBox* box, GPUVolumeObjectInstance* instances, float3 step, volatile bool* overlaps, volatile bool* in_volume)
 {
-	float2 res = get_distance(render_settings, tex, cam.campos - box[0].Min, step);
-	if (!point_in_aabb(box[0], cam.campos))
+	float2 res = get_distance(render_settings, tex, cam.campos - instances[0].location, step);
+	if (!point_in_aabb(box[0], cam.campos - instances[0].location))
 	{
 		*in_volume = false;
 		*overlaps = false;
@@ -1066,7 +1073,7 @@ bool sdf_collision(RCamera cam)
 	gpuErrchk(cudaMalloc(&in_volume, sizeof(bool)));
 	gpuErrchk(cudaMemset(collides, false, sizeof(bool)));
 	gpuErrchk(cudaMemset(in_volume, false, sizeof(bool)));
-	sdf_collision_test << <1, 1 >> > (cam, cuda_render_settings, texObject, d_sdf_volumes, sdf_spacing, collides, in_volume);
+	sdf_collision_test << <1, 1 >> > (cam, cuda_render_settings, texObject, d_sdf_volumes, d_volume_instances, sdf_spacing, collides, in_volume);
 	bool h_overlaps, h_in_volume;
 	gpuErrchk(cudaMemcpy(&h_overlaps, collides, sizeof(bool), cudaMemcpyDeviceToHost));
 	gpuErrchk(cudaMemcpy(&h_in_volume, in_volume, sizeof(bool), cudaMemcpyDeviceToHost));
