@@ -1,6 +1,7 @@
 #include "WindowsInput.h"
 #include "RayEngine/Application.h"
 #include <iostream>
+#include "Window.h"
 
 
 #include <GLFW/glfw3.h>
@@ -13,14 +14,14 @@ namespace RayEngine
 	bool WindowsInput::is_key_pressed_impl(int keycode)
 	{
 		auto& window = Application::get().get_window();
-		auto state = glfwGetKey(&window, keycode);
+		auto state = glfwGetKey(window.window, keycode);
 		return state == GLFW_PRESS || state == GLFW_REPEAT;
 	}
 
 	bool WindowsInput::is_mouse_button_pressed_impl(int button)
 	{
 		auto& window = Application::get().get_window();
-		auto state = glfwGetMouseButton(&window, button);
+		auto state = glfwGetMouseButton(window.window, button);
 		return state == GLFW_PRESS;
 	}
 
@@ -42,7 +43,7 @@ namespace RayEngine
 	{
 		auto& window = Application::get().get_window();
 		double x_pos, y_pos;
-		glfwGetCursorPos(&window, &x_pos, &y_pos);
+		glfwGetCursorPos(window.window, &x_pos, &y_pos);
 		return { x_pos, y_pos };
 	}
 }

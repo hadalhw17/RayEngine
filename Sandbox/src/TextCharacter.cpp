@@ -16,14 +16,15 @@ void TextCharacter::on_detach()
 void TextCharacter::on_update()
 {
 	RayEngine::Application& app = RayEngine::Application::get();
-	TestSceneLayer& scene_layer = dynamic_cast<TestSceneLayer&>(app.get_scene_layer());
 
-	if (app.should_spawn && app.edit_mode && !app.ctrl && app.click_timer > 10.f)
+	TestSceneLayer& scene_layer = dynamic_cast<TestSceneLayer&>(app.get_scene_layer());
+	//------------------------Spawn object on click---------------------------------------------------------
+	if (app.should_spawn && app.edit_mode && !app.ctrl)
 	{
 		scene_layer.brush.brush_type = scene_layer.brush_type;
 		app.app_spawn_obj(scene_layer.m_scene->get_camera(), scene_layer.brush, last_x, SCR_HEIGHT - last_y);
-		app.click_timer = 0.f;
 	}
+	//-----------------------------------------------------------------------------------------------------
 }
 
 
@@ -83,7 +84,6 @@ bool TextCharacter::on_mouse_button_relseased(RayEngine::MouseButtonReleasedEven
 
 	app.mouse_right = false;
 	app.should_spawn = false;
-	app.click_timer = 100;
 	return true;
 }
 
@@ -164,7 +164,6 @@ bool TextCharacter::on_key_pressed(RayEngine::KeyPressedEvent& e)
 		tmp_cam.strafe(-app.character_speed);
 		break;
 	case RE_KEY_Q:
-		app.click_timer = 0.f;
 		app.app_toggle_shadow();
 		break;
 	default:
@@ -201,10 +200,10 @@ bool TextCharacter::on_key_pressed(RayEngine::KeyPressedEvent& e)
 		break;
 	case RE_KEY_LEFT_ALT:
 		app.edit_mode = !app.edit_mode;
-		app.click_timer = 0.f;
 		break;
 	}
 
+	
 	return true;
 }
 

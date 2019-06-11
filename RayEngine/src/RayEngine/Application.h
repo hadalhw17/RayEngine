@@ -3,7 +3,7 @@
 #include "RayEngine.h"
 #include "../Layers/LayerStack.h"
 #include <vector>
-
+#include "Window.h"
 
 class RRayTracer;
 class RScene;
@@ -27,7 +27,8 @@ namespace RayEngine
 		virtual ~Application();
 
 		void Run();
-		void RenderFrame();
+
+		inline const float delta_time() const { return application_window->delta_time(); }
 
 		void on_event(class Event& e);
 		virtual bool mouse_button_presssed(class MouseButtonPresedEvent& e);
@@ -46,12 +47,8 @@ namespace RayEngine
 		bool mouse_right = false;
 		bool show_mouse = true;
 		bool edit_mode = false;
-		float click_timer;
-		double currentFrame;
-		double lastFrame;
-		double deltaTime;
 		RenderingSettings render_settings;
-		WindowData window_data;
+
 
 		void app_toggle_shadow();
 		bool app_sdf_collision(RCamera cam);
@@ -65,40 +62,18 @@ namespace RayEngine
 
 		//------------------------Getters----------------------------------
 		inline static Application& get() { return *s_instance; }
-		inline GLFWwindow& get_window() { return *window; }
+		inline Window& get_window() { return *application_window; }
 		inline RLayerStack& get_layer_stack() { return m_layer_stack; }
 		class RSceneLayer& get_scene_layer();
 		//-----------------------------------------------------------------
-		void set_event_callback(std::function<void(Event&)> e) { window_data.function_callback = e; }
+
 		RLayerStack m_layer_stack;
-
-
 		//---------------------Should be defined in the !client!------------------------
 		Application* create_application();
 		//------------------------------------------------------------------------------
 	private:
-		//----------------------Window functions. Wille be moved to a separate class----
-		void initPixelBuffer();
-		int initGL();
-		int create_window();
-		bool check_shader_compile_status(unsigned int obj);
-		bool check_program_link_status(unsigned int obj);
-		//------------------------------------------------------------------------------
-
-	private:
 		static Application* s_instance;
-		GLFWwindow* window;
-		// vao and vbo handle
-		unsigned int vao, vbo, ibo;
-		// texture handle
-		unsigned int texture;
-		unsigned int shader_program, vertex_shader, fragment_shader;
-		int texture_location;
-		unsigned int pbo = 0;     // OpenGL pixel buffer object
-		unsigned int tex = 0;     // OpenGL texture object
-		struct cudaGraphicsResource* cuda_pbo_resource; // CUDA Graphics Resource (to transfer PBO)
-		// map PBO to get CUDA device pointer
-		unsigned int* d_output;
+		Window* application_window;
 	};
 
 }

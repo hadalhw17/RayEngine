@@ -44,7 +44,7 @@ namespace RayEngine
 	void RSceneLayer::on_event(RayEngine::Event& event)
 	{
 		Application& app = Application::get();
-		m_scene->Tick(app.deltaTime);
+		m_scene->Tick(app.delta_time());
 		m_scene->on_event(event);
 		RayEngine::EventDispatcher dispatcher(event);
 

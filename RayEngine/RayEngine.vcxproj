@@ -186,6 +186,7 @@
     <ClCompile Include="src\Triangle.cpp" />
     <ClCompile Include="src\UserInterface.cpp" />
     <ClCompile Include="src\Layers\UILayer.cpp" />
+    <ClCompile Include="src\Window.cpp" />
     <ClCompile Include="vendor\MetaStuff\include\StringCast.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -268,6 +269,7 @@
     <ClInclude Include="includes\imgui\imconfig.h" />
     <ClInclude Include="includes\imgui\imgui.h" />
     <ClInclude Include="src\Layers\UILayer.h" />
+    <ClInclude Include="src\Window.h" />
     <ClInclude Include="vendor\MetaStuff\include\JsonCast.h" />
     <ClInclude Include="vendor\MetaStuff\include\StringCast.h" />
     <ClInclude Include="vendor\MetaStuff\include\detail\MetaHolder.h" />

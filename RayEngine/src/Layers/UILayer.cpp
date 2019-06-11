@@ -90,7 +90,7 @@ namespace RayEngine
 		ImGuiIO& io = ImGui::GetIO();
 		Application& app = Application::get();
 		int width, heigth;
-		glfwGetWindowSize(&app.get_window(), &width, &heigth);
+		glfwGetWindowSize(app.get_window().window, &width, &heigth);
 		io.DisplaySize = ImVec2(width, heigth);
 
 		float time = (float)glfwGetTime();

@@ -82,16 +82,6 @@ struct texturess
 	cudaTextureObject_t texture[3];
 };
 
-namespace RayEngine
-{
-	struct WindowData
-	{
-		size_t width, heigth;
-		std::string title;
-		std::function<void(class Event&)> function_callback;
-	};
-}
-
 
 enum BiomeTypes
 {
