@@ -26,8 +26,11 @@
 #include "filter_functions.cuh"
 #include "cuda_memory_functions.cuh"
 #include <sstream>
+#include <iostream>
 #include "cuda_occupancy.h"
+#include "Layers/SceneLayer.h"
 #include <fstream>
+#include "RayEngine/Application.h"
 
 
 __constant__ float3x4 c_invViewMatrix;  // inverse view matrix
@@ -977,13 +980,16 @@ void generate_noise(const float3& pos)
 extern
 void save_map()
 {
+	RayEngine::Application& app = RayEngine::Application::get();
 	//delete h_grid;
 	h_grid = new float2[sdf_dim.x * sdf_dim.y * sdf_dim.z];
 	gpuErrchk(cudaMemcpy(h_grid, d_sdf, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2), cudaMemcpyDeviceToHost));
-
+	RayEngine::RSceneLayer& scene_layer = dynamic_cast<RayEngine::RSceneLayer&>(app.get_scene_layer());
+	SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
 	std::ostringstream file_name;
-	file_name << "Edited" << ".rsdf";
-	std::ofstream volume_file_stream("SDFs/" + file_name.str(), std::ios::binary);
+	file_name << "SDFs/" << scene.get_world_chunk().get_location().x << "_" << scene.get_world_chunk().get_location().z << ".rsdf";
+	//file_name << round(h_camera->campos.x * 300) / 300 * sdf_dim.z + round(h_camera->campos.z * 300) / 300 << ".rsdf";
+	std::ofstream volume_file_stream(file_name.str(), std::ios::binary);
 	volume_file_stream.write(reinterpret_cast<const char*> (&sdf_dim.x), sizeof(int));
 	volume_file_stream.write(reinterpret_cast<const char*> (&sdf_dim.y), sizeof(int));
 	volume_file_stream.write(reinterpret_cast<const char*> (&sdf_dim.z), sizeof(int));
@@ -1006,14 +1012,40 @@ void save_map()
 }
 
 extern
-void load_map()
+void load_map(std::string filename)
 {
-	Grid* distance_field = new Grid(std::string("SDFs/Edited.rsdf"));
+
+	std::string index;
+	std::istringstream is(filename);
+	int i_index;
+	int x;
+	int y;
+	while (getline(is, index, '/'))
+	{
+		if (atoi(index.c_str()))
+		{
+			x = atoi(index.c_str());
+			is = std::istringstream(index);
+			while (getline(is, index, '_'))
+			{
+				if (atoi(index.c_str()))
+				{
+					y = atoi(index.c_str());
+					break;
+				}
+			}
+			break;
+		}
+	}
+
+	float3 pos = { x, 0, y };
+	Grid* distance_field = new Grid(filename);
 
 	float size_sdf = distance_field->voxels.size() * sizeof(float2);
 
 	sdf_spacing = distance_field->spacing;
 	sdf_dim = distance_field->sdf_dim;
+
 
 	h_grid = new float2[distance_field->voxels.size()];
 
@@ -1034,6 +1066,7 @@ void load_map()
 		//delete[] h_grid, h_volumes;
 		gpuErrchk(cudaFree(d_sdf_volumes));
 		gpuErrchk(cudaFree(d_sdf));
+		gpuErrchk(cudaFree(d_volume_instances));
 	}
 	gpuErrchk(cudaMalloc((void**)& d_sdf, size_sdf));
 	gpuErrchk(cudaMalloc(&d_sdf_volumes, sizeof(GPUBoundingBox)));
@@ -1043,9 +1076,16 @@ void load_map()
 	gpuErrchk(cudaMemcpy(d_sdf, h_grid, size_sdf, cudaMemcpyHostToDevice));
 	gpuErrchk(cudaMemcpy(d_sdf_volumes, h_volumes, sizeof(GPUBoundingBox), cudaMemcpyHostToDevice));
 
+	volume_objs = new GPUVolumeObjectInstance();
+	volume_objs = new GPUVolumeObjectInstance(0, pos, make_float3(0));
+	gpuErrchk(cudaMalloc(&d_volume_instances, sizeof(GPUVolumeObjectInstance)));
+	gpuErrchk(cudaMemcpy(d_volume_instances, volume_objs, sizeof(GPUVolumeObjectInstance), cudaMemcpyHostToDevice));
+
 	gpuErrchk(cudaDeviceSynchronize());
 	bind_sdf_to_texture(&d_sdf, sdf_dim, 1);
 	gpuErrchk(cudaDeviceSynchronize());
+
+	delete distance_field, h_volumes;
 }
 
 

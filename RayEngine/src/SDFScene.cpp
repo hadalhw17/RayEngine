@@ -13,6 +13,10 @@ extern "C"
 void cuda_update_chunk(const RayEngine::RChunk& world_chunk, const RayEngine::RPerlinNoise& noise);
 extern "C"
 void cuda_update_chunk_gen(const RayEngine::RChunk& world_chunk, const RayEngine::RPerlinNoise& noise);
+
+extern
+void load_map(std::string filename);
+
 SDFScene::SDFScene()
 {
 
@@ -46,11 +50,17 @@ void SDFScene::init_cuda_res()
 void SDFScene::update_chunk()
 {
 	cuda_update_chunk(world_chunk, noise);
+	
 }
 
 void SDFScene::generate_chunk()
 {
 	cuda_update_chunk_gen(world_chunk, noise);
+}
+
+void SDFScene::load_chunk_from_file(std::string filename)
+{
+	load_map(filename);
 }
 
 void SDFScene::write_to_file()

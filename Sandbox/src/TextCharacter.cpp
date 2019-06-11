@@ -4,7 +4,7 @@
 
 #include "TextCharacter.h"
 #include "TestSceneLayer.h"
-
+#include <iostream>
 void TextCharacter::on_attach()
 {
 }
@@ -47,17 +47,8 @@ void TextCharacter::on_update()
 	{
 		
 	}
-	SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
-	GPUBoundingBox world_box = GPUBoundingBox(make_float3(0.f) + scene.get_world_chunk().get_location(),
-		scene_layer.m_scene->get_world_chunk().get_sdf().box_max + scene.get_world_chunk().get_location());
-
-	if (!point_in_aabb(world_box, camera.position))
-	{
-		float3 rounded_pos = { round(camera.position.x * 300) / 300, 0, round(camera.position.z * 300) / 300 };
-		float3 pos = position_chunk(world_box, rounded_pos);
-		scene.move_chunk({ round(pos.x * 300) / 300, 0, round(pos.z * 300) / 300 });
-		scene.generate_chunk();
-	}
+	
+	
 
 	//-----------------------------------------------------------------------------------------------------
 }
@@ -224,7 +215,29 @@ bool TextCharacter::on_key_pressed(RayEngine::KeyPressedEvent& e)
 	{
 		camera = tmp_cam;
 	}
+	TestSceneLayer& scene_layer = dynamic_cast<TestSceneLayer&>(app.get_scene_layer());
+	SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
+	GPUBoundingBox world_box = GPUBoundingBox(make_float3(0.f) + scene.get_world_chunk().get_location(),
+		scene_layer.m_scene->get_world_chunk().get_sdf().box_max + scene.get_world_chunk().get_location());
 
+	if (!point_in_aabb(world_box, camera.position))
+	{
+
+		float3 rounded_pos = { round(camera.position.x * 300) / 300, 0, round(camera.position.z * 300) / 300 };
+		float3 pos = position_chunk(world_box, rounded_pos);
+		scene.move_chunk({ round(pos.x * 300) / 300, 0, round(pos.z * 300) / 300 });
+		std::ostringstream file_name;
+
+		file_name << "SDFs/" << scene.get_world_chunk().get_location().x  << "_" << scene.get_world_chunk().get_location().z << ".rsdf";
+		std::ifstream volume_file_stream(file_name.str(), std::ios::binary);
+		if (volume_file_stream.is_open())
+		{
+			REE_LOG("Loading chunk from file");
+			scene.load_chunk_from_file(file_name.str());
+		}
+		else
+			scene.generate_chunk();
+	}
 	switch (e.get_key_code())
 	{
 	case RE_KEY_TAB:

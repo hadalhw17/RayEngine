@@ -18,7 +18,7 @@
 extern
 void save_map();
 extern
-void load_map();
+void load_map(std::string filename);
 extern
 void update_render_settings(const RenderingSettings& render_settings, const SceneSettings& scene_settings);
 extern
@@ -235,7 +235,7 @@ namespace RayEngine
 				ImGui::SameLine();
 				if (ImGui::Button("Load map"))
 				{
-					std::thread save_file(load_map);
+					std::thread save_file(load_map, "SDFs/Edited.rsdf");
 					save_file.detach();
 				}
 				if (ImGui::CollapsingHeader("Generator options"))

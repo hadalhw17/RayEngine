@@ -7,6 +7,7 @@
 #include "TextureObject.h"
 #include "Material.h"
 #include <vector>
+#include <string>
 
 
 class RAY_ENGINE_API SDFScene :
@@ -24,6 +25,7 @@ public:
 
 	void update_chunk();
 	void generate_chunk();
+	void load_chunk_from_file(std::string filename);
 
 	RayEngine::RPerlinNoise noise;
 	std::vector<VoxelMaterial> materials;
