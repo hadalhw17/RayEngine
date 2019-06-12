@@ -25,8 +25,9 @@
 #define HELPER_MATH_H
 
 
-
-#include "cuda_runtime.h"
+#define NOMINMAX
+#include <vector_types.h>
+#include <vector_functions.h>
 
 typedef unsigned int uint;
 typedef unsigned short ushort;
@@ -35,8 +36,14 @@ typedef unsigned short ushort;
 #define EXIT_WAIVED 2
 #endif
 
+inline
+__device__
+float fsel(float a, float b, float c)
+{
+	return a >= 0 ? b : c;
+}
 #ifndef __CUDACC__
-#include <math.h>
+//#include <math.h>
 
 
 inline bool operator ==(float4 a, float4 b)
@@ -47,14 +54,18 @@ inline bool operator ==(float4 a, float4 b)
 // host implementations of CUDA functions
 ////////////////////////////////////////////////////////////////////////////////
 
+
+
+
+
 inline float fminf(float a, float b)
 {
-	return a < b ? a : b;
+	return fsel(b-a, a, b);
 }
 
 inline float fmaxf(float a, float b)
 {
-	return a > b ? a : b;
+	return fsel(b - a, b, a);
 }
 
 inline int max(int a, int b)

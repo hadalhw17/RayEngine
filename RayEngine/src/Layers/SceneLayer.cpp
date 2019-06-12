@@ -1,15 +1,10 @@
+#include "repch.h"
+
+
 #include "SceneLayer.h"
-#include "Camera.h"
 
 #include "Scene.h"
-#include "MovableCamera.h"
-#include <iostream>
 #include "Input.h"
-#include "KeyCodes.h"
-#include "MouseButtonCodes.h"
-#include "Events/Event.h"
-#include "Events/KeyEvent.h"
-#include "Events/MouseEvent.h"
 #include "Events/ApplicationEvent.h"
 #include "RayEngine/Application.h"
 

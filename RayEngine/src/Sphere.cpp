@@ -1,10 +1,11 @@
+#include "repch.h"
+
+
 #include "Sphere.h"
 
 #include "Ray.h"
 
-#include <memory>
 #include <thrust/swap.h>
-#include "helper_math.h"
 
 namespace RayEngine
 {

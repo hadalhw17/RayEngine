@@ -1,14 +1,8 @@
+#include "repch.h"
+
 #include "Grid.h"
-#include <algorithm>
-#include <iostream>
-#include "KDTree.h"
-#include "GPUBoundingBox.h"
-#include <fstream>
 #include <filesystem/resolver.h>
 #include "MeshAdjacencyTable.h"
-#include "RStaticMesh.h"
-#include "RayEngine/RayEngine.h"
-#include<string>
 
 
 Grid::Grid()
@@ -25,8 +19,6 @@ Grid::Grid(std::string file_name)
 Grid::~Grid()
 {
 }
-
-
 
 void Grid::load_volume_floam_file(const std::string filename)
 {

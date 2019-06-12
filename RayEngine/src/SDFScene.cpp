@@ -1,9 +1,8 @@
+#include "repch.h"
+
+
 #include "SDFScene.h"
-#include "Camera.h"
 #include "RayEngine/Application.h"
-#include <fstream>
-#include <stdio.h>
-#include <stdlib.h>
 #include <JsonCast.h>
 #include "SDF/Chunk.h"
 
@@ -49,6 +48,7 @@ void SDFScene::init_cuda_res()
 
 void SDFScene::update_chunk()
 {
+
 	cuda_update_chunk(world_chunk, noise);
 	
 }
@@ -60,7 +60,8 @@ void SDFScene::generate_chunk()
 
 void SDFScene::load_chunk_from_file(std::string filename)
 {
-	load_map(filename);
+	std::thread(load_map, filename).detach();
+	
 }
 
 void SDFScene::write_to_file()

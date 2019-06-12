@@ -1,3 +1,5 @@
+#include "repch.h"
+
 #include "Ray.h"
 #include "cuda_runtime.h"
 

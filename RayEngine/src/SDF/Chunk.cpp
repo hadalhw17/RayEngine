@@ -1,5 +1,5 @@
+#include "repch.h"
 #include "Chunk.h"
-#include <iostream>
 namespace RayEngine
 {
 	RChunk::RChunk()

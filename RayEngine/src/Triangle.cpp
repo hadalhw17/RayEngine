@@ -1,6 +1,8 @@
+#include "repch.h"
+
+
 #include "Triangle.h"
 #include "BoundingVolume.h"
-#include "helper_math.h"
 #include "cuda_runtime_api.h"
 
 

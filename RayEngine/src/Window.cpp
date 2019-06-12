@@ -1,20 +1,17 @@
+#include "repch.h"
+
+
 #include "Window.h"
 
 #include <GL/gl3w.h>    // Initialize with gl3wInit()
 #include <GLFW/glfw3.h>
-
 #include <cuda_gl_interop.h>
 
-#include "Events/Event.h"
 #include "Events/ApplicationEvent.h"
-#include "Events/MouseEvent.h"
-#include "Events/KeyEvent.h"
 #include "Layers/SceneLayer.h"
 #include "Layers/UILayer.h"
 #include "RayEngine/Application.h"
-#include "MouseButtonCodes.h"
 
-#include <iostream>
 
 extern void cuda_render_frame(uint* output, const uint& width, const uint& heigth);
 

@@ -1,3 +1,6 @@
+#include "repch.h"
+
+
 #include "UILayer.h"
 #include "../src/Camera.h"
 #include "UserInterface.h"
@@ -7,10 +10,8 @@
 #include "../../Platform/OpenGL/imgui_opengl_imlementation.h"
 #include "../../Platform/OpenGL/imgui_glfw_implementation.h"
 #include "GL/gl3w.h"
-#include "KeyCodes.h"
 
 #include "GLFW/glfw3.h"
-#include <thread>
 #include "SceneLayer.h"
 
 
@@ -252,7 +253,7 @@ namespace RayEngine
 					{
 						//generate_noise();
 					}
-					if (ImGui::SliderInt("Terracing", (int*)& scene_settings.terracing, 1.f, 300, "%.4f"))
+					if (ImGui::SliderInt("Terracing", (int*)& scene_settings.terracing, 1.f, 1000, "%.4f"))
 					{
 						//generate_noise();
 					}
@@ -313,7 +314,7 @@ namespace RayEngine
 				ImGui::SliderFloat("Light angle", &scene_settings.light_pos.x, 0.f, 1000.f, "%.4f", 2.0f);
 				ImGui::SliderFloat("Light Y", &scene_settings.light_pos.y, 0.f, 500.f, "%.4f", 2.0f);
 				ImGui::SliderFloat("Light intensity", &scene_settings.light_intensity, 0.f, 100000, "%.4f", 2.0f);
-				ImGui::SliderInt("Prelumbra size", &scene_settings.soft_shadow_k, 1.f, 128.0f, "%.4f");
+				ImGui::SliderInt("Prelumbra size", &scene_settings.soft_shadow_k, 1, 128, "%.4f");
 				ImGui::SliderFloat("Fog density", &scene_settings.fog_deisity, 0.f, 1.f, "%.4f", 2.0f); ImGui::SameLine();
 				ImGui::Checkbox("Render Fog", &scene_settings.enable_fog);
 				ImGui::EndTabItem();

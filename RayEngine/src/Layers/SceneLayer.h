@@ -7,7 +7,7 @@
 #include "KDThreeGPU.h"
 #include "Camera.h"
 #include "Scene.h"
-#include "RayEngine/RayEngine.h"
+
 #include "SDFScene.h"
 
 namespace RayEngine

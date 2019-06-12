@@ -1,5 +1,7 @@
+#include "repch.h"
+
+
 #include "RayTracer.h"
-#include "Camera.h"
 #include "Sphere.h"
 
 
@@ -8,17 +10,8 @@
 #include "RStaticMesh.h"
 #include "Source.h"
 #include "Triangle.h"
-#include "KDTree.h"
 #include "Object.h"
 
-#include <limits>
-#include <random>
-#include <cmath>
-#include <iostream>
-#include <memory>
-
-#include "cuda_runtime_api.h"
-#include "helper_math.h"
 #include "SDF/Grid.h"
 
 float4 _clip(float4 color)

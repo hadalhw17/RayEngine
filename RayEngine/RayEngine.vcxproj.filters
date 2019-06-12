@@ -263,9 +263,6 @@
     <ClInclude Include="src\GPUBoundingBox.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\helper_math.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\jpeg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -425,6 +422,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\SDF\Chunk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\serialise.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\cuda-src\gpu_structs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

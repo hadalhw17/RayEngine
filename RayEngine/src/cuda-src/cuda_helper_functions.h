@@ -7,7 +7,6 @@
 
 #include "../Camera.h"
 #include "../RayEngine/RayEngine.h"
-#include "helper_math.h"
 #include "../GPUBoundingBox.h"
 #include "Atmosphere.cuh"
 
@@ -21,6 +20,18 @@ float2 mul(const float2x2& M, const float2& v)
 	return r;
 }
 
+
+template <typename T> 
+__device__ 
+int sgn(T val) {
+	return (T(0) < val) - (val < T(0));
+}
+
+__device__
+float3 fract(float3 a)
+{
+	return make_float3(a.x - (int)floorf(a.x), a.y - (int)floorf(a.y), a.z - (int)floorf(a.z));
+}
 
 // transform vector by matrix (no translation)
 __device__
@@ -87,7 +98,7 @@ void illuminate(const float3& P, const float3& light_pos, float3& lightDir, floa
 	float r2 = light_pos.x * light_pos.x + light_pos.y * light_pos.y + light_pos.z * light_pos.z;
 	distance = sqrtf(r2);
 	lightDir.x /= distance, lightDir.y /= distance, lightDir.z /= distance;
-	lightIntensity = make_float3(0.86, 0.80, 0.45) * intensity / (4 * M_PI * r2);
+	lightIntensity = make_float3(0.86f, 0.80f, 0.45f) * intensity / (4.f * M_PI * r2);
 }
 
 
@@ -122,10 +133,10 @@ float3 clip(const float3& color)
 ////////////////////////////////////////////////////
 // Normal visualisation material
 ////////////////////////////////////////////////////
-__forceinline__ HOST_DEVICE_FUNCTION
+__forceinline__ __device__
 void simple_shade(float3& color, const float3& normal, float3& ray_dir)
 {
-	color += make_float3(fmaxf(0.f, dot(normal, -ray_dir) / 2)); // facing ratio 
+	color = mix(color, make_float3(fmaxf(0.f, dot(normal, -ray_dir) / 2)), 0.5); // facing ratio 
 }
 
 ////////////////////////////////////////////////////
@@ -177,7 +188,7 @@ float3 min(const float3& a, const float3& b)
 __forceinline__ HOST_DEVICE_FUNCTION
 void gray_scale(float3& color)
 {
-	color = make_float3((0.3 * color.x) + (0.59 * color.y) + (0.11 * color.z));
+	color = make_float3((0.3f * color.x) + (0.59f * color.y) + (0.11f * color.z));
 
 }
 
@@ -198,7 +209,7 @@ float3 uniformSampleHemisphere(const float& r1, const float& r2)
 	// cos(theta) = u1 = y
 	// cos^2(theta) + sin^2(theta) = 1 -> sin(theta) = srtf(1 - cos^2(theta))
 	float sinTheta = sqrtf(1 - r1 * r1);
-	float phi = 2 * M_PI * r2;
+	float phi = 2.f * M_PI * r2;
 	float x = sinTheta * cosf(phi);
 	float z = sinTheta * sinf(phi);
 	return make_float3(x, r1, z);

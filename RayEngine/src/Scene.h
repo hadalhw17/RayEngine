@@ -1,8 +1,8 @@
 #pragma once
-#include <vector>
-#include <memory>
 
-#include "RayEngine/RayEngine.h"
+
+
+
 #include "Camera.h"
 #include "SceneObject.h"
 #include "MovableCamera.h"
@@ -22,7 +22,7 @@ class RTriangle;
 class RTriMesh;
 class RPlane;
 class RStaticMesh;
-class RayEngine::RSceneObject;
+
 class RAY_ENGINE_API RScene
 {
 public:

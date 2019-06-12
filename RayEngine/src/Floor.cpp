@@ -1,6 +1,8 @@
+#include "repch.h"
+
+
 #include "Floor.h"
 #include "RayEngine/RayEngine.h"
-#include "helper_math.h"
 
 namespace RayEngine
 {

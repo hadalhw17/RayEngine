@@ -2,19 +2,7 @@
 
 #include "RayEngine.h"
 #include "../Layers/LayerStack.h"
-#include <vector>
 #include "Window.h"
-
-class RRayTracer;
-class RScene;
-class RKDTreeCPU;
-class RKDThreeGPU;
-struct RCamera;
-struct float4;
-struct GLFWwindow;
-class TextRenderer;
-class RMovableCamera;
-
 
 
 namespace RayEngine
@@ -51,8 +39,8 @@ namespace RayEngine
 
 
 		void app_toggle_shadow();
-		bool app_sdf_collision(RCamera cam);
-		void app_spawn_obj(RCamera pos, TerrainBrush brush, int x, int y);
+		bool app_sdf_collision(class RCamera cam);
+		void app_spawn_obj(class RCamera pos, TerrainBrush brush, int x, int y);
 
 		//------------------------Layer functions--------------------------
 		void push_layer(RLayer* layer);

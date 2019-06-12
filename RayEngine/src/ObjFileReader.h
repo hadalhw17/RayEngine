@@ -13,15 +13,12 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-
 #include "RStaticMesh.h"
 #include <filesystem/resolver.h>
 #include <unordered_map>
 #include <fstream>
 #include <functional>
-#include <iostream>
 #include "MeshAdjacencyTable.h"
-
 namespace RayEngine
 {
 	/// Tokenize a string into a list by splitting at 'delim'
@@ -132,7 +129,7 @@ namespace RayEngine
 				}
 			}
 
-			mesh->faces = new float3[indices.size() / 3];
+			mesh->faces = new uint3[indices.size() / 3];
 			memcpy(mesh->faces, indices.data(), sizeof(uint32_t) * indices.size());
 			for (uint32_t i = 0; i < indices.size() / 3; ++i)
 			{

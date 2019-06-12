@@ -1,5 +1,5 @@
 #pragma once
-#include "RayEngine/RayEngine.h"
+
 
 extern float3 make_float3(float);
 extern float4 make_float4(float);

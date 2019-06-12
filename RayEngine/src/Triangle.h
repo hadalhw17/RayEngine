@@ -1,7 +1,7 @@
 #pragma once
 #include "Object.h"
 
-#include "RayEngine/RayEngine.h"
+
 
 #include <vector_types.h>
 class RRay;

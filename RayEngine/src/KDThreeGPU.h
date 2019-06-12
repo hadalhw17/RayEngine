@@ -17,7 +17,7 @@
 		RKDTreeNodeGPU* GetNodes() const;
 		std::vector<int> GetIndexList() const;
 		float3* get_verts() const;
-		float3* get_faces() const;
+		uint3* get_faces() const;
 		float3* get_normals() const;
 		float2* get_uvs() const;
 		size_t GetNumNodes() const;
@@ -39,8 +39,8 @@
 		RKDTreeNodeGPU* nodes;
 
 
-		float3* verts, * faces, * normals;
-
+		float3* verts, * normals;
+		uint3* faces;
 
 		size_t num_nodes;
 		size_t num_faces;

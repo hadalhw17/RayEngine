@@ -1,9 +1,9 @@
 #pragma once
 
-#include "RayEngine/RayEngine.h"
+
 #include "Layers/Layer.h"
 #include "UserInterface.h"
-#include <memory>
+
 #include "RayEngine/Application.h"
 #include "Events/KeyEvent.h"
 #include "Events/MouseEvent.h"

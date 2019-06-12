@@ -1,3 +1,6 @@
+#include "repch.h"
+
+
 #include "SceneObject.h"
 
 #include "ObjectComponent.h"

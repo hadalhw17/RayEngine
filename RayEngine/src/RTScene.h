@@ -1,6 +1,6 @@
 #pragma once
 #include "Scene.h"
-#include "RayEngine/RayEngine.h"
+
 
 
 class RAY_ENGINE_API RTScene
@@ -24,7 +24,7 @@ protected:
 	virtual void build_scene() override;
 private:
 	float3* arrv;
-	float3* arrf;
+	uint3* arrf;
 	float3* normals;
 	float2* uvs;
 	std::vector<float4> m_triangles;

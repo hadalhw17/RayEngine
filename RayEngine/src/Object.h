@@ -1,8 +1,9 @@
 #pragma once
 
 #include "RayEngine/RayEngine.h"
-#include "helper_math.h"
 
+extern float4 make_float4(float x);
+extern float3 make_float3(float x);
 
 namespace RayEngine
 {

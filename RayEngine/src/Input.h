@@ -1,5 +1,5 @@
 #pragma once
-#include "RayEngine/RayEngine.h"
+
 
 
 namespace RayEngine

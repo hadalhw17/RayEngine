@@ -1,8 +1,7 @@
 #pragma once
-#include "../RayEngine/RayEngine.h"
+#include "cuda-src/gpu_structs.h"
 #include "cuda_helper_functions.h"
 #include "../Camera.h"
-#include "helper_math.h"
 #include "../GPUBoundingBox.h"
 #include "CUDARayTracing.cuh"
 #include "kd_tree_functions.cuh"
@@ -20,8 +19,6 @@ void generate_ray(float3& ray_o, float3& ray_dir,
 
 	if (imageX >= width || imageY >= heigth)
 		return;
-
-	int index = (imageY * width) + imageX;
 
 	float sx = (float)imageX / (width - 1.0f);
 	float sy = 1.0f - ((float)imageY / (heigth - 1.0f));
@@ -89,9 +86,7 @@ bool gpu_ray_box_intersect(const GPUBoundingBox& bbox, const float3& ray_o, cons
 	t_near = tmin;
 	t_far = tmax;
 
-	if (t_near < 0) {
-		t_near = 0;
-	}
+	t_near = fsel(t_near, t_near, 0.f);
 
 	return true;
 }
@@ -267,11 +262,6 @@ bool stackless_kdtree_traversal(RKDTreeNodeGPU* node,
 		new_o.x = scene_objs[curr_obj_count].location.x * cosy + scene_objs[curr_obj_count].location.z * siny;
 		new_o.y = -scene_objs[curr_obj_count].location.y;
 		new_o.z = -scene_objs[curr_obj_count].location.x * siny + scene_objs[curr_obj_count].location.z * cosy;
-		//new_o += make_float3(-scene_objs[curr_obj_count].location.z, -scene_objs[curr_obj_count].location.y, -scene_objs[curr_obj_count].location.x);
-		//new_dir.x = hit_result.ray_dir.x;
-		//new_dir.y = hit_result.ray_dir.y;
-		//new_dir.z = hit_result.ray_dir.z;
-
 	}
 
 	new_dir = normalize(new_dir);

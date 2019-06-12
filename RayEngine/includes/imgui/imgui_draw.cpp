@@ -20,6 +20,7 @@ Index of this file:
 // [SECTION] Default font data (ProggyClean.ttf)
 
 */
+#include "repch.h"
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
@@ -31,7 +32,6 @@ Index of this file:
 #endif
 #include "imgui_internal.h"
 
-#include <stdio.h>      // vsnprintf, sscanf, printf
 #if !defined(alloca)
 #if defined(__GLIBC__) || defined(__sun) || defined(__CYGWIN__) || defined(__APPLE__)
 #include <alloca.h>     // alloca (glibc uses <alloca.h>. Note that Cygwin may have _WIN32 defined, so the order matters here)
@@ -41,7 +41,6 @@ Index of this file:
 #define alloca _alloca  // for clang with MS Codegen
 #endif
 #else
-#include <stdlib.h>     // alloca
 #endif
 #endif
 

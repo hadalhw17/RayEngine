@@ -1,35 +1,18 @@
-
-#include <stdio.h>
 #define NOMINMAX
+#include "repch.h"
+#include "Application.h"
 
-#include "../RayTracer.h"
-#include "RayEngine.h"
+
 #include "../Scene.h"
-#include "../KDTree.h"
-#include "../Camera.h"
-#include "../KDThreeGPU.h"
 #include "../SceneObject.h"
 
-#include "helper_math.h"
 
-#include <iostream>
-#include <vector>
-#include "Application.h"
-#include "../MovableCamera.h"
-#include <thread>
 #include "../SDF/Grid.h"
-#include <sstream>
 #include "../Material.h"
 #include "../PerlinNoise.h"
-#include "Events/Event.h"
 #include "Events/ApplicationEvent.h"
-#include "Events/MouseEvent.h"
-#include "Events/KeyEvent.h"
 #include "Layers/SceneLayer.h"
 #include "Layers/UILayer.h"
-
-#include "MouseButtonCodes.h"
-#include "KeyCodes.h"
 
 extern void free_memory();
 extern void toggle_shadow();

@@ -1,6 +1,5 @@
 #pragma once
 #include "../RayEngine/RayEngine.h"
-#include "helper_math.h"
 #include "cuda_helper_functions.h"
 #include "cuda_memory_functions.cuh"
 #include "ray_functions.cuh"
@@ -75,13 +74,13 @@ float quinticDeriv(const float& t)
 
 /* inline */
 __device__
-uint8_t hash(const unsigned*& perm, const int& x, const int& y, const int& z)
+uint8_t hash(const cudaTextureObject_t& permutation, const int& x, const int& y, const int& z)
 {
-	return perm[perm[perm[x] + y] + z];
+	return tex2D<uint>(permutation, tex2D<uint>(permutation, x, y), z);
 }
 
 __device__
-float3 eval(const unsigned*& perm, const float3& p, float3& derivs)
+float3 eval(const cudaTextureObject_t& permutation, const float3& p, float3& derivs)
 {
 	int xi0 = ((int)floor(p.x)) & tableSizeMask;
 	int yi0 = ((int)floor(p.y)) & tableSizeMask;
@@ -98,20 +97,21 @@ float3 eval(const unsigned*& perm, const float3& p, float3& derivs)
 	float u = smoothstep(tx);
 	float v = smoothstep(ty);
 	float w = smoothstep(tz);
-
+	
 	// generate vectors going from the grid points to p
 	float x0 = tx, x1 = tx - 1;
 	float y0 = ty, y1 = ty - 1;
 	float z0 = tz, z1 = tz - 1;
 
-	float a = gradientDotV(hash(perm, xi0, yi0, zi0), x0, y0, z0);
-	float b = gradientDotV(hash(perm, xi1, yi0, zi0), x1, y0, z0);
-	float c = gradientDotV(hash(perm, xi0, yi1, zi0), x0, y1, z0);
-	float d = gradientDotV(hash(perm, xi1, yi1, zi0), x1, y1, z0);
-	float e = gradientDotV(hash(perm, xi0, yi0, zi1), x0, y0, z1);
-	float f = gradientDotV(hash(perm, xi1, yi0, zi1), x1, y0, z1);
-	float g = gradientDotV(hash(perm, xi0, yi1, zi1), x0, y1, z1);
-	float h = gradientDotV(hash(perm, xi1, yi1, zi1), x1, y1, z1);
+	float a = gradientDotV(hash(permutation, xi0, yi0, zi0), x0, y0, z0);
+	float b = gradientDotV(hash(permutation, xi1, yi0, zi0), x1, y0, z0);
+	float c = gradientDotV(hash(permutation, xi0, yi1, zi0), x0, y1, z0);
+	float d = gradientDotV(hash(permutation, xi1, yi1, zi0), x1, y1, z0);	
+
+	float e = gradientDotV(hash(permutation, xi0, yi0, zi1), x0, y0, z1);
+	float f = gradientDotV(hash(permutation, xi1, yi0, zi1), x1, y0, z1);
+	float g = gradientDotV(hash(permutation, xi0, yi1, zi1), x0, y1, z1);
+	float h = gradientDotV(hash(permutation, xi1, yi1, zi1), x1, y1, z1);
 
 	float du = smoothstepDeriv(tx);
 	float dv = smoothstepDeriv(ty);
@@ -126,9 +126,9 @@ float3 eval(const unsigned*& perm, const float3& p, float3& derivs)
 	float k6 = (a + g - c - e);
 	float k7 = (b + c + e + h - a - d - f - g);
 
-	derivs.x = du * (k1 + k4 * v + k5 * w + k7 * v * w);
-	derivs.y = dv * (k2 + k4 * u + k6 * w + k7 * v * w);
-	derivs.z = dw * (k3 + k5 * u + k6 * v + k7 * v * w);
+	//derivs.x = du * (k1 + k4 * v + k5 * w + k7 * v * w);
+	//derivs.y = dv * (k2 + k4 * u + k6 * w + k7 * v * w);
+	//derivs.z = dw * (k3 + k5 * u + k6 * v + k7 * v * w);
 
 	return make_float3(k0 + k1 * u + k2 * v + k3 * w + k4 * u * v + k5 * u * w + k6 * v * w + k7 * u * v * w);
 }
@@ -143,7 +143,7 @@ BiomeTypes biomes(const float& lh, const float& elev)
 }
 
 __device__
-float terrainH(const float2x2& m2, const float2& x, const unsigned*& perm, float3& p3, float3& derivs, const float& freq, const float& amp)
+float terrainH(const float2x2& m2, const float2& x, const cudaTextureObject_t& permutation, float3& p3, float3& derivs, const float& freq, const float& amp)
 {
 	float2  p = x * 0.003;
 	p3 = make_float3(p.x, 0, p.y);
@@ -152,7 +152,7 @@ float terrainH(const float2x2& m2, const float2& x, const unsigned*& perm, float
 	float2  d = make_float2(0.0);
 	for (int i = 0; i < freq + 6; i++)
 	{
-		float3 n = eval(perm, p3, derivs);
+		float3 n = eval(permutation, p3, derivs);
 		d.x += n.y;
 		d.y += n.z;
 		a += b * n.x / (1.0 + dot(d, d));
@@ -164,7 +164,7 @@ float terrainH(const float2x2& m2, const float2& x, const unsigned*& perm, float
 	return amp * a;
 }
 __device__
-float terrainM(float2x2 m2, float2 x, const unsigned*& perm, float3& p3, float3& derivs, float freq, float amp)
+float terrainM(float2x2 m2, float2 x, const cudaTextureObject_t& permutation, float3& p3, float3& derivs, float freq, float amp)
 {
 	float2  p = x * 0.003;
 	p3 = make_float3(p.x, 0, p.y);
@@ -173,7 +173,7 @@ float terrainM(float2x2 m2, float2 x, const unsigned*& perm, float3& p3, float3&
 	float2  d = make_float2(0.0);
 	for (int i = 0; i < freq; i++)
 	{
-		float3 n = eval(perm, p3, derivs);
+		float3 n = eval(permutation, p3, derivs);
 		d.x += n.y;
 		d.y += n.z;
 		a += b * n.x / (1.0 + dot(d, d));
@@ -184,7 +184,7 @@ float terrainM(float2x2 m2, float2 x, const unsigned*& perm, float3& p3, float3&
 	return a;
 }
 __device__
-float terrainL(float2x2 m2, float2 x, const unsigned*& perm, float3& p3, float3& derivs)
+float terrainL(float2x2 m2, float2 x, const cudaTextureObject_t& permutation, float3& p3, float3& derivs)
 {
 	float2  p = x * 0.003;
 	p3 = make_float3(p.x, 0, p.y);
@@ -193,7 +193,7 @@ float terrainL(float2x2 m2, float2 x, const unsigned*& perm, float3& p3, float3&
 	float2  d = make_float2(0.0);
 	for (int i = 0; i < 3; i++)
 	{
-		float3 n = eval(perm, p3, derivs);
+		float3 n = eval(permutation, p3, derivs);
 		d.x += n.y;
 		d.y += n.z;
 		a += b * n.x / (1.0 + dot(d, d));
@@ -424,8 +424,8 @@ __forceinline__
 float aabb_distance(const float3& p, const float3& s)
 {
 	float3 d = fabs(p) - s;
-	return length(max(d, make_float3(0.0)))
-		+ min(max(d.x, max(d.y, d.z)), 0.0); // remove this line for an only partially signed sdf
+	return length(max(d, make_float3(0.0f)))
+		+ min(max(d.x, max(d.y, d.z)), 0.0f); // remove this line for an only partially signed sdf
 }
 
 
@@ -467,31 +467,31 @@ float get_distance_to_sdf(const RenderingSettings& render_settings, const cudaTe
 }
 
 __device__
-float get_terrain_distance(float2x2 m2, float3 poi, float3 coord, SceneSettings scene_settings, float3 transform, GPUBoundingBox volume, const unsigned* perm)
+float get_terrain_distance(float2x2 m2, float3 poi, float3 coord, SceneSettings scene_settings, float3 transform, GPUBoundingBox volume, const cudaTextureObject_t& permutation, const bool& norm)
 {
 	float lh = 0.0f;
 	float ly = 0.0f;
 	float3 derivs;
-	float3 nc = make_float3(coord.x / scene_settings.world_size.x, 0, coord.z / scene_settings.world_size.z);
-	//lh = f(poi.x, poi.z, scene_settings.noise_freuency, scene_settings.noise_amplitude + 10);
+
+
 	float3 tr_coord = coord - transform;
-	lh = terrainM(m2, make_float2(poi.x - transform.x, poi.z - transform.z), perm, tr_coord, derivs, scene_settings.noise_freuency, scene_settings.noise_amplitude);
-	//lh = eval(perm, nc  * scene_settings.noise_freuency, derivs).y;
+	lh = norm ? terrainH(m2, make_float2(poi.x - transform.x, poi.z - transform.z), permutation, tr_coord, derivs, scene_settings.noise_freuency, scene_settings.noise_amplitude) 
+		: terrainM(m2, make_float2(poi.x - transform.x, poi.z - transform.z), permutation, tr_coord, derivs, scene_settings.noise_freuency, scene_settings.noise_amplitude);
+
+
 	lh = pow(lh + 1, scene_settings.noise_redistrebution);
 	lh = round(lh * scene_settings.terracing) / scene_settings.terracing;
 
 	lh *= scene_settings.noise_amplitude;
-	//lh += volumes[0].Max.y / 2;
+
+
+
 	ly = poi.y;
 	if (biomes(lh, volume.Max.y) == BIOME_OCEAN)
 	{
 		lh = (0.2 * volume.Max.y) - 1;
 	}
-	float sign = -1;
-	if (ly > lh)
-	{
-		sign = 1;
-	}
+	float sign = sgn(ly - lh);
 	return sign * fabs(length(poi - make_float3(poi.x, lh, poi.z)));
 }
 
@@ -526,13 +526,14 @@ float3 compute_sdf_normal_tet(const float3& p_hit, const float& t, const Renderi
 
 __device__
 float3 compute_terrain_normal(const float2x2& m2, const float3& p_hit, const float& t, const SceneSettings &scene_settings,
-	const unsigned *permutation, GPUBoundingBox volume, const GPUVolumeObjectInstance& curr_obj)
+	const cudaTextureObject_t& permutation, GPUBoundingBox volume, const GPUVolumeObjectInstance& curr_obj)
 {
-	float delta = fminf(0.001 * t, 0.002);
+	float delta = 0.002 * t;
 	float3 transform = curr_obj.location;
-	float curr_dist = get_terrain_distance(m2, p_hit, p_hit, scene_settings, transform, volume, permutation) - curr_dist;
 	return normalize(make_float3(
-		get_terrain_distance(m2, p_hit + make_float3(delta, 0, 0), p_hit + make_float3(delta, 0, 0),scene_settings, -transform, volume, permutation) - curr_dist,
-		get_terrain_distance(m2, p_hit + make_float3(0, delta, 0), p_hit + make_float3(0, delta, 0), scene_settings,-transform, volume, permutation) - curr_dist,
-		get_terrain_distance(m2, p_hit + make_float3(0, 0, delta), p_hit + make_float3(0, 0, delta), scene_settings,-transform, volume, permutation) - curr_dist));
+		get_terrain_distance(m2, p_hit - make_float3(delta, 0, 0), p_hit - make_float3(delta, 0, 0),scene_settings, -transform, volume, permutation, true)
+		- get_terrain_distance(m2, p_hit + make_float3(delta, 0, 0), p_hit + make_float3(delta, 0, 0), scene_settings, -transform, volume, permutation, true), //X
+		2.0 * delta, // Y
+		get_terrain_distance(m2, p_hit - make_float3(0, 0, delta), p_hit - make_float3(0, 0, delta), scene_settings,-transform, volume, permutation, true)
+		- get_terrain_distance(m2, p_hit + make_float3(0, 0, delta), p_hit + make_float3(0, 0, delta), scene_settings, -transform, volume, permutation, true))); // Z
 }

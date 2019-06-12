@@ -29,7 +29,7 @@ bool is_point_to_the_left_of_split(RKDTreeNodeGPU node, const float3& p)
 // Returns a node index roped to a corresponding face
 ////////////////////////////////////////////////////
 HOST_DEVICE_FUNCTION
-int get_neighboring_node_index(RKDTreeNodeGPU node, float3 p)
+size_t get_neighboring_node_index(RKDTreeNodeGPU node, float3 p)
 {
 	// Check left face.
 	if (fabs(p.x - node.box.Min.x) < K_EPSILON) {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RayEngine/RayEngine.h"
+
 
 
 	class RRay

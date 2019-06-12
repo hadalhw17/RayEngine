@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../RayEngine/RayEngine.h"
-#include <string>
-#include <sstream>
+
+
 
 
 namespace RayEngine

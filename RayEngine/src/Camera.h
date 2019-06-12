@@ -8,7 +8,8 @@ struct RAY_ENGINE_API RCamera
 {
 	RCamera();
 	RCamera(float3 pos, float3 dir, float3 right, float3 down) :
-		campos(pos), camdir(dir), camright(right), camdown(down) {}
+		campos(pos), camdir(dir), camright(right), camdown(down), lookat({0}),
+		view({ 0 }), focial_distance(0), apertude_radius(0), fov({ 0 }) {}
 	float3 campos, camdir, camright, camdown, lookat, view;
 	float2 fov;
 	float focial_distance, apertude_radius;

@@ -1,15 +1,13 @@
 #pragma once
 
-#include <vector>
-#include "RayEngine/RayEngine.h"
 #include "RStaticMesh.h"
 #include "GPUBoundingBox.h"
 #include "Events/Event.h"
-
+#include "cuda-src/gpu_structs.h"
 
 namespace RayEngine
 {
-	class RSceneObject
+	class RAY_ENGINE_API RSceneObject
 	{
 	public:
 		RSceneObject();

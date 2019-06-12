@@ -1,6 +1,7 @@
-#include "Glass.h"
-#include "helper_math.h"
+#include "repch.h"
 
+
+#include "Glass.h"
 
 namespace RayEngine
 {

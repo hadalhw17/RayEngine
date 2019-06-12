@@ -1,3 +1,6 @@
+#include "repch.h"
+
+
 //#include "UserInterface.h"
 //#include "imgui/imgui.h"
 //#include "imgui/imgui_impl_glfw.h"
@@ -14,8 +17,6 @@
 ////
 ////// Include glfw3.h after our OpenGL definitions
 //#include <GLFW/glfw3.h>
-//#include <iostream>
-//#include <thread>
 //
 //#include "RayEngine/RayEngine.h"
 //struct ImVec4 clear_color;

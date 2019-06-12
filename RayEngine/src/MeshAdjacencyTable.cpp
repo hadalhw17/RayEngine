@@ -1,7 +1,8 @@
+#include "repch.h"
+
+
 #include "MeshAdjacencyTable.h"
 
-#include "helper_math.h"
-#include <vector>
 #include "RStaticMesh.h"
 
 
@@ -21,7 +22,7 @@
 		for (size_t i = 0; i < mesh->num_faces; ++i)
 		{
 			// Get triangle.
-			float3 tri = mesh->faces[i];
+			uint3 tri = mesh->faces[i];
 			int v0 = tri.x;
 			int v1 = tri.y;
 			int v2 = tri.z;

@@ -1,9 +1,10 @@
+#include "repch.h"
+
+
 #include "RTScene.h"
 #include "Cow.h"
 #include "Floor.h"
 #include "Glass.h"
-#include <iostream>
-#include "KDTree.h"
 #include "KDThreeGPU.h"
 #include "MeshObject.h"
 
@@ -98,7 +99,7 @@ void RTScene::load_meshes_from_file(std::vector<char*> files)
 
 void RTScene::build_gpu_structs()
 {
-	int first_index = 0;
+	size_t first_index = 0;
 	int i = 0;
 	for (auto obj : scene_objects)
 	{
@@ -119,7 +120,7 @@ std::pair<size_t, size_t> RTScene::merge_meshes()
 	size_t numFaces = 0;
 	size_t numVerts = 0;
 
-	std::vector<float3> tmp_faces = {};
+	std::vector<uint3> tmp_faces = {};
 	std::vector<float3> tmp_verts = {};
 	std::vector<float3> tmp_norms = {};
 	std::vector<float2> tmp_uvs = {};
@@ -162,7 +163,7 @@ std::pair<size_t, size_t> RTScene::merge_meshes()
 	num_uvs = tmp_uvs.size();
 
 	arrv = new float3[numVerts];
-	arrf = new float3[numFaces];
+	arrf = new uint3[numFaces];
 	normals = new float3[num_normals];
 	uvs = new float2[num_uvs];
 
@@ -222,14 +223,14 @@ void RTScene::init_triangles()
 	{
 
 		float3* verts = t->get_verts();
-		float3* faces = t->get_faces();
+		uint3* faces = t->get_faces();
 		float3* norms = t->get_normals();
 		float2* uv = t->uvs;
 
 		for (size_t i = 0; i < t->get_num_faces(); ++i)
 		{
 			// make a local copy of the triangle vertices
-			float3 tri = faces[i];
+			uint3 tri = faces[i];
 			float3 v0 = verts[(size_t)tri.x];
 			float3 v1 = verts[(size_t)tri.y];
 			float3 v2 = verts[(size_t)tri.z];

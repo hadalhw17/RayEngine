@@ -1,16 +1,14 @@
+#include "repch.h"
+
+
 #include "Scene.h"
 #include "Plane.h"
 #include "Object.h"
 #include "Triangle.h"
 #include "Sphere.h"
-#include "KDTree.h"
-#include "RStaticMesh.h"
 
 #include "Character.h"
 
-#include <iostream>
-#include <vector>
-#include <fstream>
 #include <filesystem/resolver.h>
 
 RScene::RScene()

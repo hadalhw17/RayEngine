@@ -1,5 +1,7 @@
+#include "repch.h"
+
+
 #include "Light.h"
-#include "helper_math.h"
 
 
 RLight::RLight()

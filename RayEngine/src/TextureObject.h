@@ -1,5 +1,4 @@
 #pragma once
-#include "helper_math.h"
 #include <vector>
 #include "RayEngine/RayEngine.h"
 #include <ostream>

@@ -1,7 +1,7 @@
 #pragma once
 #include "BoundingVolume.h"
-#include <vector>
-#include "RayEngine/RayEngine.h"
+
+
 
 
 
@@ -56,7 +56,8 @@
 		int intersectionAmount;
 
 		RBoundingVolume box;
-		float3* verts, * faces, * norms;
+		float3* verts, * norms;
+		uint3* faces;
 		float2* uvs;
 		size_t num_verts, num_faces, num_norms, num_uvs;
 		bool isLeaf = false;
@@ -67,7 +68,7 @@
 			RKDTreeCPU(RKDTreeCPU* node, RBoundingVolume b, float3 lb, float3 ub, int depth);
 
 		HOST_DEVICE_FUNCTION
-			RKDTreeCPU(float3* _verts, float3* _faces, float3* _norms, float2* uvs, int numVerts, int numFaces, int num_norms, int num_uvs);
+			RKDTreeCPU(float3* _verts, uint3* _faces, float3* _norms, float2* uvs, int numVerts, int numFaces, int num_norms, int num_uvs);
 
 		~RKDTreeCPU();
 

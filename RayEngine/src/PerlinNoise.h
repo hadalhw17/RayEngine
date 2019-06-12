@@ -3,11 +3,10 @@
 #include <cstdio> 
 #include <random> 
 #include <functional> 
-#include <iostream> 
 #include <fstream> 
 #include <algorithm> 
-#include "helper_math.h"
 #include "RayEngine/RayEngine.h"
+#include "helper_math.h"
 
 namespace RayEngine
 {
@@ -30,12 +29,12 @@ namespace RayEngine
 				gradients[i].normalize();
 #else 
 				// better
-				float theta = acos(2 * dice() - 1);
-				float phi = 2 * dice() * 3.14159265358979323846;
+				double theta = acos(2 * dice() - 1);
+				double phi = 2.f * dice() * 3.14159265358979323846;
 
-				float x = cos(phi) * sin(theta);
-				float y = sin(phi) * sin(theta);
-				float z = cos(theta);
+				double x = cos(phi) * sin(theta);
+				double y = sin(phi) * sin(theta);
+				double z = cos(theta);
 				gradients[i] = make_float3(x, y, z);
 #endif 
 				permutationTable[i] = i;

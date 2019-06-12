@@ -6,6 +6,8 @@
 #include "Events/MouseEvent.h"
 #include "Events/ApplicationEvent.h"
 #include "RayEngine/Application.h"
+#include "cuda-src/gpu_structs.h"
+
 
 class RAY_ENGINE_API RCharacter : public RayEngine::RSceneObject
 {

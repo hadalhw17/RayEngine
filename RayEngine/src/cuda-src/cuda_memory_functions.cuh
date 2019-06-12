@@ -21,7 +21,7 @@ void bind_triangles_tro_texture(float4* dev_triangle_p, unsigned int number_of_t
 ////////////////////////////////////////////////////
 // Bind normals to texture memory
 ////////////////////////////////////////////////////
-void bind_normals_tro_texture(float4* dev_normals_p, unsigned int number_of_normals)
+void bind_normals_tro_texture(float4* dev_normals_p, size_t number_of_normals)
 {
 	normals_texture.normalized = false;                      // access with normalized texture coordinates
 	normals_texture.filterMode = cudaFilterModePoint;        // Point mode, so no 
@@ -35,7 +35,7 @@ void bind_normals_tro_texture(float4* dev_normals_p, unsigned int number_of_norm
 ////////////////////////////////////////////////////
 // Bind uvs to texture memory
 ////////////////////////////////////////////////////
-void bind_uvs_to_texture(float2* dev_uvs_p, unsigned int number_of_uvs)
+void bind_uvs_to_texture(float2* dev_uvs_p, size_t number_of_uvs)
 {
 	uvs_texture.normalized = false;                      // access with normalized texture coordinates
 	uvs_texture.filterMode = cudaFilterModePoint;        // Point mode, so no 
@@ -65,9 +65,9 @@ void copy_memory(std::vector<RKDThreeGPU*>tree, RCamera sceneCam, std::vector<fl
 	d_texture_size = textures.size();
 	size_t textures_size = textures.size() * sizeof(float3);
 	size_t image_size = SCR_WIDTH * SCR_HEIGHT;
-	int size = image_size * sizeof(uchar4);
+	size_t size = image_size * sizeof(uchar4);
 	angle = 0;
-	int shadow_map_size = image_size * sizeof(float4);
+	size_t shadow_map_size = image_size * sizeof(float4);
 	size_t size_hit_result = image_size * sizeof(HitResult);
 	size_t size_kd_tree = 0;
 
@@ -91,7 +91,7 @@ void copy_memory(std::vector<RKDThreeGPU*>tree, RCamera sceneCam, std::vector<fl
 	h_camera = &sceneCam;
 	h_pixels = new uchar4[size];
 
-	std::vector<int> h_root_index = {};
+	std::vector<size_t> h_root_index = {};
 	int offset = 0;
 	for (int i = 0; i < num_objs; i++)
 	{
@@ -109,7 +109,7 @@ void copy_memory(std::vector<RKDThreeGPU*>tree, RCamera sceneCam, std::vector<fl
 	// initialise array of triangle indecies.
 	std::vector<int> kd_tree_tri_indics = {};
 	offset = 0;
-	int count = 0;
+	size_t count = 0;
 	for (auto t : tree)
 	{
 		for (auto n : t->obj_index_list)
@@ -141,7 +141,7 @@ void copy_memory(std::vector<RKDThreeGPU*>tree, RCamera sceneCam, std::vector<fl
 
 	// calculate total number of triangles in the scene
 	size_t triangle_size = triangles.size() * sizeof(float4);
-	int total_num_triangles = triangles.size() / 3;
+	size_t total_num_triangles = triangles.size() / 3;
 
 	// calculate total number of normals in the scene
 	size_t normals_size = normals.size() * sizeof(float4);

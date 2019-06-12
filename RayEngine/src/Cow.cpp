@@ -1,5 +1,7 @@
+#include "repch.h"
+
+
 #include "Cow.h"
-#include "helper_math.h"
 
 
 namespace RayEngine

@@ -1,6 +1,8 @@
+#include "repch.h"
+
+
 #include "Plane.h"
 #include "Ray.h"
-#include <cmath>
 
 
 	RPlane::RPlane()

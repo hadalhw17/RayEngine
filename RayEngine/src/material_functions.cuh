@@ -1,5 +1,5 @@
 #pragma once
-#include "RayEngine/RayEngine.h"
+
 #include "KDTreeGPUUtills.h"
 #include "cuda_helper_functions.h"
 #include "ray_functions.cuh"

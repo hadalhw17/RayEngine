@@ -32,7 +32,6 @@ Index of this file:
 #endif
 
 #include <stdio.h>      // FILE*
-#include <stdlib.h>     // NULL, malloc, free, qsort, atoi, atof
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
 #include <limits.h>     // INT_MIN, INT_MAX
 

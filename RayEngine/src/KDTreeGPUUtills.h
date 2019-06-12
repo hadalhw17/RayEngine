@@ -43,7 +43,7 @@
 
 		bool is_leaf;
 
-		int neighbor_node_indices[6];
+		size_t neighbor_node_indices[6];
 
 		void PrintDebugString();
 

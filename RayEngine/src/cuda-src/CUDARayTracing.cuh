@@ -69,7 +69,7 @@ float3* d_textures;
 size_t d_texture_size;
 
 __device__
-int d_object_number;
+size_t d_object_number;
 
 __device__
 float4* dev_triangle_p;

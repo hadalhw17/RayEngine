@@ -1,6 +1,5 @@
 #pragma once
 
-#include "helper_math.h"
 
 #include <vector>
 #include <string>
@@ -8,7 +7,7 @@
 
 class RMeshAdjacencyTable;
 class RKDTreeCPU;
-class GPUBoundingBox;
+struct GPUBoundingBox;
 class RStaticMesh;
 
 struct RAY_ENGINE_API GridNode

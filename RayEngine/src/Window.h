@@ -1,5 +1,5 @@
 #pragma once
-#include "RayEngine/RayEngine.h"
+
 
 
 class GLFWwindow;
@@ -23,7 +23,7 @@ namespace RayEngine
 		bool updateGL();
 		void RenderFrame();
 
-		inline const float delta_time() const { return deltaTime; }
+		inline const double delta_time() const { return deltaTime; }
 		
 		void destroy_window();
 		void close_window();
@@ -33,7 +33,7 @@ namespace RayEngine
 		double currentFrame;
 		double lastFrame;
 		int frame_counter = 0;
-		float click_timer;
+		double click_timer;
 	private:
 
 		//----------------------Window functions. Wille be moved to a separate class----

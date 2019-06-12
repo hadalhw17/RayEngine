@@ -1,8 +1,7 @@
+#include "repch.h"
+
+
 #include "TextureObject.h"
-#include <iostream>
-#include "helper_math.h"
-#include <vector>
-#include <fstream>
 #include <filesystem/resolver.h>
 
 std::vector<float4> RTextureObject::read_ppm(char* filename)
@@ -19,7 +18,7 @@ std::vector<float4> RTextureObject::read_ppm(char* filename)
 	int width, height;
 	line >> width >> height;
 	resolution = make_uint2(width, height);
-	std::getline(is, line_str); // Color.
+	std::getline(is, line_str); // Colour.
 
 	int i = 0;
 	while (std::getline(is, line_str))

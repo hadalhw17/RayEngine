@@ -2,7 +2,7 @@
 
 #include <vector_types.h>
 #include "Grid.h"
-#include "RayEngine/RayEngine.h"
+
 
 namespace RayEngine
 {
