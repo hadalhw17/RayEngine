@@ -1,7 +1,7 @@
 #pragma once
 
 #include "RStaticMesh.h"
-#include "GPUBoundingBox.h"
+#include "Primitives/GPUBoundingBox.h"
 #include "Events/Event.h"
 #include "cuda-src/gpu_structs.h"
 
@@ -17,6 +17,7 @@ namespace RayEngine
 		virtual void tick(float delta_time);
 
 		std::vector<class RObjectComponent*> components;
+		//RStaticMesh* root_component;
 
 		GPUSceneObject object_properties;
 		GPUBoundingBox collision_box;

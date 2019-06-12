@@ -3,12 +3,11 @@
 #include "Events/KeyEvent.h"
 #include "Events/MouseEvent.h"
 #include "Events/ApplicationEvent.h"
-#include "KDTree.h"
-#include "KDThreeGPU.h"
-#include "Camera.h"
-#include "Scene.h"
+#include "Primitives/KDTree.h"
+#include "Primitives/KDThreeGPU.h"
+#include "Primitives/Camera.h"
 
-#include "SDFScene.h"
+#include "World/SDFScene.h"
 
 namespace RayEngine
 {

@@ -3,13 +3,13 @@
 #include "Application.h"
 
 
-#include "../Scene.h"
-#include "../SceneObject.h"
+#include "../World/Scene.h"
+#include "../Objects/SceneObject.h"
 
 
-#include "../SDF/Grid.h"
-#include "../Material.h"
-#include "../PerlinNoise.h"
+#include "../World/Grid.h"
+#include "../Engine/Material.h"
+#include "../World/PerlinNoise.h"
 #include "Events/ApplicationEvent.h"
 #include "Layers/SceneLayer.h"
 #include "Layers/UILayer.h"
@@ -27,6 +27,7 @@ namespace RayEngine
 
 	Application::Application()
 	{
+		RE_LOG("HIIIII");
 		s_instance = this;
 		application_window = new Window();
 		application_window->set_event_callback(BIND_EVENT_FN(Application::on_event));

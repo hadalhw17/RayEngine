@@ -3,8 +3,8 @@
 
 #include "SceneLayer.h"
 
-#include "Scene.h"
-#include "Input.h"
+#include "World/Scene.h"
+#include "Engine/Input.h"
 #include "Events/ApplicationEvent.h"
 #include "RayEngine/Application.h"
 

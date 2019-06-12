@@ -5,7 +5,7 @@
 
 #include "ObjectComponent.h"
 
-#include "MeshAdjacencyTable.h"
+#include "Primitives/MeshAdjacencyTable.h"
 
 
 namespace RayEngine

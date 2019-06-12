@@ -5,9 +5,9 @@
 #include "curand_kernel.h"
 #include "cuda_runtime_api.h"
 
-#include "../Camera.h"
+#include "../Primitives/Camera.h"
 #include "../RayEngine/RayEngine.h"
-#include "../GPUBoundingBox.h"
+#include "../Primitives/GPUBoundingBox.h"
 #include "Atmosphere.cuh"
 
 // transform vector by matrix (no translation)

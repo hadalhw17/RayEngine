@@ -18,7 +18,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <functional>
-#include "MeshAdjacencyTable.h"
+#include "Primitives/MeshAdjacencyTable.h"
 namespace RayEngine
 {
 	/// Tokenize a string into a list by splitting at 'delim'

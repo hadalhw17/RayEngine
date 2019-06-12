@@ -4,7 +4,7 @@
 #include "SDFScene.h"
 #include "RayEngine/Application.h"
 #include <JsonCast.h>
-#include "SDF/Chunk.h"
+#include "World/Chunk.h"
 
 extern "C" void initialize_volume_render(RCamera& sceneCam, const RayEngine::RChunk& world_chunk, const int& num_sdf, const std::vector<VoxelMaterial>& materials, const RenderingSettings& render_settings,
 	const SceneSettings& scene_settings, const RayEngine::RPerlinNoise& nosie);

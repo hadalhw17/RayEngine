@@ -1,8 +1,8 @@
 #pragma once
 #include "cuda-src/gpu_structs.h"
 #include "cuda_helper_functions.h"
-#include "../Camera.h"
-#include "../GPUBoundingBox.h"
+#include "../Primitives/Camera.h"
+#include "../Primitives/GPUBoundingBox.h"
 #include "CUDARayTracing.cuh"
 #include "kd_tree_functions.cuh"
 
@@ -86,7 +86,7 @@ bool gpu_ray_box_intersect(const GPUBoundingBox& bbox, const float3& ray_o, cons
 	t_near = tmin;
 	t_far = tmax;
 
-	t_near = fsel(t_near, t_near, 0.f);
+	//t_near = fsel(t_near, t_near, 0.f);
 
 	return true;
 }

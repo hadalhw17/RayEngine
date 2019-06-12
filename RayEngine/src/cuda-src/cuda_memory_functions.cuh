@@ -1,7 +1,7 @@
 #pragma once
 #include "sphere_tracing.cuh"
 #include "CUDARayTracing.cuh"
-#include "../GPUBoundingBox.h"
+#include "../Primitives/GPUBoundingBox.h"
 
 
 ////////////////////////////////////////////////////

@@ -2,11 +2,9 @@
 
 
 #include "RTScene.h"
-#include "Cow.h"
-#include "Floor.h"
-#include "Glass.h"
-#include "KDThreeGPU.h"
-#include "MeshObject.h"
+
+#include "Primitives/KDThreeGPU.h"
+#include "Objects/MeshObject.h"
 
 extern "C" void copy_memory(std::vector<RKDThreeGPU*> tree, RCamera _sceneCam, std::vector<float4> h_triangles,
 	std::vector<float4> h_normals, std::vector<float2> h_uvs, std::vector<GPUSceneObject> objs, std::vector<float4> textures, class Grid* grid);

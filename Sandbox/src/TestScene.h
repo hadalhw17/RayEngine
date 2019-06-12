@@ -1,11 +1,11 @@
 #pragma once
-#include<SDFScene.h>
-#include <Character.h>
-#include <TextureObject.h>
-#include <Material.h>
-#include <PerlinNoise.h>
+#include <World/SDFScene.h>
+#include <Objects/Character.h>
+#include <Engine/TextureObject.h>
+#include <Engine/Material.h>
+#include <World/PerlinNoise.h>
 #include <RayEngine/Application.h>
-#include <SDF/Grid.h>
+#include <World/Grid.h>
 
 
 class  TestScene :

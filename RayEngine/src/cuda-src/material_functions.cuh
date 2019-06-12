@@ -1,6 +1,6 @@
 #pragma once
 
-#include "KDTreeGPUUtills.h"
+#include "Primitives/KDTreeGPUUtills.h"
 #include "cuda_helper_functions.h"
 #include "ray_functions.cuh"
 #include "kd_tree_functions.cuh"

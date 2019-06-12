@@ -2,8 +2,8 @@
 
 
 #include "RStaticMesh.h"
-#include "Triangle.h"
-#include "Ray.h"
+#include "Primitives/Triangle.h"
+#include "Primitives/Ray.h"
 
 
 #include <cstdio>

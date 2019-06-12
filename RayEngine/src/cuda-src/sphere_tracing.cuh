@@ -5,12 +5,12 @@
 #include "curand_kernel.h"
 #include "cuda_runtime_api.h"
 #include "sdf_functions.cuh"
-#include "../material_functions.cuh"
-#include "../SDF/Chunk.h"
+#include "material_functions.cuh"
+#include "../World/Chunk.h"
 #include "sdf_functions.cuh"
-#include "../Material.h"
-#include "../TextureObject.h"
-#include "../PerlinNoise.h"
+#include "../Engine/Material.h"
+#include "../Engine/TextureObject.h"
+#include "../World/PerlinNoise.h"
 
 
 cudaArray* d_volumeArray = 0;

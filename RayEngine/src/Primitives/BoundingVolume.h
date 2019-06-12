@@ -13,7 +13,7 @@
 #include "RayEngine/RayEngine.h"
 #include <vector_types.h>
 
-#include "helper_math.h"
+#include <helper_math.h>
 
 #define DOUBLE_EPS  1e-9
 

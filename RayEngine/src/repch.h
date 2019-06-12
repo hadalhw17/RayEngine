@@ -19,15 +19,15 @@
 #include <thread>
 #include <fstream>
 
-#include "MouseButtonCodes.h"
-#include "KeyCodes.h"
+#include "Engine/MouseButtonCodes.h"
+#include "Engine/KeyCodes.h"
 #include "RayEngine/RayEngine.h"
 
 #include "Events/Event.h"
 
-#include "Camera.h"
-#include "MovableCamera.h"
-#include "KDTree.h"
+#include "Primitives/Camera.h"
+#include "Objects/MovableCamera.h"
+#include "Primitives/KDTree.h"
 
 #include <stdio.h>
 

@@ -1,5 +1,5 @@
 #pragma once
-#include <Character.h>
+#include <Objects/Character.h>
 
 #include <Events/KeyEvent.h>
 #include <Events/MouseEvent.h>

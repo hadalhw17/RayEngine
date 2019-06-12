@@ -1,6 +1,6 @@
 #pragma once
 #include "../RayEngine/RayEngine.h"
-#include "../KDThreeGPU.h" 
+#include "../Primitives/KDThreeGPU.h" 
 
 
 ////////////////////////////////////////////////////

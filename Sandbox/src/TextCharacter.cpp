@@ -1,6 +1,6 @@
-#include <KeyCodes.h>
-#include <MouseButtonCodes.h>
-#include <Camera.h>
+#include <Engine/KeyCodes.h>
+#include <Engine/MouseButtonCodes.h>
+#include <Primitives/Camera.h>
 
 #include "TextCharacter.h"
 #include "TestSceneLayer.h"

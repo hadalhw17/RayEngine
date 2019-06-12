@@ -1,11 +1,11 @@
 #pragma once
 #include "Scene.h"
 #include "RayEngine/RayEngine.h"
-#include "SDF/Chunk.h"
+#include "World/Chunk.h"
 #include "PerlinNoise.h"
-#include "Character.h"
-#include "TextureObject.h"
-#include "Material.h"
+#include "Objects/Character.h"
+#include "Engine/TextureObject.h"
+#include "Engine/Material.h"
 #include <vector>
 #include <string>
 

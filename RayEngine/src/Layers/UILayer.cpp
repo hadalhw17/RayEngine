@@ -2,8 +2,7 @@
 
 
 #include "UILayer.h"
-#include "../src/Camera.h"
-#include "UserInterface.h"
+#include "../src/Primitives/Camera.h"
 #include "../src/RayEngine/RayEngine.h"
 
 #include "imgui.h"

@@ -3,7 +3,7 @@
 #include"TextCharacter.h"
 #include "TestSceneLayer.h"
 #include <Meta.h>
-#include <SDFScene.h>
+#include <World/SDFScene.h>
 #include <json.hpp>
 #include <JsonCast.h>
 

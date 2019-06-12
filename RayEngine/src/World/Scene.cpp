@@ -2,12 +2,9 @@
 
 
 #include "Scene.h"
-#include "Plane.h"
-#include "Object.h"
-#include "Triangle.h"
-#include "Sphere.h"
 
-#include "Character.h"
+
+#include "Objects/Character.h"
 
 #include <filesystem/resolver.h>
 

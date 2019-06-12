@@ -2,17 +2,17 @@
 
 
 #include "RayTracer.h"
-#include "Sphere.h"
+#include "Primitives/Sphere.h"
 
 
-#include "Light.h"
-#include "Plane.h"
-#include "RStaticMesh.h"
-#include "Source.h"
-#include "Triangle.h"
-#include "Object.h"
+#include "Primitives/Light.h"
+#include "Primitives/Plane.h"
+#include "Objects/RStaticMesh.h"
+#include "Primitives/Source.h"
+#include "Primitives/Triangle.h"
+#include "Primitives/Object.h"
 
-#include "SDF/Grid.h"
+#include "World/Grid.h"
 
 float4 _clip(float4 color)
 {

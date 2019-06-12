@@ -300,7 +300,7 @@ namespace RayEngine
 		// Initialize OpenGL loader
 		RAY_ENGINE_ASSERT(!gl3wInit(), "Failed to initialize OpenGL loader!\n")
 
-			glfwSetWindowUserPointer(window, &window_data);
+			glfwSetWindowUserPointer(window, &m_data);
 		glfwMakeContextCurrent(window);
 
 

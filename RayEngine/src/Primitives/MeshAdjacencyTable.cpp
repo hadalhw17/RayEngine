@@ -3,7 +3,7 @@
 
 #include "MeshAdjacencyTable.h"
 
-#include "RStaticMesh.h"
+#include "Objects/RStaticMesh.h"
 
 
 

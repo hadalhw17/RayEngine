@@ -2,18 +2,13 @@
 // Main CUDA rendering file.
 ////////////////////////////////////////////////////
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
 
-#include "../Camera.h"
-#include "../KDTree.h"
-#include "../Light.h"
-#include "../KDThreeGPU.h"
+#include "../Primitives/Camera.h"
+#include "../Primitives/KDTree.h"
+#include "../Primitives/KDThreeGPU.h"
 #include <curand_kernel.h>
-#include "../GPUBoundingBox.h"
 #include "../RayEngine/RayEngine.h"
-#include "../SDF/Grid.h"
+#include "../World/Grid.h"
 #include "Atmosphere.cuh"
 #include "ray_functions.cuh"
 #include "cuda_helper_functions.h"
@@ -23,7 +18,6 @@
 #include "cuda_memory_functions.cuh"
 #include <sstream>
 #include <iosfwd>
-#include "cuda_occupancy.h"
 #include "Layers/SceneLayer.h"
 #include <fstream>
 #include "RayEngine/Application.h"

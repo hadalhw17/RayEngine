@@ -8,9 +8,17 @@ namespace RayEngine
 
 	struct WindowData
 	{
-		size_t width, heigth;
-		std::string title;
+		size_t m_width, m_heigth;
+		std::string m_title;
+		bool vsync;
+
+
 		std::function<void(class Event&)> function_callback;
+
+		WindowData(const std::string& title = "RayEngine",
+			size_t width = 1920,
+			size_t heigth = 1080)
+			: m_title(title), m_width(width), m_heigth(heigth) {}
 	};
 
 	class Window
@@ -18,6 +26,12 @@ namespace RayEngine
 	public:
 		Window();
 		inline GLFWwindow* get_window();
+
+		inline size_t get_width() const { return m_data.m_width; }
+		inline size_t get_heigth() const { return m_data.m_heigth; }
+
+		inline bool set_vsync(bool vsync) { m_data.vsync = vsync; }
+		inline bool get_vsync() const { return m_data.vsync; }
 		
 		inline const bool should_close() const { return window_shoud_close; }
 		bool updateGL();
@@ -27,7 +41,8 @@ namespace RayEngine
 		
 		void destroy_window();
 		void close_window();
-		void set_event_callback(std::function<void(Event&)> e) { window_data.function_callback = e; }
+
+		void set_event_callback(std::function<void(Event&)> e) { m_data.function_callback = e; }
 
 		GLFWwindow* window;
 		double currentFrame;
@@ -60,7 +75,7 @@ namespace RayEngine
 		struct cudaGraphicsResource* cuda_pbo_resource; // CUDA Graphics Resource (to transfer PBO)
 		// map PBO to get CUDA device pointer
 		unsigned int* d_output;
-		WindowData window_data;
+		WindowData m_data;
 	};
 
 }

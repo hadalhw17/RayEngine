@@ -2,7 +2,7 @@
 
 #include "Grid.h"
 #include <filesystem/resolver.h>
-#include "MeshAdjacencyTable.h"
+#include "Primitives/MeshAdjacencyTable.h"
 
 
 Grid::Grid()

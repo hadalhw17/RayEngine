@@ -3,10 +3,10 @@
 
 
 
-#include "Camera.h"
-#include "SceneObject.h"
-#include "MovableCamera.h"
-#include "Character.h"
+#include "Primitives/Camera.h"
+#include "Objects/SceneObject.h"
+#include "Objects/MovableCamera.h"
+#include "Objects/Character.h"
 #include "Events/Event.h"
 #include "Events/KeyEvent.h"
 #include "Events/MouseEvent.h"

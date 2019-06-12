@@ -10,13 +10,13 @@
 #include "Layers/SceneLayer.h"
 //-------------------------------------------------
 //-----------------Scenes--------------------------
-#include "Scene.h"
-#include "SDFScene.h"
+#include "World/Scene.h"
+#include "World/SDFScene.h"
 //-------------------------------------------------
 //---------------Inputs----------------------------
-#include "Input.h"
-#include "KeyCodes.h"
-#include "MouseButtonCodes.h"
+#include "Engine/Input.h"
+#include "Engine/KeyCodes.h"
+#include "Engine/MouseButtonCodes.h"
 //-------------------------------------------------
 //-----------------Entry point---------------------
 #include "RayEngine/EntryPoint.h"
