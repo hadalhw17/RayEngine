@@ -21,6 +21,12 @@
 #include "Primitives/MeshAdjacencyTable.h"
 namespace RayEngine
 {
+	template<class ArgumentType, class ResultType>
+	struct unary_function
+	{
+		typedef ArgumentType argument_type;
+		typedef ResultType result_type;
+	};
 	/// Tokenize a string into a list by splitting at 'delim'
 	std::vector<std::string> tokenize(const std::string& string, const std::string& delim, bool includeEmpty)
 	{
@@ -203,7 +209,7 @@ namespace RayEngine
 		};
 
 		/// Hash function for OBJVertex
-		struct OBJVertexHash : std::unary_function<OBJVertex, size_t> {
+		struct OBJVertexHash : unary_function<OBJVertex, size_t> {
 			std::size_t operator()(const OBJVertex& v) const {
 				size_t hash = std::hash<uint32_t>()(v.p);
 				hash = hash * 37 + std::hash<uint32_t>()(v.uv);

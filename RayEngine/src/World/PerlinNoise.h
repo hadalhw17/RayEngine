@@ -13,7 +13,7 @@ namespace RayEngine
 	class RAY_ENGINE_API RPerlinNoise
 	{
 	public:
-		RPerlinNoise(const unsigned& seed = 2031)
+		RPerlinNoise(const unsigned& seed = 2016)
 		{
 			std::mt19937 generator(seed);
 			std::uniform_real_distribution<float> distribution;
@@ -57,7 +57,7 @@ namespace RayEngine
 		static const unsigned tableSize = 256;
 		static const unsigned tableSizeMask = tableSize - 1;
 		float3 gradients[tableSize];
-		unsigned permutationTable[tableSize * 2];
+		uint permutationTable[tableSize * 2];
 	};
 }
 

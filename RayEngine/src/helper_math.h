@@ -32,13 +32,17 @@ typedef unsigned short ushort;
 #define EXIT_WAIVED 2
 #endif
 
+inline __device__
+float fsel(float a, float b, float c)
+{
+	return a >= 0 ? b : c;
+}
 #ifndef __CUDACC__
 #include <math.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 // host implementations of CUDA functions
 ////////////////////////////////////////////////////////////////////////////////
-
 inline float fminf(float a, float b)
 {
     return a < b ? a : b;

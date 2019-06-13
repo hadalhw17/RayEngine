@@ -107,7 +107,7 @@ void generate_noise(float2x2 m2, RenderingSettings render_settings, SceneSetting
 	float3 poi = (make_float3(x, y, z)) * spacing;
 	float3 coord = ((make_float3(x + 0.5f, 0, z + 0.5)) * spacing);
 
-	float distance = get_terrain_distance(m2, poi, coord, scene_settings, -pos, volumes[0], permutaion, false);
+	float distance = get_terrain_distance(m2, poi, coord, scene_settings, -pos, volumes[0], permutaion, true);
 	
 	sdf_texute[index] = make_float2(distance, 0);
 }
@@ -140,105 +140,125 @@ void render_sphere_trace(const RenderingSettings render_settings, const RCamera 
 	if (imageX >= width || imageY >= heigth)
 		return;
 
+	//if (imageX % 2 != 0 && imageY % 2 != 0)
+	//	return;
+	float2x2 m2;
+	m2.m[0] = make_float2(0.8f, -0.6f);
+	m2.m[1] = make_float2(0.6f, 0.8f);
+
 	int index = imageY * width + imageX;
 
-	float3 pixel_colour = make_float3(0);
+	float3 pixel_colour = make_float3(0.f);
 
 	float u = (imageX / (float)width);
 	float v = (imageY / (float)heigth);
 
-
 	HitResult hit_result;
 	generate_ray(hit_result.ray_o, hit_result.ray_dir, render_camera, width, heigth);
+	
+	GPUBoundingBox world_box = GPUBoundingBox(make_float3(hit_result.ray_o.x-1000, 0, hit_result.ray_o.z - 1000), make_float3(hit_result.ray_o.x + 1000, volumes[0].Max.y, hit_result.ray_o.z + 1000));
+	
+	float world_t_near, world_t_far,scene_t_near, scene_t_far, smallest_dist = K_INFINITY;
+
 	// calculate eye ray in world space
 	bool intersect_scene = false;
-	float scene_t_near, scene_t_far, smallest_dist = K_INFINITY;
+	bool intersect_world = gpu_ray_box_intersect(world_box, hit_result.ray_o, hit_result.ray_dir, world_t_near, world_t_far);
+	bool intersect_sdf = false;
+	bool intersect_terrain = false;
+	bool intersect_anything = false;
+	
 	int  nearest_shape = 0;
 	int num_intersected = 0;
 	hit_result.ray_o -= instances[0].location;
+
+	float prel = 1.f;
+	int material_index = -1.f;
 	// Interate over every object and test for intersection with their aabb.
-//#pragma unroll 1
-//	for (int i = 0; i < num_instances; ++i)
-//	{
-//		if (gpu_ray_box_intersect(volumes[instances[i].index], hit_result.ray_o, hit_result.ray_dir, scene_t_near, scene_t_far))
-//		{
-//			if (scene_t_near < smallest_dist)
-//			{
-//				intersect_scene = true;
-//				smallest_dist = scene_t_near;
-//				nearest_shape = i;
-//				++num_intersected;
-//			}
-//		}
-//	}
-	float prel;
-	bool intersect_sdf = false;
-	int material_index = -1;
-
-	//// Traverse volume texture.
-	//if (intersect_scene)
-	//{
-	//	//intersect_sdf = single_ray_sphere_trace(render_settings, scene, tex, hit_result, instances,
-	//		//smallest_dist, scene_t_far, step, nearest_shape, prel, 0.001, material_index);
-	//}
-	//
-	//// Shade texture.
-	//if (intersect_scene && intersect_sdf)
-	//{
-	//	sphere_trace_shade(render_settings, tex, normal_tex, scene, lights, num_lights, hit_result, instances, smallest_dist, volumes,
-	//		num_instances, step, dim, material_index, pixel_colour, 0, shade, materials, permutation);
-	//	if (scene.enable_fog)
-	//		apply_fog(pixel_colour, smallest_dist, scene.fog_deisity, hit_result.ray_o, hit_result.ray_dir);
-
-	//}
-
-	// In case if missed bounding volume or sdf.
-	if (!intersect_sdf || !intersect_scene)
+	if (intersect_world)
 	{
-		bool intersect_terrain = false;
-		float t = 0;
-		float2x2 m2;
-		m2.m[0] = make_float2(0.8, -0.6);
-		m2.m[1] = make_float2(0.6, 0.8);
-		float t_min = K_INFINITY;
-		while (t < 500)
+#pragma unroll 1
+		for (int i = 0; i < num_instances; ++i)
 		{
-			float3 poi = hit_result.ray_o + t * hit_result.ray_dir;
-			float3 transform = instances[0].location;
-			float distance = get_terrain_distance(m2, poi, poi, scene, -transform, volumes[0], permutation, false);
-			if (distance < 0.002 * t)
+			if (gpu_ray_box_intersect(volumes[instances[i].index], hit_result.ray_o, hit_result.ray_dir, scene_t_near, scene_t_far))
 			{
-				intersect_terrain = true;
-				t_min = t;
-				break;
+				if (scene_t_near < smallest_dist)
+				{
+					intersect_scene = true;
+					smallest_dist = scene_t_near;
+					nearest_shape = i;
+					++num_intersected;
+				}
 			}
-			t += distance;
 		}
-		if (intersect_terrain)
-		{
-			pixel_colour = {0, 0, 0};
-			float3 n_poi = hit_result.ray_o + t_min * hit_result.ray_dir;
-			float3 terrain_normal = compute_terrain_normal(m2, n_poi, t_min, scene, permutation, volumes[0], instances[0]);
 
-			paint_surface(render_settings, n_poi, 0, pixel_colour, volumes[0].Max.y, terrain_normal, materials, permutation);
-			shade_terrain(render_settings, scene, tex, instances, n_poi, terrain_normal, volumes, num_sdf, step, dim, make_float3(0), pixel_colour, material_index);
+		// Traverse volume signed distance field texture.
+		if (intersect_scene)
+		{
+			intersect_sdf = single_ray_sphere_trace(render_settings, scene, tex, hit_result, instances,
+				smallest_dist, scene_t_far, step, nearest_shape, prel, 0.001f, material_index);
+		}
+
+		// Generate terrain outside of signed distance field texture.
+		if(!intersect_sdf && render_settings.god_mode)
+		{
+			float t = intersect_scene ? scene_t_far : world_t_near;
+
+			if (intersect_world)
+			{
+				while (t < world_t_far)
+				{
+					float3 poi = hit_result.ray_o + t * hit_result.ray_dir;
+					float3 transform = instances[0].location;
+					float distance = get_terrain_distance(m2, poi, poi, scene, -transform, world_box, permutation, false);
+					if (distance < 0.002f * t)
+					{
+						intersect_terrain = true;
+						smallest_dist = t;
+						break;
+					}
+					t += distance;
+				}
+			}
+		}
+
+		// Shade texture.
+		if (intersect_sdf)
+		{
+			sphere_trace_shade(render_settings, tex, normal_tex, scene, lights, num_lights, hit_result, instances, smallest_dist, volumes,
+				num_instances, step, dim, material_index, pixel_colour, 0, shade, materials, permutation);
+		}
+
+		if (intersect_terrain && render_settings.god_mode)
+		{
+			prel = 1.f;
+			pixel_colour = { 0.f, 0.f, 0.f };		
+			float3 n_poi = hit_result.ray_o + smallest_dist * hit_result.ray_dir;
+			float3 terrain_normal = compute_terrain_normal(m2, n_poi, smallest_dist, scene, permutation, world_box, instances[0]);
+
+			paint_surface(render_settings, n_poi, 0.f, pixel_colour, world_box.Max.y, terrain_normal, materials, permutation);
+			shade_terrain(render_settings, scene, tex, instances, n_poi, 
+				terrain_normal, world_box, num_sdf, step, dim, make_float3(0.f), pixel_colour, material_index, world_t_near, world_t_far, prel);
 
 			//simple_shade(pixel_colour, terrain_normal, hit_result.ray_dir);
 
 		}
-		else
-		{
-			pixel_colour = mix(pixel_colour, make_float3(1, 0.65, 0), prel);
-			sky_mat(pixel_colour, hit_result.ray_dir);
-		}
-		if (scene.enable_fog)
-			apply_fog(pixel_colour, t_min, scene.fog_deisity, hit_result.ray_o, hit_result.ray_dir);
+		intersect_anything = intersect_terrain || intersect_sdf;
 	}
 
+	// In case if missed everything, paint sky.
+	if (!intersect_anything)
+	{
+		pixel_colour = mix(pixel_colour, make_float3(1.f, 0.65f, 0.f), prel);
+		sky_mat(pixel_colour, hit_result.ray_dir);
+	}
+
+	if (scene.enable_fog)
+		apply_fog(pixel_colour, smallest_dist, scene.fog_deisity, hit_result.ray_o, hit_result.ray_dir);
+
 	// Gamma.	
-	if (render_settings.gamma) pixel_colour = powf(pixel_colour, 1.0 / 2.2);
+	if (render_settings.gamma) pixel_colour = powf(pixel_colour, 1.0f / 2.2f);
 	// Vignetting.
-	if (render_settings.vignetting) pixel_colour *= 0.5 + 0.5 * powf(16.0 * u * v * (1.0 - u) * (1.0 - v), render_settings.vignetting_k);
+	if (render_settings.vignetting) pixel_colour *= 0.5f + 0.5f * powf(16.0f * u * v * (1.0f - u) * (1.0f - v), render_settings.vignetting_k);
 	// Fix colour clipping.
 	pixel_colour = clip(pixel_colour);
 	// Convert to sRGB.
@@ -913,7 +933,7 @@ void load_map(std::string filename)
 __global__
 void sdf_collision_test(RCamera cam, RenderingSettings render_settings, cudaTextureObject_t tex, GPUBoundingBox* box, GPUVolumeObjectInstance* instances, float3 step, volatile bool* overlaps, volatile bool* in_volume)
 {
-	float2 res = get_distance(render_settings, tex, cam.campos - instances[0].location, step);
+	float2 res = get_distance(render_settings, tex, cam.campos - instances[0].location, step, false);
 	if (!point_in_aabb(box[0], cam.campos - instances[0].location))
 	{
 		*in_volume = false;
@@ -950,8 +970,8 @@ void cuda_update_chunk_gen(const RayEngine::RChunk& world_chunk, const RayEngine
 	gpuErrchk(cudaFree(d_sdf));
 	gpuErrchk(cudaMalloc((void**)& d_sdf, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
 
-	gpuErrchk(cudaFree(d_sdf_norm));
-	gpuErrchk(cudaMalloc((void**)& d_sdf_norm, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
+	//gpuErrchk(cudaFree(d_sdf_norm));
+	//gpuErrchk(cudaMalloc((void**)& d_sdf_norm, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
 	//sdf_spacing = cuda_scene_settings.volume_spacing;
 	sdf_spacing = make_float3(cuda_scene_settings.world_size.x / sdf_dim.x, cuda_scene_settings.world_size.y / sdf_dim.y, cuda_scene_settings.world_size.z / sdf_dim.z);
 	dim3 primaryRaysBlockDim(2, 2, 2);

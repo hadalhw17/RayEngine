@@ -124,7 +124,7 @@
       <AdditionalOptions>/FS %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>C:\dev\RayEngine\RayEngine\vendor\MetaStuff\include;C:\dev\RayEngine\RayEngine\Platform\OpenGL;C:\dev\RayEngine\RayEngine\includes\imgui;C:\dev\RayEngine\RayEngine\src;$(CudaToolkitDir)/include;C:\dev\RayEngine\RayEngine\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>Default</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>RE_DEVELOPMENT;RE_BUILD_DLL;RE_PLATFORM_WINDOWS;_WINDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>repch.h</PrecompiledHeaderFile>

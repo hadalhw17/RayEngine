@@ -198,7 +198,7 @@ bool single_ray_sphere_trace(const RenderingSettings& render_settings, const Sce
 		else
 		{
 			//min_dist = get_distance(from, step, dim, curr_obj);
-			res = get_distance(render_settings, tex, from, step);
+			res = get_distance(render_settings, tex, from, step, false);
 			min_dist = res.x;
 			material_index = res.y;
 		}
@@ -255,7 +255,7 @@ bool single_shadow_ray_sphere_trace(const RenderingSettings& render_settings, co
 
 
 		//min_dist = get_distance(from, step, dim, curr_obj);
-		res = get_distance(render_settings, tex, from, step);
+		res = get_distance(render_settings, tex, from, step, false);
 		min_dist = res.x;
 		material_index = res.y;
 
@@ -273,31 +273,32 @@ bool single_shadow_ray_sphere_trace(const RenderingSettings& render_settings, co
 
 __device__
 void shade_terrain(const RenderingSettings& render_settings, const SceneSettings& scene_settings, const cudaTextureObject_t& tex,
-	const GPUVolumeObjectInstance*& __restrict__ instances, const float3& p_hit, const float3& normal, const GPUBoundingBox*& __restrict__ volumes, const int& num_sdf,
-	const float3& step, const uint3& dim, const float3& light, float3& final_colour, const int& material_index)
+	const GPUVolumeObjectInstance*& __restrict__ instances, const float3& p_hit, const float3& normal, const GPUBoundingBox& volume, const int& num_sdf,
+	const float3& step, const uint3& dim, const float3& light, float3& final_colour, const int& material_index, float t_n, float t_f, float& prel)
 {
 	float3 pixel_color = make_float3(0.f);
 
 	float light_dst = K_INFINITY;
 	float x = scene_settings.light_pos.x;
-	float3 lightpos = make_float3(x, scene_settings.light_pos.y, x) - instances[0].location, lightDir;
+	float3 lightpos = make_float3(x, scene_settings.light_pos.y, x), lightDir;
 	float3 lightInt;
 	illuminate(p_hit, lightpos, lightDir, lightInt, light_dst, scene_settings.light_intensity);
 
 	HitResult hit_result;
 	hit_result.ray_o = p_hit;
 	hit_result.ray_dir = normalize(-lightDir);
-	float t_far;
-
-	float sh = 1.f;
+	float light_t_near,t_far;
+	if (!gpu_ray_box_intersect(volume, hit_result.ray_o, hit_result.ray_dir, light_t_near, t_far))
+	{
+		return;
+	}
 
 	int step_count = 0;
-	float t_near = 0;
 	int material_ind;
 	bool intersects = single_shadow_ray_terrain(render_settings, scene_settings, tex, hit_result,
-		t_near, t_far, step, 0, sh, 10e-6, material_ind, volumes[0], instances[0].location);
+		light_t_near, t_far, step, 0, prel, 10e-6, material_ind, volume, instances[0].location);
 	float amb = __saturatef(0.5 + 0.5 * normal.y);
-	float soft_shadow = __saturatef(sh);
+	float soft_shadow = __saturatef(prel);
 	float dif = fmaxf(.0f, dot(normal, hit_result.ray_dir));
 	float bac = __saturatef(0.2 + 0.8 * dot(normalize(make_float3(-lightDir.x, 0.0, lightDir.z)), normal));
 

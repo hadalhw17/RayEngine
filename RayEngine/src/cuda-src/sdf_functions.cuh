@@ -77,6 +77,7 @@ __device__
 uint8_t hash(const cudaTextureObject_t& permutation, const int& x, const int& y, const int& z)
 {
 	return tex2D<uint>(permutation, tex2D<uint>(permutation, x, y), z);
+	//return tex2D<uint>(permutation, x, z);
 }
 
 __device__
@@ -94,9 +95,9 @@ float3 eval(const cudaTextureObject_t& permutation, const float3& p, float3& der
 	float ty = p.y - ((int)floorf(p.y));
 	float tz = p.z - ((int)floorf(p.z));
 
-	float u = smoothstep(tx);
-	float v = smoothstep(ty);
-	float w = smoothstep(tz);
+	float u = quintic(tx);
+	float v = quintic(ty);
+	float w = quintic(tz);
 	
 	// generate vectors going from the grid points to p
 	float x0 = tx, x1 = tx - 1;
@@ -113,9 +114,9 @@ float3 eval(const cudaTextureObject_t& permutation, const float3& p, float3& der
 	float g = gradientDotV(hash(permutation, xi0, yi1, zi1), x0, y1, z1);
 	float h = gradientDotV(hash(permutation, xi1, yi1, zi1), x1, y1, z1);
 
-	float du = smoothstepDeriv(tx);
-	float dv = smoothstepDeriv(ty);
-	float dw = smoothstepDeriv(tz);
+	float du = quinticDeriv(tx);
+	float dv = quinticDeriv(ty);
+	float dw = quinticDeriv(tz);
 
 	float k0 = a;
 	float k1 = (b - a);
@@ -161,7 +162,7 @@ float terrainH(const float2x2& m2, const float2& x, const cudaTextureObject_t& p
 		p3 = make_float3(p.x, 0, p.y);
 	}
 
-	return amp * a;
+	return a;
 }
 __device__
 float terrainM(float2x2 m2, float2 x, const cudaTextureObject_t& permutation, float3& p3, float3& derivs, float freq, float amp)
@@ -202,7 +203,7 @@ float terrainL(float2x2 m2, float2 x, const cudaTextureObject_t& permutation, fl
 		p3 = make_float3(p.x, 0, p.y);
 	}
 
-	return 120.0 * a;
+	return a;
 }
 
 template<typename T>
@@ -390,9 +391,15 @@ float CUBICTEX3D(const cudaTextureObject_t& tex, const float3& coord)
 
 
 __device__
-float2 get_distance(const RenderingSettings& render_settings, const cudaTextureObject_t& tex, const float3& r_orig, const float3& step)
+float2 get_distance(const RenderingSettings& render_settings, const cudaTextureObject_t& tex, const float3& r_orig, const float3& step, bool normal)
 {
 	float2 dist;
+	if (normal)
+	{
+		dist = cubicTex3DSimple(tex, r_orig / step);
+		return dist;
+
+	}
 	switch (render_settings.quality)
 	{
 	case LOW:
@@ -455,7 +462,7 @@ float get_distance_to_sdf(const RenderingSettings& render_settings, const cudaTe
 	if (intersect_box)
 	{
 
-		float2 min_dist_to_sdf = get_distance(render_settings, tex, from, step);
+		float2 min_dist_to_sdf = get_distance(render_settings, tex, from, step, false);
 		min_dist = t_near + min_dist_to_sdf.x;
 	}
 	else
@@ -480,7 +487,8 @@ float get_terrain_distance(float2x2 m2, float3 poi, float3 coord, SceneSettings 
 
 
 	lh = pow(lh + 1, scene_settings.noise_redistrebution);
-	lh = round(lh * scene_settings.terracing) / scene_settings.terracing;
+	if(scene_settings.terracing != 1)
+		lh = round(lh * scene_settings.terracing) / scene_settings.terracing;
 
 	lh *= scene_settings.noise_amplitude;
 
@@ -501,11 +509,11 @@ float3 compute_sdf_normal(const float3& p_hit, const float& t, const RenderingSe
 	const float3& step, const GPUVolumeObjectInstance& curr_obj)
 {
 	float delta = fminf(0.001 * t, 0.002);
-	float curr_dist = get_distance(render_settings, tex, p_hit, step).x;
+	float curr_dist = get_distance(render_settings, tex, p_hit, step, true).x;
 	return normalize(make_float3(
-		get_distance(render_settings, tex, p_hit + make_float3(delta, 0, 0), step).x - curr_dist,
-		get_distance(render_settings, tex, p_hit + make_float3(0, delta, 0), step).x - curr_dist,
-		get_distance(render_settings, tex, p_hit + make_float3(0, 0, delta), step).x - curr_dist));
+		get_distance(render_settings, tex, p_hit + make_float3(delta, 0, 0), step, true).x - curr_dist,
+		get_distance(render_settings, tex, p_hit + make_float3(0, delta, 0), step, true).x - curr_dist,
+		get_distance(render_settings, tex, p_hit + make_float3(0, 0, delta), step, true).x - curr_dist));
 }
 
 __device__
@@ -519,7 +527,7 @@ float3 compute_sdf_normal_tet(const float3& p_hit, const float& t, const Renderi
 	for (int i = zero; i < 4; i++)
 	{
 		float3 e = 0.5773 * (2.0 * make_float3((((i + 3) >> 1) & 1), ((i >> 1) & 1), (i & 1)) - 1.0);
-		n += e * get_distance(render_settings, tex, p_hit + e * delta, step).x;
+		n += e * get_distance(render_settings, tex, p_hit + e * delta, step, true).x;
 	}
 	return normalize(n);
 }

@@ -98,11 +98,12 @@ enum RenderQuality
 struct RenderingSettings
 {
 	float texture_scale = 1;
-	RenderQuality quality = HIGH;
+	RenderQuality quality = MEDIUM;
 	bool gamma;
 	bool vignetting;
 	float vignetting_k;
 	bool gravity;
+	bool god_mode = false;
 };
 
 struct SceneSettings
@@ -116,6 +117,7 @@ struct SceneSettings
 	float noise_amplitude;
 	float noise_redistrebution;
 	int terracing = 1;
+	bool should_terrace = false;
 	uint3 volume_resolution;
 	float3 world_size;
 };

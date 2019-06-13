@@ -303,6 +303,7 @@ namespace RayEngine
 			{
 				ImGui::SliderFloat("Texture scale", &render_settings.texture_scale, 1.f, 250.0f, "%.4f", 2.0f);
 				ImGui::SliderInt("Render quality", (int*)& render_settings.quality, 0, 2, "%.4f");
+				ImGui::Checkbox("Enable god mode", &render_settings.god_mode);
 				ImGui::Checkbox("Apply gamma corrention", &render_settings.gamma);
 				ImGui::Checkbox("Apply vignetting", &render_settings.vignetting);
 				ImGui::SliderFloat("Vignetting k", &render_settings.vignetting_k, 0.f, 10.f, "%.4f");
