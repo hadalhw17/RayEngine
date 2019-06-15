@@ -4,7 +4,7 @@
 #include "BoundingVolume.h"
 
 
-	struct GPUBoundingBox
+	struct RAY_ENGINE_API GPUBoundingBox
 	{
 	public:
 		HOST_DEVICE_FUNCTION

@@ -121,7 +121,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\dev\RayEngine\RayEngine\vendor\MetaStuff\include;$(CudaToolkitDir)/include;$(SolutionDir)RayEngine\src</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>RE_PLATFORM_WINDOWS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>RE_DEVELOPMENT;RE_PLATFORM_WINDOWS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

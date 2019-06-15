@@ -13,4 +13,8 @@ namespace RayEngine
 	RChunk::~RChunk()
 	{
 	}
+	void RChunk::update_sdf_box(const float3& new_box_max)
+	{
+		distance_field.box_max = new_box_max;
+	}
 }

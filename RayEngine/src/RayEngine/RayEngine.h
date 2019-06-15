@@ -84,8 +84,9 @@ enum TerrainBrushType
 struct TerrainBrush
 {
 	TerrainBrushType brush_type;
-	float brush_radius;
+	int3 brush_extent;
 	int material_index;
+	bool snap_to_grid;
 };
 
 enum RenderQuality

@@ -222,7 +222,26 @@ namespace RayEngine
 			ImGui::BeginTabBar("TabBar");
 			if (ImGui::BeginTabItem("Editor Settings"))
 			{
-				ImGui::SliderFloat("Brush size", &brush.brush_radius, 0.f, 5.0f, "%.4f", 2.0f);
+				if (ImGui::TreeNode("Brush settings"))
+				{
+					if (ImGui::SliderInt("X", &brush.brush_extent.x, 1.f, 300, "%.4f"))
+					{
+					}
+					if (ImGui::SliderInt("Y", &brush.brush_extent.y, 1.f, 300, "%.4f"))
+					{
+					}
+					if (ImGui::SliderInt("Z", &brush.brush_extent.z, 1.f, 300, "%.4f"))
+					{
+					}
+					ImGui::Checkbox("Snap to grid", &brush.snap_to_grid);
+
+					ImGui::TreePop();
+					ImGui::Separator();
+					RayEngine::RSceneLayer& scene_layer = dynamic_cast<RayEngine::RSceneLayer&>(app.get_scene_layer());
+					SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
+					scene.get_world_chunk().update_sdf_box(scene_settings.world_size);
+				}
+				
 				ImGui::SliderInt("Material index", &brush.material_index, 0.f, 2, "%.4f");
 				ImGui::SliderFloat("Character speed", &character_speed, 0.f, 500.0f, "%.4f", 2.0f);
 				ImGui::Checkbox("Enable gravity and collisions", &render_settings.gravity);
@@ -242,19 +261,19 @@ namespace RayEngine
 				{
 					if (ImGui::SliderFloat("Noise frequency", &scene_settings.noise_freuency, 0.f, 30.f, "%.4f", 2.0f))
 					{
-						//generate_noise();
+						generate_noise(curr_pos);
 					}
 					if (ImGui::SliderFloat("Noise amplitude", &scene_settings.noise_amplitude, 0.f, 200.f, "%.4f", 2.0f))
 					{
-						//generate_noise();
+						generate_noise(curr_pos);
 					}
 					if (ImGui::SliderFloat("Noise redistribution", &scene_settings.noise_redistrebution, 0.f, 30.f, "%.4f", 2.0f))
 					{
-						//generate_noise();
+						generate_noise(curr_pos);
 					}
 					if (ImGui::SliderInt("Terracing", (int*)& scene_settings.terracing, 1.f, 1000, "%.4f"))
 					{
-						//generate_noise();
+						generate_noise(curr_pos);
 					}
 					if (ImGui::TreeNode("Volume resolution"))
 					{
@@ -288,7 +307,10 @@ namespace RayEngine
 							//generate_noise();
 						}
 						ImGui::TreePop();
-						ImGui::Separator();
+						ImGui::Separator(); 
+						RayEngine::RSceneLayer& scene_layer = dynamic_cast<RayEngine::RSceneLayer&>(app.get_scene_layer());
+						SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
+						scene.get_world_chunk().update_sdf_box(scene_settings.world_size);
 					}
 
 					if (ImGui::Button("Generate noise terrain"))

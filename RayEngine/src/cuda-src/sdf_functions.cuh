@@ -127,9 +127,9 @@ float3 eval(const cudaTextureObject_t& permutation, const float3& p, float3& der
 	float k6 = (a + g - c - e);
 	float k7 = (b + c + e + h - a - d - f - g);
 
-	//derivs.x = du * (k1 + k4 * v + k5 * w + k7 * v * w);
-	//derivs.y = dv * (k2 + k4 * u + k6 * w + k7 * v * w);
-	//derivs.z = dw * (k3 + k5 * u + k6 * v + k7 * v * w);
+	derivs.x = du * (k1 + k4 * v + k5 * w + k7 * v * w);
+	derivs.y = dv * (k2 + k4 * u + k6 * w + k7 * v * w);
+	derivs.z = dw * (k3 + k5 * u + k6 * v + k7 * v * w);
 
 	return make_float3(k0 + k1 * u + k2 * v + k3 * w + k4 * u * v + k5 * u * w + k6 * v * w + k7 * u * v * w);
 }
@@ -474,12 +474,11 @@ float get_distance_to_sdf(const RenderingSettings& render_settings, const cudaTe
 }
 
 __device__
-float get_terrain_distance(float2x2 m2, float3 poi, float3 coord, SceneSettings scene_settings, float3 transform, GPUBoundingBox volume, const cudaTextureObject_t& permutation, const bool& norm)
+float get_terrain_distance(const float2x2& m2, const float3& poi, const float3& coord, float3& derivs, const SceneSettings &scene_settings, 
+	const float3& transform, const GPUBoundingBox &volume, const cudaTextureObject_t& permutation, const bool& norm)
 {
 	float lh = 0.0f;
 	float ly = 0.0f;
-	float3 derivs;
-
 
 	float3 tr_coord = coord - transform;
 	lh = norm ? terrainH(m2, make_float2(poi.x - transform.x, poi.z - transform.z), permutation, tr_coord, derivs, scene_settings.noise_freuency, scene_settings.noise_amplitude) 
@@ -534,14 +533,14 @@ float3 compute_sdf_normal_tet(const float3& p_hit, const float& t, const Renderi
 
 __device__
 float3 compute_terrain_normal(const float2x2& m2, const float3& p_hit, const float& t, const SceneSettings &scene_settings,
-	const cudaTextureObject_t& permutation, GPUBoundingBox volume, const GPUVolumeObjectInstance& curr_obj)
+	const cudaTextureObject_t& permutation, GPUBoundingBox volume, const GPUVolumeObjectInstance& curr_obj, float3& deriv)
 {
 	float delta = 0.002 * t;
 	float3 transform = curr_obj.location;
 	return normalize(make_float3(
-		get_terrain_distance(m2, p_hit - make_float3(delta, 0, 0), p_hit - make_float3(delta, 0, 0),scene_settings, -transform, volume, permutation, true)
-		- get_terrain_distance(m2, p_hit + make_float3(delta, 0, 0), p_hit + make_float3(delta, 0, 0), scene_settings, -transform, volume, permutation, true), //X
+		get_terrain_distance(m2, p_hit - make_float3(delta, 0, 0), p_hit - make_float3(delta, 0, 0), deriv, scene_settings, -transform, volume, permutation, true)
+		- get_terrain_distance(m2, p_hit + make_float3(delta, 0, 0), p_hit + make_float3(delta, 0, 0), deriv, scene_settings, -transform, volume, permutation, true), //X
 		2.0 * delta, // Y
-		get_terrain_distance(m2, p_hit - make_float3(0, 0, delta), p_hit - make_float3(0, 0, delta), scene_settings,-transform, volume, permutation, true)
-		- get_terrain_distance(m2, p_hit + make_float3(0, 0, delta), p_hit + make_float3(0, 0, delta), scene_settings, -transform, volume, permutation, true))); // Z
+		get_terrain_distance(m2, p_hit - make_float3(0, 0, delta), p_hit - make_float3(0, 0, delta), deriv, scene_settings,-transform, volume, permutation, true)
+		- get_terrain_distance(m2, p_hit + make_float3(0, 0, delta), p_hit + make_float3(0, 0, delta), deriv, scene_settings, -transform, volume, permutation, true))); // Z
 }

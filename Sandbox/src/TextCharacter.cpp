@@ -13,21 +13,30 @@ void TextCharacter::on_detach()
 {
 }
 
-bool point_in_aabb(const GPUBoundingBox& tBox, const float3& vecPoint)
+bool exited_chunk(const GPUBoundingBox& tBox, const float3& vecPoint)
 {
+	RE_LOG("Checking if in chunk with bounds: " << tBox.Min.x << " " << tBox.Min.z << " "  << tBox.Max.x << " " << tBox.Max.z);
+	RE_LOG("At point: " << vecPoint.x << " " << vecPoint.z);
 	return
-		vecPoint.x > tBox.Min.x && vecPoint.x < tBox.Max.x &&
-		vecPoint.z > tBox.Min.z && vecPoint.z < tBox.Max.z;
+		(vecPoint.x < tBox.Min.x || vecPoint.x > tBox.Max.x) ||
+		(vecPoint.z < tBox.Min.z || vecPoint.z > tBox.Max.z);
 
 }
 
 float3 position_chunk(const GPUBoundingBox& tBox, const float3& vecPoint)
 {
+	RayEngine::Application& app = RayEngine::Application::get();
+	TestSceneLayer& scene_layer = dynamic_cast<TestSceneLayer&>(app.get_scene_layer());
+	SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
+
+	GPUBoundingBox world_box = GPUBoundingBox(make_float3(0.f) + scene.get_world_chunk().get_location(),
+		scene.get_world_chunk().get_sdf().box_max + scene.get_world_chunk().get_location());
+
 	float3 new_pos = make_float3(0);
-	if (vecPoint.x < tBox.Min.x) new_pos.x -= 300;
-	else if (vecPoint.x > tBox.Max.x) new_pos.x += 300;
-	if (vecPoint.z < tBox.Min.z) new_pos.z -= 300;
-	else if (vecPoint.z > tBox.Max.z) new_pos.z += 300;
+	if (vecPoint.x < tBox.Min.x) new_pos.x -= scene.scene_settings.world_size.x;
+	else if (vecPoint.x > tBox.Max.x) new_pos.x += scene.scene_settings.world_size.x;
+	if (vecPoint.z < tBox.Min.z) new_pos.z -= scene.scene_settings.world_size.z;
+	else if (vecPoint.z > tBox.Max.z) new_pos.z += scene.scene_settings.world_size.z;
 	
 	return new_pos;
 }
@@ -218,14 +227,17 @@ bool TextCharacter::on_key_pressed(RayEngine::KeyPressedEvent& e)
 	TestSceneLayer& scene_layer = dynamic_cast<TestSceneLayer&>(app.get_scene_layer());
 	SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
 	GPUBoundingBox world_box = GPUBoundingBox(make_float3(0.f) + scene.get_world_chunk().get_location(),
-		scene_layer.m_scene->get_world_chunk().get_sdf().box_max + scene.get_world_chunk().get_location());
+		scene.get_world_chunk().get_sdf().box_max + scene.get_world_chunk().get_location());
 
-	if (!point_in_aabb(world_box, camera.position))
+	if (exited_chunk(world_box, camera.position))
 	{
+		float3 rounded_pos = { round(camera.position.x * scene.scene_settings.world_size.x) / scene.scene_settings.world_size.x, 0, 
+			round(camera.position.z * scene.scene_settings.world_size.z) / scene.scene_settings.world_size.z };
 
-		float3 rounded_pos = { round(camera.position.x * 300) / 300, 0, round(camera.position.z * 300) / 300 };
 		float3 pos = position_chunk(world_box, rounded_pos);
-		scene.move_chunk({ round(pos.x * 300) / 300, 0, round(pos.z * 300) / 300 });
+		scene.move_chunk({ round(pos.x * scene.scene_settings.world_size.x) / scene.scene_settings.world_size.x, 0, 
+			round(pos.z * scene.scene_settings.world_size.z) / scene.scene_settings.world_size.z });
+
 		std::ostringstream file_name;
 
 		file_name << "SDFs/" << scene.get_world_chunk().get_location().x  << "_" << scene.get_world_chunk().get_location().z << ".rsdf";

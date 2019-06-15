@@ -11,6 +11,7 @@
 #include "../Engine/Material.h"
 #include "../Engine/TextureObject.h"
 #include "../World/PerlinNoise.h"
+#include "Layers/SceneLayer.h"
 
 
 cudaArray* d_volumeArray = 0;
@@ -216,7 +217,7 @@ bool single_ray_sphere_trace(const RenderingSettings& render_settings, const Sce
 
 __device__
 bool single_shadow_ray_terrain(const RenderingSettings& render_settings, const SceneSettings& scene_settings, const cudaTextureObject_t& permutation, const HitResult& hit_result,
-	float& t_near, const float& t_far, const float3& step, const int& nearest_shape, float& prel, const float& threshold, int& material_index, const GPUBoundingBox& volume, float3 transform)
+	float& t_near, const float& t_far,  float& prel, const float& threshold, const GPUBoundingBox& volume)
 {
 	float2x2 m2;
 	m2.m[0] = make_float2(0.8, -0.6);
@@ -226,8 +227,8 @@ bool single_shadow_ray_terrain(const RenderingSettings& render_settings, const S
 	{
 		float3 from = hit_result.ray_o + (t * hit_result.ray_dir);
 		float min_dist = K_INFINITY;
-
-		min_dist == get_terrain_distance(m2, from, from, scene_settings, transform, volume, permutation, false);
+		float3 deriv;
+		min_dist == get_terrain_distance(m2, from, from, deriv, scene_settings, make_float3(0), volume, permutation, false);
 
 		if (prel < K_EPSILON || min_dist <= threshold)
 		{
@@ -273,8 +274,7 @@ bool single_shadow_ray_sphere_trace(const RenderingSettings& render_settings, co
 
 __device__
 void shade_terrain(const RenderingSettings& render_settings, const SceneSettings& scene_settings, const cudaTextureObject_t& tex,
-	const GPUVolumeObjectInstance*& __restrict__ instances, const float3& p_hit, const float3& normal, const GPUBoundingBox& volume, const int& num_sdf,
-	const float3& step, const uint3& dim, const float3& light, float3& final_colour, const int& material_index, float t_n, float t_f, float& prel)
+	const float3& p_hit, const float3& normal, const GPUBoundingBox& volume, const float3& light, float3& final_colour, float& prel)
 {
 	float3 pixel_color = make_float3(0.f);
 
@@ -296,7 +296,7 @@ void shade_terrain(const RenderingSettings& render_settings, const SceneSettings
 	int step_count = 0;
 	int material_ind;
 	bool intersects = single_shadow_ray_terrain(render_settings, scene_settings, tex, hit_result,
-		light_t_near, t_far, step, 0, prel, 10e-6, material_ind, volume, instances[0].location);
+		light_t_near, t_far, prel, 10e-6, volume);
 	float amb = __saturatef(0.5 + 0.5 * normal.y);
 	float soft_shadow = __saturatef(prel);
 	float dif = fmaxf(.0f, dot(normal, hit_result.ray_dir));
@@ -322,7 +322,7 @@ void sphere_trace_shadow(const RenderingSettings& render_settings, const SceneSe
 	float light_dst = K_INFINITY;
 	float x = scene_settings.light_pos.x;
 	float z = scene_settings.light_pos.x;
-	float3 lightpos = make_float3(x, scene_settings.light_pos.y, x) - instances[0].location, lightDir;
+	float3 lightpos = make_float3(x, scene_settings.light_pos.y, x), lightDir;
 	float3 lightInt;
 	illuminate(p_hit, lightpos, lightDir, lightInt, light_dst, scene_settings.light_intensity);
 
@@ -462,10 +462,6 @@ void sphere_trace_shade(const RenderingSettings& render_settings, const cudaText
 	paint_surface(render_settings, p_hit, material_index, final_colour, volumes[0].Max.y, n, materials, permutation);
 	
 
-	//if (fract(p_hit.x / step.x) < 0.1f || fract(p_hit.y / step.y) < 0.1f || fract(p_hit.z / step.z) < 0.1f)
-	//{
-	//	final_colour = { 0 };
-	//}
 	if (shade)
 	{
 #pragma unroll 1
@@ -711,14 +707,14 @@ void initialize_volume_render(RCamera& sceneCam, const RayEngine::RChunk& world_
 	size_t noise_pitch;
 	uint* perm;
 	size_t noise_width = tableSize * sizeof(uint);
-	size_t noise_heighth = tableSize;
+	size_t noise_heigth = tableSize;
 
 	// allocate memory for the triangle meshes on the GPU
-	gpuErrchk(cudaMallocPitch((void**)& perm, &noise_pitch, noise_width, noise_heighth));
+	gpuErrchk(cudaMallocPitch((void**)& perm, &noise_pitch, noise_width, noise_heigth));
 
 
 	// copy triangle data to GPU
-	gpuErrchk(cudaMemcpy2D(perm, noise_pitch, noise.permutationTable, noise_width, noise_width, noise_heighth,
+	gpuErrchk(cudaMemcpy2D(perm, noise_pitch, noise.permutationTable, noise_width, noise_width, noise_heigth,
 		cudaMemcpyHostToDevice));
 
 	bind_noise(&perm, { tableSize ,tableSize }, noise_pitch);

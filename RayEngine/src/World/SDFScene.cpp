@@ -55,6 +55,7 @@ void SDFScene::update_chunk()
 
 void SDFScene::generate_chunk()
 {
+	RE_LOG("Generating chunk");
 	cuda_update_chunk_gen(world_chunk, noise);
 }
 

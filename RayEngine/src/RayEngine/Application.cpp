@@ -75,7 +75,6 @@ namespace RayEngine
 		dispatcher.dipatch<KeyPressedEvent>(BIND_EVENT_FN(Application::on_key_pressed));
 		dispatcher.dipatch<KeyReleaseEvent>(BIND_EVENT_FN(Application::on_key_released));
 		dispatcher.dipatch<WindowClosedEvent>(BIND_EVENT_FN(Application::on_window_closed));
-		RE_LOG(e);
 
 		for (auto it = m_layer_stack.end(); it != m_layer_stack.begin();)
 		{
