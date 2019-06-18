@@ -97,8 +97,6 @@ namespace RayEngine
 		io.DeltaTime = m_time > 0.f ? (time - m_time) : (1.f / 60.f);
 		m_time = time;
 
-
-
 		bool show = app.show_mouse;
 		if (show)
 		{
@@ -203,16 +201,16 @@ namespace RayEngine
 	{
 		Application& app = Application::get();
 		const float DISTANCE_X = 10;
-		const float DISTANCE_Y = SCR_HEIGHT / 2 - 250;
+		const float DISTANCE_Y = app.get_window().get_heigth() / 2 - 250;
 		static int corner = 0;
 		ImGuiIO& io = ImGui::GetIO();
 		if (corner != -1)
 		{
-			ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE_X : DISTANCE_X, (corner & 2) ? io.DisplaySize.y - DISTANCE_Y : DISTANCE_Y);
-			ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
-			ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
-			ImGui::SetNextWindowSize(ImVec2(500, 500));
-			ImGui::SetNextWindowContentSize(ImVec2(250, 250));
+			//ImVec2 window_pos = ImVec2((corner & 1) ? io.DisplaySize.x - DISTANCE_X : DISTANCE_X, (corner & 2) ? io.DisplaySize.y - DISTANCE_Y : DISTANCE_Y);
+			//ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+			//ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+			//ImGui::SetNextWindowSize(ImVec2(500, 500));
+			//ImGui::SetNextWindowContentSize(ImVec2(250, 250));
 		}
 		ImGui::SetNextWindowBgAlpha(.5f); // Transparent background
 		bool show = app.show_mouse;

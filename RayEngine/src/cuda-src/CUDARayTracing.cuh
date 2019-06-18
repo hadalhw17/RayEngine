@@ -41,7 +41,7 @@ __device__ __constant__
 int* d_index_list;
 
 __device__
-uchar4* d_pixels;
+uint* d_pixels;
 
 __device__
 float4* d_shadow_map;

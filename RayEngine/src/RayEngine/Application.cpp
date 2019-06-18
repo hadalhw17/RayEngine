@@ -17,17 +17,17 @@
 extern void free_memory();
 extern void toggle_shadow();
 extern bool sdf_collision(RCamera cam);
-extern void spawn_obj(RCamera pos, TerrainBrush brush, int x, int y);
+extern void spawn_obj(RCamera pos, TerrainBrush brush, uint x, uint y);
 
 
 namespace RayEngine
 {
 
+
 	Application* Application::s_instance = nullptr;
 
 	Application::Application()
 	{
-		RE_LOG("HIIIII");
 		s_instance = this;
 		application_window = new Window();
 		application_window->set_event_callback(BIND_EVENT_FN(Application::on_event));
@@ -116,18 +116,14 @@ namespace RayEngine
 	{
 		while (!application_window->should_close())
 		{
-			application_window->updateGL();
+			if (!application_window->updateGL()) break;
 
 			for (auto layer : m_layer_stack)
 			{
 				layer->on_update();
 			}
-
-
 			
 			application_window->RenderFrame();
-
-
 		}
 
 		// Cleanup

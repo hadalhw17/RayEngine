@@ -13,23 +13,29 @@
 #include "RayEngine/Application.h"
 
 
-extern void cuda_render_frame(uint* output, const uint& width, const uint& heigth);
+extern uint *cuda_render_frame(uint* output, const uint& width, const uint& heigth);
 
 namespace RayEngine
 {
 	void Window::RenderFrame()
 	{
 		glfwSwapBuffers(window);
-		// map PBO to get CUDA device pointer
-		gpuErrchk(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
-		size_t num_bytes;
-		gpuErrchk(cudaGraphicsResourceGetMappedPointer((void**)& d_output, &num_bytes,
-			cuda_pbo_resource));
+		//// map PBO to get CUDA device pointer
+		//gpuErrchk(cudaGraphicsMapResources(1, &cuda_pbo_resource, 0));
+		//size_t num_bytes;
+		//gpuErrchk(cudaGraphicsResourceGetMappedPointer((void**)& d_output, &num_bytes,
+		//	cuda_pbo_resource));
 
-		// call CUDA kernel, writing results to PBO
-		cuda_render_frame(d_output, SCR_WIDTH, SCR_HEIGHT);
+		//// call CUDA kernel, writing results to PBO
+		d_output = cuda_render_frame(d_output, m_data.m_width, m_data.m_heigth);
 
-		gpuErrchk(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
+		// generate texture
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, &d_output[0]);
+		//gpuErrchk(cudaGraphicsUnmapResources(1, &cuda_pbo_resource, 0));
 
 		// display results
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -40,10 +46,10 @@ namespace RayEngine
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 		// copy from pbo to texture
-		glBindBuffer(0x88EC, pbo);
-		glBindTexture(GL_TEXTURE_2D, tex);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-		glBindBuffer(0x88EC, 0);
+		//glBindBuffer(0x88EC, pbo);
+		//glBindTexture(GL_TEXTURE_2D, tex);
+		//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_data.m_width, m_data.m_heigth, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		//glBindBuffer(0x88EC, 0);
 
 		click_timer += deltaTime;
 
@@ -54,7 +60,6 @@ namespace RayEngine
 			glfwSetWindowTitle(window, ss.str().c_str());
 			frame_counter = 0;
 			lastFrame++;
-
 		}
 	}
 
@@ -74,7 +79,7 @@ namespace RayEngine
 		// create pixel buffer object for display
 		glGenBuffers(1, &pbo);
 		glBindBuffer(0x88EC, pbo);
-		glBufferData(0x88EC, SCR_WIDTH * SCR_HEIGHT * sizeof(GLubyte) * 4, 0, 0x88E0);
+		glBufferData(0x88EC, m_data.m_width * m_data.m_heigth * sizeof(GLubyte) * 4, 0, 0x88E0);
 		glBindBuffer(0x88EC, 0);
 
 		// register this buffer object with CUDA
@@ -83,7 +88,7 @@ namespace RayEngine
 		// create texture for display
 		glGenTextures(1, &tex);
 		glBindTexture(GL_TEXTURE_2D, tex);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_data.m_width, m_data.m_heigth, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -218,7 +223,7 @@ namespace RayEngine
 		GLuint bufferID;
 		glGenBuffers(1, &bufferID);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, bufferID);
-		glBufferData(GL_PIXEL_UNPACK_BUFFER, SCR_HEIGHT * SCR_WIDTH * sizeof(GLubyte) * 4, NULL, GL_STREAM_DRAW);
+		glBufferData(GL_PIXEL_UNPACK_BUFFER, m_data.m_width * m_data.m_heigth * sizeof(GLubyte) * 4, NULL, GL_STREAM_DRAW);
 
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
@@ -227,6 +232,7 @@ namespace RayEngine
 
 	Window::Window()
 	{
+		d_output = new uint[SCR_WIDTH * SCR_HEIGHT * 4];
 		click_timer = 0.f;
 		create_window();
 		currentFrame = glfwGetTime();
@@ -273,7 +279,6 @@ namespace RayEngine
 			return false;;
 		}
 
-		// Iterate over the layer stack
 		glfwPollEvents();
 		update_mouse();
 		return true;
@@ -285,7 +290,7 @@ namespace RayEngine
 		if (!glfwInit())
 			return 1;
 
-		window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Ray Engine", NULL, NULL);
+		window = glfwCreateWindow(m_data.m_width, m_data.m_heigth, "Ray Engine", NULL, NULL);
 		if (window == NULL)
 		{
 			RE_LOG("Failed to create GLFW window");
@@ -298,9 +303,9 @@ namespace RayEngine
 
 
 		// Initialize OpenGL loader
-		RAY_ENGINE_ASSERT(!gl3wInit(), "Failed to initialize OpenGL loader!\n")
+		RAY_ENGINE_ASSERT(!gl3wInit(), "Failed to initialize OpenGL loader!\n");
 
-			glfwSetWindowUserPointer(window, &m_data);
+		glfwSetWindowUserPointer(window, &m_data);
 		glfwMakeContextCurrent(window);
 
 
@@ -393,7 +398,7 @@ namespace RayEngine
 		//}
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		initGL();
-		initPixelBuffer();
+		//initPixelBuffer();
 	}
 
 	void Window::destroy_window()

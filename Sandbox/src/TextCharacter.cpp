@@ -227,7 +227,7 @@ bool TextCharacter::on_key_pressed(RayEngine::KeyPressedEvent& e)
 	TestSceneLayer& scene_layer = dynamic_cast<TestSceneLayer&>(app.get_scene_layer());
 	SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
 	GPUBoundingBox world_box = GPUBoundingBox(make_float3(0.f) + scene.get_world_chunk().get_location(),
-		scene.get_world_chunk().get_sdf().box_max + scene.get_world_chunk().get_location());
+		scene.scene_settings.world_size + scene.get_world_chunk().get_location());
 
 	if (exited_chunk(world_box, camera.position))
 	{

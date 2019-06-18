@@ -28,7 +28,7 @@ float2x2 m2;
 
 
 __global__
-void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings scene_settings, TerrainBrush brush, cudaTextureObject_t tex, HitResult hit_result, const GPUVolumeObjectInstance* instances,
+void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings scene_settings, TerrainBrush brush, cudaTextureObject_t tex, RayData ray, const GPUVolumeObjectInstance* instances,
 	float3 step, float2* sdf_texute, GPUBoundingBox* volumes, uint3 tex_dim)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -36,22 +36,21 @@ void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings s
 	int z = blockIdx.z * blockDim.z + threadIdx.z;
 	if (x >= tex_dim.x || y >= tex_dim.y || z >= tex_dim.z)
 		return;
-	float scene_t_near, scene_t_far;
-	hit_result.ray_o -= instances[0].location;
-	bool intersect_scene = gpu_ray_box_intersect(volumes[0], hit_result.ray_o, hit_result.ray_dir, scene_t_near, scene_t_far);
-	bool intersect_sdf = false;
+	ray.origin -= instances[0].location;
+	bool intersect_scene = gpu_ray_box_intersect(volumes[0], ray);
+	HitResult sdf_hit_result;
 	float prel;
 	int material_index = -1;
 	if (intersect_scene)
 	{
-		intersect_sdf = single_ray_sphere_trace(render_settings, scene_settings, tex, hit_result, instances,
-			scene_t_near, scene_t_far, step, 0, prel, 10e-6, material_index);
+		sdf_hit_result = single_ray_sphere_trace(render_settings, scene_settings, tex, ray, instances,
+			step, 0, 10e-6);
 	}
-	if (intersect_sdf)
+	if (sdf_hit_result.hits)
 	{
 		int index = x + tex_dim.x * (y + tex_dim.z * z);
 		float3 poi = make_float3(x, y, z) * step;
-		float3 placement_position = hit_result.ray_o + scene_t_near * hit_result.ray_dir;
+		float3 placement_position = ray.origin + sdf_hit_result.t * ray.direction;
 		int mat_index = brush.material_index;
 		placement_position = poi - placement_position;
 		//printf("Bebore: %f %f %f\n", placement_position.x, placement_position.y, placement_position.z);
@@ -64,7 +63,7 @@ void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings s
 			//placement_position.z = floor(placement_position.z / brush.brush_extent.z) * brush.brush_extent.z;
 			placement_position.x = floor(placement_position.x - fabs(modff(placement_position.x, (float*)& snapx)));
 			placement_position.z = floor(placement_position.z - fabs(modff(placement_position.z, (float*)& snapz)));
-			
+
 			//printf("After: %f %f %f\n", placement_position.x, placement_position.y, placement_position.z);
 		}
 
@@ -104,7 +103,7 @@ float noised(float3 x, curandState* rand_state)
 
 __global__
 void generate_noise(float2x2 m2, RenderingSettings render_settings, SceneSettings scene_settings, GPUVolumeObjectInstance* instances,
-	float2* sdf_texute, float2* normal_texture, uint3 tex_dim, float3 spacing, GPUBoundingBox* volumes, curandState* rand_state, const cudaTextureObject_t permutaion, float3* grads, float3 pos)
+	float2* sdf_texute, uint3 tex_dim, float3 spacing, GPUBoundingBox* volumes, curandState* rand_state, const cudaTextureObject_t permutaion, float3* grads, float3 pos)
 {
 	int x = blockIdx.x * blockDim.x + threadIdx.x;
 	int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -120,8 +119,8 @@ void generate_noise(float2x2 m2, RenderingSettings render_settings, SceneSetting
 	float3 poi = (make_float3(x, y, z)) * spacing;
 	float3 coord = ((make_float3(x + 0.5f, 0, z + 0.5)) * spacing);
 	float3 deriv;
-	float distance = get_terrain_distance(m2, poi, coord, deriv,  scene_settings, -pos, volumes[0], permutaion, true);
-	
+	float distance = get_terrain_distance(m2, poi, coord, deriv, scene_settings, -pos, volumes[0], permutaion, true);
+
 	sdf_texute[index] = make_float2(distance, 0);
 }
 
@@ -144,8 +143,8 @@ void render_sphere_trace(const RenderingSettings render_settings, const RCamera 
 	const float3* __restrict__ lights, const int num_lights,
 	const  GPUVolumeObjectInstance* __restrict__ instances, const int num_instances,
 	const GPUBoundingBox* __restrict__ volumes, const float3 step, const uint3 dim,
-	uint* __restrict__ pixels, const int num_sdf, const cudaTextureObject_t tex, const cudaTextureObject_t normal_tex,
-	const bool shade, const  uint width, const uint heigth, const  GPUMat* __restrict__ materials, const cudaTextureObject_t permutation, Atmosphere *atmosphere)
+	uint* __restrict__ pixels, const int num_sdf, const cudaTextureObject_t tex,
+	const bool shade, const  uint width, const uint heigth, const  GPUMat* __restrict__ materials, const cudaTextureObject_t permutation, Atmosphere* atmosphere)
 {
 	int imageX = blockIdx.x * blockDim.x + threadIdx.x;
 	int imageY = blockIdx.y * blockDim.y + threadIdx.y;
@@ -166,38 +165,40 @@ void render_sphere_trace(const RenderingSettings render_settings, const RCamera 
 	float u = (imageX / (float)width);
 	float v = (imageY / (float)heigth);
 
-	HitResult hit_result;
-	generate_ray(hit_result.ray_o, hit_result.ray_dir, render_camera, width, heigth);
-	
-	GPUBoundingBox world_box = GPUBoundingBox(make_float3(hit_result.ray_o.x-1000, 0, hit_result.ray_o.z - 1000), make_float3(hit_result.ray_o.x + 1000, volumes[0].Max.y, hit_result.ray_o.z + 1000));
-	
-	float world_t_near, world_t_far,scene_t_near, scene_t_far, smallest_dist = K_INFINITY;
+	RayData world_ray;
+	generate_ray(world_ray, render_camera, width, heigth, { imageX, imageY });
+
+	GPUBoundingBox world_box = GPUBoundingBox(make_float3(world_ray.origin.x - 1000, 0, world_ray.origin.z - 1000), 
+		make_float3(world_ray.origin.x + 1000, volumes[0].Max.y, world_ray.origin.z + 1000));
+
+	float world_t_near, world_t_far, scene_t_near, scene_t_far, smallest_dist = K_INFINITY;
 
 	// calculate eye ray in world space
 	bool intersect_scene = false;
-	bool intersect_world = gpu_ray_box_intersect(world_box, hit_result.ray_o, hit_result.ray_dir, world_t_near, world_t_far);
-	bool intersect_sdf = false;
-	bool intersect_terrain = false;
+	bool intersect_world = gpu_ray_box_intersect(world_box, world_ray);
+	HitResult geometry_hit_result;
+	HitResult terrain_hit_result;
 	bool intersect_anything = false;
-	
+
 	int  nearest_shape = 0;
 	int num_intersected = 0;
-	hit_result.ray_o -= instances[0].location;
+	RayData scene_ray = world_ray;
+	scene_ray.origin -= instances[0].location;
 
-	float prel = 1.f;
-	int material_index = -1.f;
 	// Interate over every object and test for intersection with their aabb.
 	if (intersect_world)
 	{
+		RayData local_ray = scene_ray;
 #pragma unroll 1
 		for (int i = 0; i < num_instances; ++i)
 		{
-			if (gpu_ray_box_intersect(volumes[instances[i].index], hit_result.ray_o, hit_result.ray_dir, scene_t_near, scene_t_far))
+			if (gpu_ray_box_intersect(volumes[instances[i].index], local_ray))
 			{
-				if (scene_t_near < smallest_dist)
+				if (local_ray.min_distance < smallest_dist)
 				{
+					smallest_dist = scene_ray.min_distance;
 					intersect_scene = true;
-					smallest_dist = scene_t_near;
+					scene_ray = local_ray;
 					nearest_shape = i;
 					++num_intersected;
 				}
@@ -207,26 +208,30 @@ void render_sphere_trace(const RenderingSettings render_settings, const RCamera 
 		// Traverse volume signed distance field texture.
 		if (intersect_scene)
 		{
-			intersect_sdf = single_ray_sphere_trace(render_settings, scene, tex, hit_result, instances,
-				smallest_dist, scene_t_far, step, nearest_shape, prel, 0.001f, material_index);
+			geometry_hit_result = single_ray_sphere_trace(render_settings, scene, tex, scene_ray, instances,
+				step, nearest_shape, 0.001f);
 		}
+
 		float3 deriv;
 		// Generate terrain outside of signed distance field texture.
-		if(!intersect_sdf && render_settings.god_mode)
+		if (!geometry_hit_result.hits && render_settings.god_mode)
 		{
-			float t = intersect_scene ? scene_t_far : world_t_near;
+			RayData local_ray = world_ray;
+			terrain_hit_result.ray = local_ray;
+			float t = intersect_scene ? scene_ray.max_distance : world_ray.min_distance;
 
 			if (intersect_world)
 			{
-				while (t < world_t_far)
+				while (t < local_ray.max_distance)
 				{
-					float3 poi = hit_result.ray_o + t * hit_result.ray_dir;
+					float3 poi = local_ray.origin + t * local_ray.direction;
 					float3 transform = instances[0].location;
 					float distance = get_terrain_distance(m2, poi, poi, deriv, scene, -transform, world_box, permutation, false);
 					if (distance < 0.002f * t)
 					{
-						intersect_terrain = true;
-						smallest_dist = t;
+						terrain_hit_result.hits = true;
+						terrain_hit_result.material_index = 0;
+						terrain_hit_result.t = t;
 						break;
 					}
 					t += distance;
@@ -235,35 +240,35 @@ void render_sphere_trace(const RenderingSettings render_settings, const RCamera 
 		}
 
 		// Shade texture.
-		if (intersect_sdf)
+		if (geometry_hit_result.hits)
 		{
-			sphere_trace_shade(render_settings, tex, normal_tex, scene, lights, num_lights, hit_result, instances, smallest_dist, volumes,
-				num_instances, step, dim, material_index, pixel_colour, 0, shade, materials, permutation);
+			sphere_trace_shade(render_settings, tex, scene, lights, num_lights, geometry_hit_result, instances, volumes,
+				num_instances, step, dim, pixel_colour, 0, shade, materials, permutation);
 		}
 
-		if (intersect_terrain && render_settings.god_mode)
+		if (terrain_hit_result.hits && render_settings.god_mode)
 		{
-			prel = 1.f;
-			pixel_colour = { 0.f, 0.f, 0.f };		
-			float3 terrain_phit = hit_result.ray_o + smallest_dist * hit_result.ray_dir;
-			float3 terrain_normal = compute_terrain_normal(m2, terrain_phit, smallest_dist, scene, permutation, world_box, instances[0], deriv);
+			terrain_hit_result.prel = 1.f;
+			pixel_colour = { 0.f, 0.f, 0.f };
+			float3 terrain_phit = terrain_hit_result.ray.origin + terrain_hit_result.t * terrain_hit_result.ray.direction;
+			terrain_hit_result.normal = compute_terrain_normal(m2, terrain_phit, terrain_hit_result.t, scene, permutation, world_box, instances[0], deriv);
 
-			paint_surface(render_settings, terrain_phit, 0.f, pixel_colour, world_box.Max.y, terrain_normal, materials, permutation);
-			shade_terrain(render_settings, scene, tex, terrain_phit, terrain_normal, world_box, lights[0], pixel_colour, prel);
+			paint_surface(render_settings, terrain_hit_result, pixel_colour, world_box.Max.y, materials, permutation);
+			shade_terrain(render_settings, scene, tex, terrain_hit_result, world_box, lights[0], pixel_colour);
 
 			//simple_shade(pixel_colour, terrain_normal, hit_result.ray_dir);
 
 		}
-		intersect_anything = intersect_terrain || intersect_sdf;
+		intersect_anything = terrain_hit_result.hits || geometry_hit_result.hits;
 	}
 
 	// In case if missed everything, paint sky.
 	if (!intersect_anything)
 	{
 		// if ray missed draw sky there.
-		//sky_mat(pixel_color, primary_hit_results[index].ray_dir);
+		//sky_mat(pixel_colour, hit_result.ray_dir);
 		float t_max = K_INFINITY;
-		pixel_colour = compute_incident_light(atmosphere, make_float3(0, atmosphere->earthRadius + 10000, 300000), hit_result.ray_dir, 0, t_max);
+		pixel_colour = compute_incident_light(atmosphere, make_float3(0, atmosphere->earthRadius + 10000, 300000), world_ray.direction, 0, t_max);
 
 		pixel_colour.x = pixel_colour.x < 1.413f ? pow(pixel_colour.x * 0.38317f, 1.0f / 2.2f) : 1.0f - __expf(-pixel_colour.x);
 		pixel_colour.y = pixel_colour.y < 1.413f ? pow(pixel_colour.y * 0.38317f, 1.0f / 2.2f) : 1.0f - __expf(-pixel_colour.y);
@@ -271,7 +276,7 @@ void render_sphere_trace(const RenderingSettings render_settings, const RCamera 
 	}
 
 	if (scene.enable_fog)
-		apply_fog(pixel_colour, smallest_dist, scene.fog_deisity, hit_result.ray_o, hit_result.ray_dir);
+		apply_fog(pixel_colour, world_ray, scene.fog_deisity);
 
 	// Gamma.	
 	if (render_settings.gamma) pixel_colour = powf(pixel_colour, 1.0f / 2.2f);
@@ -337,15 +342,14 @@ void gpu_bruteforce_ray_cast(float4* image_buffer, const RCamera render_camera, 
 
 	float3 pixel_colour = make_float3(0);
 
-	float3 ray_o, ray_dir;
-	generate_ray(ray_o, ray_dir, render_camera, width, height);
+	RayData ray;
+	generate_ray(ray, render_camera, width, height, { imageX, imageY });
 
-	float t_near, t_far;
 	GPUBoundingBox bbox = tree[0].box;
 
 
 	// Perform ray-box intersection test.
-	bool intersects_aabb = gpu_ray_box_intersect(bbox, ray_o, ray_dir, t_near, t_far);
+	bool intersects_aabb = gpu_ray_box_intersect(bbox, ray);
 	if (intersects_aabb)
 	{
 		HitResult hit_result;
@@ -401,8 +405,9 @@ void trace_primary_rays(RKDTreeNodeGPU* tree,
 	int index = imageY * width + imageX;
 
 	HitResult hit_result;
-	generate_ray(hit_result.ray_o, hit_result.ray_dir, render_camera, width, height);
-
+	RayData ray;
+	generate_ray(ray, render_camera, width, height, { imageX, imageY });
+	hit_result.ray = ray;
 	trace_scene(tree, render_camera, scene_objs, num_objs, root_index, indexList, hit_result);
 
 	hit_results[index] = hit_result;
@@ -479,7 +484,7 @@ void trace_secondary_rays(float3* lights, size_t num_lights, RKDTreeNodeGPU* tre
 		// if ray missed draw sky there.
 		//sky_mat(pixel_color, primary_hit_results[index].ray_dir);
 		float t_max = K_INFINITY;
-		pixel_color = compute_incident_light(atmosphere, make_float3(0, atmosphere->earthRadius + 10000, 300000), primary_hit_results[index].ray_dir, 0, t_max);
+		pixel_color = compute_incident_light(atmosphere, make_float3(0, atmosphere->earthRadius + 10000, 300000), primary_hit_results[index].ray.direction, 0, t_max);
 
 		pixel_color.x = pixel_color.x < 1.413f ? pow(pixel_color.x * 0.38317f, 1.0f / 2.2f) : 1.0f - __expf(-pixel_color.x);
 		pixel_color.y = pixel_color.y < 1.413f ? pow(pixel_color.y * 0.38317f, 1.0f / 2.2f) : 1.0f - __expf(-pixel_color.y);
@@ -560,8 +565,9 @@ void trace_secondary_shadow_rays(curandState* rand_state, float3* lights, size_t
 			float3 direct_light = make_float3(0);
 			shade(lights, num_lights, direct_light, tree, scene_objs, num_objs, root_index, indexList, primary_hit_results[index], hit_result);
 
+			float3 hit_point = primary_hit_results[index].ray.origin + primary_hit_results[index].t * primary_hit_results[index].ray.direction;
 			float3 indirectLigthing = make_float3(0);
-
+			RayData ray;
 			uint32_t N = 128;
 			float3 Nt, Nb;
 			createCoordinateSystem(primary_hit_results[index].normal, Nt, Nb);
@@ -576,8 +582,8 @@ void trace_secondary_shadow_rays(curandState* rand_state, float3* lights, size_t
 					sample.x * Nb.y + sample.y * primary_hit_results[index].normal.y + sample.z * Nt.y,
 					sample.x * Nb.z + sample.y * primary_hit_results[index].normal.z + sample.z * Nt.z);
 				// don't forget to divide by PDF and multiply by cos(theta)
-				local_hit_result.ray_o = primary_hit_results[index].hit_point + sample_world * make_float3(K_EPSILON);
-				local_hit_result.ray_dir = sample_world;
+				local_hit_result.ray.origin = hit_point + sample_world * make_float3(K_EPSILON);
+				local_hit_result.ray.direction = sample_world;
 				trace_scene(tree, render_camera, scene_objs, num_objs, root_index, indexList, local_hit_result);
 				indirectLigthing += r1 * local_hit_result.hit_color / pdf;
 			}
@@ -684,7 +690,7 @@ int iDivUp(int a, int b)
 }
 __device__
 float4* dev_tex_p;
-int size = SCR_WIDTH * SCR_HEIGHT * sizeof(uint4);
+int size = SCR_WIDTH * SCR_HEIGHT * sizeof(uint);
 
 // Number of threads in each thread block
 //int  blockSize = SCR_WIDTH;
@@ -699,9 +705,8 @@ dim3 gridSize = dim3(iDivUp(SCR_WIDTH, blockSize.x), iDivUp(SCR_HEIGHT, blockSiz
 // Kernel is being executed from here
 ////////////////////////////////////////////////////
 extern
-void cuda_render_frame(uint* output, const uint& width, const uint& heigth)
+uint* cuda_render_frame(uint* output, const uint& width, const uint& heigth)
 {
-
 #ifdef ray_tracing
 	// Generate primary rays and cast them throught the scene.
 	trace_primary_rays << < primaryRaysGridDim, primaryRaysBlockDim >> > (d_tree, sceneCam, d_scene_objects, d_object_number, d_root_index, d_index_list, d_hit_result, width, heigth);
@@ -726,15 +731,17 @@ void cuda_render_frame(uint* output, const uint& width, const uint& heigth)
 	gpuErrchk(cudaDeviceSynchronize());
 	// Generate primary rays and cast them throught the scene.
 	render_sphere_trace << < gridSize, blockSize >> > (cuda_render_settings, *h_camera, cuda_scene_settings, d_light, num_light, d_volume_instances, d_num_instances,
-		d_sdf_volumes, sdf_spacing, sdf_dim, output, d_num_sdf, texObject, normalObject, should_shade, width, heigth, d_materials, permutation_texture, d_atmosphere);
+		d_sdf_volumes, sdf_spacing, sdf_dim, d_pixels, d_num_sdf, texObject, should_shade, width, heigth, d_materials, permutation_texture, d_atmosphere);
 
 #endif
 	gpuErrchk(cudaDeviceSynchronize());
+	cudaMemcpy(output, d_pixels, size, cudaMemcpyDeviceToHost);
 
 	Craze << <1, 1 >> > (d_light, angle, d_atmosphere);
 	angle += 0.001;  // or some other value.  Higher numbers = circles faster
 	if (angle > 1.1f) angle = 0.f;
 
+	return output;
 }
 
 extern
@@ -754,59 +761,39 @@ void toggle_shadow()
 }
 
 extern
-void spawn_obj(RCamera cam, TerrainBrush brush, int x, int y)
+void spawn_obj(RCamera cam, TerrainBrush brush, uint x, uint y)
 {
+	RayEngine::Application& app = RayEngine::Application::get();
+	uint width = app.get_window().get_width();
+	uint heigth = app.get_window().get_heigth();
+	float2* d_sdf; // Device pointer array.
+	gpuErrchk(cudaMalloc((void**)& d_sdf, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
+	// !!TODO: COPY 3D device array to device pointer d_sdf of type float2!!
+	cudaMemcpy3DParms copyParams = { 0 };
+
+	//Array creation
+	copyParams.srcArray = d_volumeArray;
+	copyParams.dstPtr = make_cudaPitchedPtr(d_sdf, sdf_dim.x * sizeof(float2), sdf_dim.y, sdf_dim.z);
+	copyParams.extent = make_cudaExtent(sdf_dim.x, sdf_dim.y, sdf_dim.z);
+	copyParams.kind = cudaMemcpyDeviceToDevice;
+	cudaMemcpy3D(&copyParams);
+	//Array creation End
+
+
 	dim3 primaryRaysBlockDim(2, 2, 2);
 	dim3 primaryRaysGridDim(sdf_dim.x / 2, sdf_dim.y / 2, sdf_dim.z / 2);
-	float3 ray_o;
-	int imageX = x;
-	int imageY = y;
 
-	int index = ((imageY * SCR_WIDTH) + imageX);
-	if (index > (SCR_WIDTH - 1) * (SCR_HEIGHT - 1))
-		return;
+	RayData ray;
+	generate_ray(ray, cam, width, heigth, { x, y });
 
-	float sx = (float)imageX / (SCR_WIDTH - 1.0f);
-	float sy = 1.0f - ((float)imageY / (SCR_HEIGHT - 1.0f));
-
-	float3 rendercampos = cam.campos;
-
-	// compute primary ray direction
-	// use camera view of current frame (transformed on CPU side) to create local orthonormal basis
-	float3 rendercamview = cam.view; rendercamview = normalize(rendercamview); // view is already supposed to be normalized, but normalize it explicitly just in case.
-	float3 rendercamup = cam.camdown; rendercamup = normalize(rendercamup);
-	float3 horizontalAxis = cross(rendercamview, rendercamup); horizontalAxis = normalize(horizontalAxis); // Important to normalize!
-	float3 verticalAxis = cross(horizontalAxis, rendercamview); verticalAxis = normalize(verticalAxis); // verticalAxis is normalized by default, but normalize it explicitly just for good measure.
-
-	float3 middle = rendercampos + rendercamview;
-	float3 horizontal = horizontalAxis * tanf(cam.fov.x * 0.5f * (M_PI / 180.f)); // Treating FOV as the full FOV, not half, so multiplied by 0.5
-	float3 vertical = verticalAxis * tanf(cam.fov.y * 0.5f * (M_PI / 180.f)); // Treating FOV as the full FOV, not half, so multiplied by 0.5
-
-	// compute pixel on screen
-	float3 pointOnPlaneOneUnitAwayFromEye = middle + (horizontal * ((2.f * sx) - 1.f)) + (vertical * ((2.f * sy) - 1.f));
-	float3 pointOnImagePlane = rendercampos + ((pointOnPlaneOneUnitAwayFromEye - rendercampos) * cam.focial_distance); // Important for depth of field!		
-
-	float3 aperturePoint = rendercampos;
-
-	// calculate ray direction of next ray in path
-	float3 apertureToImagePlane = pointOnImagePlane - aperturePoint;
-	apertureToImagePlane = normalize(apertureToImagePlane); // ray direction needs to be normalised
-
-	// ray direction
-	float3 rayInWorldSpace = apertureToImagePlane;
-
-	float3 pos = rendercampos + 10.f * apertureToImagePlane;
-	// ray origin
-	ray_o = rendercampos;
-	HitResult hit_result;
-	hit_result.ray_o = ray_o;
-	hit_result.ray_dir = apertureToImagePlane;
-	insert_sphere_to_texture << < primaryRaysGridDim, primaryRaysBlockDim >> > (cuda_render_settings, cuda_scene_settings, brush, texObject, hit_result, d_volume_instances,
+	insert_sphere_to_texture << < primaryRaysGridDim, primaryRaysBlockDim >> > (cuda_render_settings, cuda_scene_settings, brush, texObject, ray, d_volume_instances,
 		sdf_spacing, d_sdf, d_sdf_volumes, sdf_dim);
 
 
 	gpuErrchk(cudaDeviceSynchronize());
 	bind_sdf_to_texture(&d_sdf, sdf_dim, 1);
+
+	gpuErrchk(cudaFree(d_sdf));
 }
 
 extern
@@ -815,11 +802,10 @@ void generate_noise(const float3& pos)
 	m2.m[0] = make_float2(0.8f, -0.6f);
 	m2.m[1] = make_float2(0.6f, 0.8f);
 	sdf_dim = cuda_scene_settings.volume_resolution;
-	gpuErrchk(cudaFree(d_sdf));
+	float2* d_sdf;
 	gpuErrchk(cudaMalloc((void**)& d_sdf, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
 
-	gpuErrchk(cudaFree(d_sdf_norm));
-	gpuErrchk(cudaMalloc((void**)& d_sdf_norm, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
+
 	//sdf_spacing = cuda_scene_settings.volume_spacing;
 	sdf_spacing = make_float3(cuda_scene_settings.world_size.x / sdf_dim.x, cuda_scene_settings.world_size.y / sdf_dim.y, cuda_scene_settings.world_size.z / sdf_dim.z);
 	dim3 primaryRaysBlockDim(2, 2, 2);
@@ -827,26 +813,39 @@ void generate_noise(const float3& pos)
 	//cudaMalloc(&rand_state, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(curandState));
 	//register_random << <primaryRaysGridDim, primaryRaysBlockDim >> > (rand_state, sdf_dim);
 	generate_noise << < primaryRaysGridDim, primaryRaysBlockDim >> > (m2, cuda_render_settings, cuda_scene_settings, d_volume_instances,
-		d_sdf, d_sdf_norm, sdf_dim, sdf_spacing, d_sdf_volumes, rand_state, permutation_texture, d_gradients, make_float3(0));
+		d_sdf, sdf_dim, sdf_spacing, d_sdf_volumes, rand_state, permutation_texture, d_gradients, make_float3(0));
 
 	//cudaFree(rand_state);
 	gpuErrchk(cudaDeviceSynchronize());
+
 	bind_sdf_to_texture(&d_sdf, sdf_dim, 1);
-	bind_sdf_norm_to_texture(d_sdf_norm, sdf_dim, 1);
+
+	gpuErrchk(cudaFree(d_sdf));
 }
 
 extern
 void save_map()
 {
 	RayEngine::Application& app = RayEngine::Application::get();
-	//delete h_grid;
-	h_grid = new float2[sdf_dim.x * sdf_dim.y * sdf_dim.z];
-	gpuErrchk(cudaMemcpy(h_grid, d_sdf, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2), cudaMemcpyDeviceToHost));
+	float2* h_grid = new float2[sdf_dim.x * sdf_dim.y * sdf_dim.z];
+	float2* d_sdf; // Device pointer array.
+	gpuErrchk(cudaMalloc((void**)& d_sdf, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
+	// !!TODO: COPY 3D device array to device pointer d_sdf of type float2!!
+	cudaMemcpy3DParms copyParams = { 0 };
+
+	//Array creation
+	copyParams.srcArray = d_volumeArray;
+	copyParams.dstPtr = make_cudaPitchedPtr(h_grid, sdf_dim.x * sizeof(float2), sdf_dim.y, sdf_dim.z);
+	copyParams.extent = make_cudaExtent(sdf_dim.x, sdf_dim.y, sdf_dim.z);
+	copyParams.kind = cudaMemcpyDeviceToHost;
+	cudaMemcpy3D(&copyParams);
+	//Array creation End
+
 	RayEngine::RSceneLayer& scene_layer = dynamic_cast<RayEngine::RSceneLayer&>(app.get_scene_layer());
 	SDFScene& scene = static_cast<SDFScene&>(scene_layer.get_scene());
 	std::ostringstream file_name;
 	file_name << "SDFs/" << scene.get_world_chunk().get_location().x << "_" << scene.get_world_chunk().get_location().z << ".rsdf";
-	
+
 	std::ofstream volume_file_stream(file_name.str(), std::ios::binary);
 	volume_file_stream.write(reinterpret_cast<const char*> (&sdf_dim.x), sizeof(int));
 	volume_file_stream.write(reinterpret_cast<const char*> (&sdf_dim.y), sizeof(int));
@@ -867,6 +866,9 @@ void save_map()
 
 	//Close the file when finished
 	volume_file_stream.close();
+
+	gpuErrchk(cudaFree(d_sdf));
+	delete[] h_grid;
 }
 
 extern
@@ -905,7 +907,7 @@ void load_map(std::string filename)
 	sdf_dim = distance_field->sdf_dim;
 
 
-	h_grid = new float2[distance_field->voxels.size()];
+	float2* h_grid = new float2[distance_field->voxels.size()];
 
 	for (size_t iz = 0; iz < sdf_dim.z; ++iz)
 	{
@@ -921,11 +923,10 @@ void load_map(std::string filename)
 	gpuErrchk(cudaDeviceSynchronize());
 	if (h_grid)
 	{
-		//delete[] h_grid, h_volumes;
 		gpuErrchk(cudaFree(d_sdf_volumes));
-		gpuErrchk(cudaFree(d_sdf));
 		gpuErrchk(cudaFree(d_volume_instances));
 	}
+	float2* d_sdf;
 	gpuErrchk(cudaMalloc((void**)& d_sdf, size_sdf));
 	gpuErrchk(cudaMalloc(&d_sdf_volumes, sizeof(GPUBoundingBox)));
 
@@ -943,7 +944,10 @@ void load_map(std::string filename)
 	bind_sdf_to_texture(&d_sdf, sdf_dim, 1);
 	gpuErrchk(cudaDeviceSynchronize());
 
+	gpuErrchk(cudaFree(d_sdf));
+
 	delete distance_field, volume_objs;
+	delete[] h_grid;
 }
 
 
@@ -985,21 +989,22 @@ void cuda_update_chunk_gen(const RayEngine::RChunk& world_chunk, const RayEngine
 	m2.m[0] = make_float2(0.8f, -0.6f);
 	m2.m[1] = make_float2(0.6f, 0.8f);
 	sdf_dim = cuda_scene_settings.volume_resolution;
-	gpuErrchk(cudaFree(d_sdf));
+	float2* d_sdf; // Device pointer array.
 	gpuErrchk(cudaMalloc((void**)& d_sdf, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
 
-	//gpuErrchk(cudaFree(d_sdf_norm));
-	//gpuErrchk(cudaMalloc((void**)& d_sdf_norm, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(float2)));
-	//sdf_spacing = cuda_scene_settings.volume_spacing;
-	sdf_spacing = make_float3(cuda_scene_settings.world_size.x / sdf_dim.x, cuda_scene_settings.world_size.y / sdf_dim.y, cuda_scene_settings.world_size.z / sdf_dim.z);
+	sdf_spacing = make_float3(cuda_scene_settings.world_size.x / sdf_dim.x, 
+		cuda_scene_settings.world_size.y / sdf_dim.y, 
+		cuda_scene_settings.world_size.z / sdf_dim.z);
+
 	dim3 primaryRaysBlockDim(2, 2, 2);
 	dim3 primaryRaysGridDim(sdf_dim.x / 2, sdf_dim.y / 2, sdf_dim.z / 2);
-	//cudaMalloc(&rand_state, sdf_dim.x * sdf_dim.y * sdf_dim.z * sizeof(curandState));
-	//register_random << <primaryRaysGridDim, primaryRaysBlockDim >> > (rand_state, sdf_dim);
-	generate_noise << < primaryRaysGridDim, primaryRaysBlockDim >> > (m2, cuda_render_settings, cuda_scene_settings, d_volume_instances,
-		d_sdf, d_sdf_norm, sdf_dim, sdf_spacing, d_sdf_volumes, rand_state, permutation_texture, d_gradients, world_chunk.get_location());
 
-	//cudaFree(rand_state);
+
+	generate_noise << < primaryRaysGridDim, primaryRaysBlockDim >> > (m2, cuda_render_settings, cuda_scene_settings, d_volume_instances,
+		d_sdf, sdf_dim, sdf_spacing, d_sdf_volumes, rand_state, permutation_texture, d_gradients, world_chunk.get_location());
+
 	gpuErrchk(cudaDeviceSynchronize());
 	bind_sdf_to_texture(&d_sdf, sdf_dim, 1);
+
+	gpuErrchk(cudaFree(d_sdf));
 }

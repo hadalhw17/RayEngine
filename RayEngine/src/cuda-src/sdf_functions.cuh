@@ -453,17 +453,19 @@ float get_distance_to_sdf(const RenderingSettings& render_settings, const cudaTe
 	const float3& from, const HitResult& hit_result, const float3& step, const int3& dim, const GPUVolumeObjectInstance& instance, const float& curr_t)
 {
 	float min_dist = K_INFINITY;
-	float t_near = K_INFINITY, t_far;
 	bool intersect_box = false;
 
-	intersect_box = gpu_ray_box_intersect(box, from, hit_result.ray_dir, t_near, t_far);
+	RayData ray;
+	ray.origin = from;
+	ray.direction = hit_result.ray.direction;
+	intersect_box = gpu_ray_box_intersect(box, ray);
 
 
 	if (intersect_box)
 	{
 
 		float2 min_dist_to_sdf = get_distance(render_settings, tex, from, step, false);
-		min_dist = t_near + min_dist_to_sdf.x;
+		min_dist = ray.min_distance + min_dist_to_sdf.x;
 	}
 	else
 	{

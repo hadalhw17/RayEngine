@@ -16,8 +16,8 @@ namespace RayEngine
 		std::function<void(class Event&)> function_callback;
 
 		WindowData(const std::string& title = "RayEngine",
-			size_t width = 1920,
-			size_t heigth = 1080)
+			size_t width = SCR_WIDTH,
+			size_t heigth = SCR_HEIGHT)
 			: m_title(title), m_width(width), m_heigth(heigth) {}
 	};
 

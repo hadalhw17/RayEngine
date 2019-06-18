@@ -30,8 +30,8 @@
 #define NOMINMAX
 
 // settings
-#define SCR_WIDTH 1920
-#define SCR_HEIGHT 1080
+#define SCR_WIDTH 300
+#define SCR_HEIGHT 300
 
 #define PATH_TO_VOLUMES "C://dev/SDFGenerator/SDFGenerator/SDFs/"
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
@@ -83,10 +83,10 @@ enum TerrainBrushType
 
 struct TerrainBrush
 {
-	TerrainBrushType brush_type;
-	int3 brush_extent;
-	int material_index;
-	bool snap_to_grid;
+	TerrainBrushType brush_type = SPHERE_ADD;
+	int3 brush_extent = { 10, 10, 10 };
+	int material_index = 0;
+	bool snap_to_grid = false;
 };
 
 enum RenderQuality
@@ -103,24 +103,24 @@ struct RenderingSettings
 	bool gamma;
 	bool vignetting;
 	float vignetting_k;
-	bool gravity;
-	bool god_mode = false;
+	bool gravity = false;
+	bool god_mode = true;
 };
 
 struct SceneSettings
 {
-	float3 light_pos;
+	float3 light_pos = {0.f, 1.f, 0.f};
 	int soft_shadow_k = 32;
-	float light_intensity;
+	float light_intensity = 2500.f;
 	bool enable_fog = false;
-	float fog_deisity;
-	float noise_freuency;
-	float noise_amplitude;
-	float noise_redistrebution;
+	float fog_deisity = 0.f;
+	float noise_freuency = 2.f;
+	float noise_amplitude = 200.f;
+	float noise_redistrebution = 1.f;
 	int terracing = 1;
 	bool should_terrace = false;
-	uint3 volume_resolution;
-	float3 world_size;
+	uint3 volume_resolution = { 100, 100, 100};
+	float3 world_size = { 300, 300, 300 };
 };
 
 

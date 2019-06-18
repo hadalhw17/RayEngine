@@ -50,10 +50,10 @@
 	// Fog
 	////////////////////////////////////////////////////
 	__device__
-		void apply_fog(float3& color, const float& distance, const float& d, const float3& ray_o, const float3& ray_dir)
+		void apply_fog(float3& color, const RayData& ray, const float& d)
 	{
 		float a = 0.0375f;
-		float fogAmount = __saturatef(a / d * __expf(-ray_o.y * d) * (1.0 - __expf(-distance * ray_dir.y * d)) / ray_dir.y);
+		float fogAmount = __saturatef(a / d * __expf(-ray.origin.y * d) * (1.0 - __expf(-ray.min_distance * ray.direction.y * d)) / ray.direction.y);
 		//fogAmount = __saturatef(fogAmount + (__expf(-(100.f - distance) * d)) - 0.1);
 		//float fogAmount = 1.0 - __expf(-distance * d);
 		//float fo = 1.0 - exp(-pow(0.001 * distance / d, 1.5));
@@ -76,17 +76,21 @@
 			float3 lightpos = lights[i], lightDir;
 			float3 lightInt;
 			float t = K_INFINITY;
-			illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, t, 20000);
+			float3 hit_point = hit_result.ray.origin + hit_result.ray.direction * hit_result.t;
+			illuminate(hit_point, lightpos, lightDir, lightInt, t, 20000);
+			RayData light_ray;
 
-			shadow_hit_result.ray_o = hit_result.hit_point + bias;
-			shadow_hit_result.ray_dir = -lightDir;
+			light_ray.origin = hit_point + bias;
+			light_ray.direction = -lightDir;
+
+			shadow_hit_result.ray = light_ray;
 
 			trace_shadow(tree, scene_objs, num_objs, root_index, index_list, shadow_hit_result);
 
 			diffuse += lightInt * make_float3(shadow_hit_result.hits * 0.18) * fmaxf(0.0, dot(hit_result.normal, -lightDir));
 
 			float3 R = reflect(lightDir, hit_result.normal);
-			specular += lightInt * make_float3(shadow_hit_result.hits * powf(fmaxf(0.0, dot(R, -hit_result.ray_dir)), 10));
+			specular += lightInt * make_float3(shadow_hit_result.hits * powf(fmaxf(0.0, dot(R, -hit_result.ray.direction)), 10));
 
 			finalColor += diffuse * 0.8 + specular * 0.2;
 			shadow_hit_result = HitResult();
@@ -107,10 +111,14 @@
 			float3 lightInt;
 			float3 lightColor = make_float3(1, 0, 0);
 			float t = K_INFINITY;
-			illuminate(hit_result.hit_point, lightpos, lightDir, lightInt, t, 20000);
+			float3 hit_point = hit_result.ray.origin + hit_result.ray.direction * hit_result.t;
+			illuminate(hit_point, lightpos, lightDir, lightInt, t, 20000);
+			RayData light_ray;
 
-			shading_hit_result.ray_o = hit_result.hit_point + bias;
-			shading_hit_result.ray_dir = -lightDir;
+			light_ray.origin = hit_point + bias;
+			light_ray.direction = -lightDir;
+
+			shading_hit_result.ray = light_ray;
 
 			trace_shadow(tree, scene_objs, num_objs, root_index, index_list, shading_hit_result);
 			finalColor += !shading_hit_result.hits * lightInt * fmaxf(.0f, dot(hit_result.normal, (-lightDir)));
@@ -167,17 +175,18 @@
 	{
 		float3 refractionRColor = make_float3(0), reflectionRColor = make_float3(0);
 		float kr = 0, ior = 1.3;
-		float3 direct = hit_result.ray_dir;
+		float3 direct = hit_result.ray.direction;
 		bool outside = dot(direct, hit_result.normal) < 0;
 		fresnel(direct, hit_result.normal, ior, kr);
+		float3 hit_point = hit_result.ray.origin + hit_result.ray.direction * hit_result.t;
 
 		if (kr < 1)
 		{
 			float3 refractionDirection = refract(direct, hit_result.normal, ior);
-			float3 refractionRayOrig = outside ? hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON);
+			float3 refractionRayOrig = outside ? hit_point - hit_result.normal * make_float3(K_EPSILON) : hit_point + hit_result.normal * make_float3(K_EPSILON);
 			HitResult refraction_result;
-			refraction_result.ray_dir = refractionDirection;
-			refraction_result.ray_o = refractionRayOrig;
+			refraction_result.ray.direction = refractionDirection;
+			refraction_result.ray.origin = refractionRayOrig;
 			trace_shadow(tree, scene_objs, num_objs, root_index, index_list, refraction_result);
 
 			if (refraction_result.hits)
@@ -190,9 +199,9 @@
 		}
 		HitResult reflection_result;
 		float3 reflectionDirection = reflect(direct, hit_result.normal);
-		float3 reflectionRayOrig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON);
-		reflection_result.ray_dir = reflectionDirection;
-		reflection_result.ray_o = reflectionRayOrig;
+		float3 reflectionRayOrig = outside < 0 ? hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_point - hit_result.normal * make_float3(K_EPSILON);
+		reflection_result.ray.direction = reflectionDirection;
+		reflection_result.ray.origin = reflectionRayOrig;
 		trace_shadow(tree, scene_objs, num_objs, root_index, index_list, reflection_result);
 
 		if (reflection_result.hits)
@@ -210,17 +219,18 @@
 	{
 		float3 refractionRColor = make_float3(0), reflectionRColor = make_float3(0);
 		float kr = 0, ior = 1.3;
-		float3 direct = hit_result.ray_dir;
+		float3 direct = hit_result.ray.direction;
 		bool outside = dot(direct, hit_result.normal) < 0;
 		fresnel(direct, hit_result.normal, ior, kr);
+		float3 hit_point = hit_result.ray.origin + hit_result.ray.direction * hit_result.t;
 
 		if (kr < 1)
 		{
 			float3 refractionDirection = refract(direct, hit_result.normal, ior);
-			float3 refractionRayOrig = outside ? hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON);
+			float3 refractionRayOrig = outside ? hit_point - hit_result.normal * make_float3(K_EPSILON) : hit_point + hit_result.normal * make_float3(K_EPSILON);
 			HitResult refraction_result;
-			refraction_result.ray_dir = refractionDirection;
-			refraction_result.ray_o = refractionRayOrig;
+			refraction_result.ray.direction = refractionDirection;
+			refraction_result.ray.origin = refractionRayOrig;
 			trace_shadow(tree, scene_objs, num_objs, root_index, index_list, refraction_result);
 
 			if (refraction_result.hits)
@@ -233,9 +243,9 @@
 		}
 		HitResult reflection_result;
 		float3 reflectionDirection = reflect(direct, hit_result.normal);
-		float3 reflectionRayOrig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON);
-		reflection_result.ray_dir = reflectionDirection;
-		reflection_result.ray_o = reflectionRayOrig;
+		float3 reflectionRayOrig = outside < 0 ? hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_point - hit_result.normal * make_float3(K_EPSILON);
+		reflection_result.ray.direction = reflectionDirection;
+		reflection_result.ray.origin = reflectionRayOrig;
 		trace_shadow(tree, scene_objs, num_objs, root_index, index_list, reflection_result);
 
 		if (reflection_result.hits)
@@ -251,13 +261,15 @@
 		void reflect(float3& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
 			int* root_index, int* index_list, HitResult& hit_result, HitResult& shading_hit_result)
 	{
-		float3 direct = hit_result.ray_dir;
+		float3 hit_point = hit_result.ray.origin + hit_result.ray.direction * hit_result.t;
+
+		float3 direct = hit_result.ray.direction;
 		bool outside = dot(direct, hit_result.normal) < 0;
 		float3 dir = reflect(direct, hit_result.normal);
-		float3 orig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON);
+		float3 orig = outside < 0 ? hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_point - hit_result.normal * make_float3(K_EPSILON);
 		HitResult reflection_hit_result;
-		reflection_hit_result.ray_dir = dir;
-		reflection_hit_result.ray_o = orig;
+		reflection_hit_result.ray.direction = dir;
+		reflection_hit_result.ray.origin = orig;
 		trace_shadow(tree, scene_objs, num_objs, root_index, index_list, reflection_hit_result);
 		shading_hit_result = reflection_hit_result;
 		if (reflection_hit_result.hits)
@@ -270,13 +282,15 @@
 		void reflect_light(float3& finalColor, RKDTreeNodeGPU* tree, GPUSceneObject* scene_objs, int num_objs,
 			int* root_index, int* index_list, HitResult& hit_result, HitResult& shading_hit_result)
 	{
-		float3 direct = hit_result.ray_dir;
+		float3 hit_point = hit_result.ray.origin + hit_result.ray.direction * hit_result.t;
+
+		float3 direct = hit_result.ray.direction;
 		bool outside = dot(direct, hit_result.normal) < 0;
 		float3 dir = reflect(direct, hit_result.normal);
-		float3 orig = outside < 0 ? hit_result.hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_result.hit_point - hit_result.normal * make_float3(K_EPSILON);
+		float3 orig = outside < 0 ? hit_point + hit_result.normal * make_float3(K_EPSILON) : hit_point - hit_result.normal * make_float3(K_EPSILON);
 		HitResult reflection_hit_result;
-		reflection_hit_result.ray_dir = dir;
-		reflection_hit_result.ray_o = orig;
+		reflection_hit_result.ray.direction = dir;
+		reflection_hit_result.ray.origin = orig;
 		trace_shadow(tree, scene_objs, num_objs, root_index, index_list, reflection_hit_result);
 		shading_hit_result = reflection_hit_result;
 		if (reflection_hit_result.hits)

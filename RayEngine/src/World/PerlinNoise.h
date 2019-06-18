@@ -57,7 +57,7 @@ namespace RayEngine
 		static const unsigned tableSize = 256;
 		static const unsigned tableSizeMask = tableSize - 1;
 		float3 gradients[tableSize];
-		uint permutationTable[tableSize * 2];
+		uint permutationTable[tableSize * tableSize];
 	};
 }
 

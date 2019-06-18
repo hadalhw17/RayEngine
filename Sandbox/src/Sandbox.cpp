@@ -27,6 +27,8 @@ public:
 		TestSceneLayer *scene_layer = new TestSceneLayer(*scene);
 
 
+
+
 		push_layer(scene_layer);
 		push_overlay(new RayEngine::RUILayer());
 

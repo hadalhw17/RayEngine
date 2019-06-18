@@ -89,17 +89,28 @@ struct GPUSceneObject
 	}
 };
 
+struct RayData
+{
+	float3 direction;		// Ray Direction,
+	float3 origin;			// Ray Origin.
+
+	// The folowing params should be set only in bounding volume intersection test.
+	float min_distance = 0;				// Ray nearest clipping.
+	float max_distance = K_INFINITY;	// Ray far clipping.
+};
+
+
 struct HitResult
 {
+	RayData ray;
 	float t;
 	float3 normal;
-	float3 hit_point;
-	float3 ray_dir;
-	float3 ray_o;
 	float2 uv;
-	bool hits;
+	bool hits = false;
 	int obj_index;
 	float3 hit_color;
+	uint material_index = -1;
+	float prel;
 
 	HOST_DEVICE_FUNCTION
 		HitResult()
@@ -107,5 +118,6 @@ struct HitResult
 		t = K_INFINITY;
 		hits = false;
 		obj_index = -1;
+		material_index = -1;
 	}
 };

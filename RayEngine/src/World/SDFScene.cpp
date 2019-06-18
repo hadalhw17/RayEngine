@@ -18,7 +18,6 @@ void load_map(std::string filename);
 
 SDFScene::SDFScene()
 {
-
 }
 
 SDFScene::SDFScene(RCharacter& character)

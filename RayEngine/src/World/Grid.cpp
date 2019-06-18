@@ -52,8 +52,6 @@ void Grid::load_volume_floam_file(const std::string filename)
 					volume_stream.read(reinterpret_cast<char*>(&in), sizeof(float2));
 					voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].distance = in.x;
 					voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].material = in.y;
-					//volume_stream.read(reinterpret_cast<char*>(&voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].distance), sizeof(float));
-					//volume_stream.read(reinterpret_cast<char*>(&voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].material), sizeof(float));
 					voxels[ix + sdf_dim.y * (iy + sdf_dim.x * iz)].point = make_float3(ix * spacing.x, iy * spacing.y, iz * spacing.z);
 				}
 			}
