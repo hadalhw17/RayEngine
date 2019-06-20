@@ -14,3 +14,19 @@ RMeshObject::RMeshObject(const char* file_name)
 	object_properties = GPUSceneObject();
 	components.push_back(this->root_component);
 }
+
+void RMeshObject::on_attach()
+{
+}
+
+void RMeshObject::on_detach()
+{
+}
+
+void RMeshObject::on_update()
+{
+}
+
+void RMeshObject::on_event(RayEngine::Event& event)
+{
+}

@@ -225,12 +225,9 @@ copy /Y "$(TargetDir)$(TargetName).lib" "$(SolutionDir)bin\$(Configuration)-$(Pl
     <ClCompile Include="src\Layers\LayerStack.cpp" />
     <ClCompile Include="src\Primitives\Camera.cpp" />
     <ClCompile Include="src\Objects\Character.cpp" />
-    <ClCompile Include="src\Objects\Cow.cpp" />
-    <ClCompile Include="src\Objects\Floor.cpp" />
     <ClCompile Include="includes\glad.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\Objects\Glass.cpp" />
     <ClCompile Include="src\Primitives\KDThreeGPU.cpp" />
     <ClCompile Include="src\Primitives\KDTree.cpp" />
     <ClCompile Include="src\Primitives\KDTreeGPUUtills.cpp" />
@@ -289,7 +286,6 @@ copy /Y "$(TargetDir)$(TargetName).lib" "$(SolutionDir)bin\$(Configuration)-$(Pl
     <ClInclude Include="src\Primitives\BoundingVolume.h" />
     <ClInclude Include="src\Primitives\Camera.h" />
     <ClInclude Include="src\Objects\Character.h" />
-    <ClInclude Include="src\Objects\Cow.h" />
     <ClInclude Include="src\cuda-src\Atmosphere.cuh" />
     <ClInclude Include="src\cuda-src\CUDARayTracing.cuh" />
     <ClInclude Include="src\cuda-src\cuda_helper_functions.h" />
@@ -310,8 +306,6 @@ copy /Y "$(TargetDir)$(TargetName).lib" "$(SolutionDir)bin\$(Configuration)-$(Pl
     <ClInclude Include="src\RayCore.h" />
     <ClInclude Include="src\RayEngine\EntryPoint.h" />
     <ClInclude Include="src\ray_functions.cuh" />
-    <ClInclude Include="src\Objects\Floor.h" />
-    <ClInclude Include="src\Objects\Glass.h" />
     <ClInclude Include="src\Primitives\GPUBoundingBox.h" />
     <ClInclude Include="src\Primitives\KDThreeGPU.h" />
     <ClInclude Include="src\Primitives\KDTree.h" />
@@ -372,7 +366,4 @@ copy /Y "$(TargetDir)$(TargetName).lib" "$(SolutionDir)bin\$(Configuration)-$(Pl
     <None Include="vendor\MetaStuff\include\Meta.inl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 10.1.targets" />
-  </ImportGroup>
 </Project>

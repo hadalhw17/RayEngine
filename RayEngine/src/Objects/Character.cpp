@@ -26,6 +26,7 @@ RCharacter::~RCharacter()
 
 void RCharacter::on_attach()
 {
+	RSceneObject::on_attach();
 }
 
 void RCharacter::on_detach()

@@ -78,15 +78,6 @@
     <ClCompile Include="src\Objects\Character.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Objects\Cow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Objects\Floor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Objects\Glass.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\Objects\MeshObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -292,15 +283,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Objects\Character.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Objects\Floor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Objects\Cow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Objects\Glass.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Objects\MeshObject.h">

@@ -19,7 +19,7 @@ public:
 	SDFScene(RCharacter& character);
 
 	inline RayEngine::RPerlinNoise& get_noise() { return noise; }
-	inline std::vector<VoxelMaterial>& get_materials() { return materials; }
+	inline std::vector<RMaterial*>& get_materials() { return materials; }
 	inline RayEngine::RChunk& get_world_chunk() { return world_chunk; }
 	void move_chunk(float3 chunk_location);
 
@@ -28,7 +28,7 @@ public:
 	void load_chunk_from_file(std::string filename);
 
 	RayEngine::RPerlinNoise noise;
-	std::vector<VoxelMaterial> materials;
+	std::vector<RMaterial*> materials;
 	virtual void write_to_file();
 	
 	RayEngine::RChunk world_chunk;

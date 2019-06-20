@@ -50,10 +50,10 @@ __device__
 float4* d_indirect_map;
 
 __device__
-struct HitResult* d_hit_result;
+HitResult* d_hit_result;
 
 __device__
-struct HitResult* d_shadow_hit_result;
+HitResult* d_shadow_hit_result;
 
 __device__ __constant__
 int* d_root_index;

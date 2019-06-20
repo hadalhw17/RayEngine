@@ -214,6 +214,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="src\Resource.h" />
+    <ClInclude Include="src\ResourceManager.h" />
     <ClInclude Include="src\TestScene.h" />
     <ClInclude Include="src\TestSceneLayer.h" />
     <ClInclude Include="src\TextCharacter.h" />
@@ -222,6 +224,8 @@
     <ResourceCompile Include="Sandbox.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\ResourceManager.cpp" />
+    <ClCompile Include="src\Resource.cpp" />
     <ClCompile Include="src\Sandbox.cpp" />
     <ClCompile Include="src\TestScene.cpp" />
     <ClCompile Include="src\TestSceneLayer.cpp" />

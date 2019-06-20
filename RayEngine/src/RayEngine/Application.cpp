@@ -18,7 +18,7 @@ extern void free_memory();
 extern void toggle_shadow();
 extern bool sdf_collision(RCamera cam);
 extern void spawn_obj(RCamera pos, TerrainBrush brush, uint x, uint y);
-
+extern HitResult sphere_trace_ray(RCamera cam, uint x, uint y);
 
 namespace RayEngine
 {
@@ -75,6 +75,7 @@ namespace RayEngine
 		dispatcher.dipatch<KeyPressedEvent>(BIND_EVENT_FN(Application::on_key_pressed));
 		dispatcher.dipatch<KeyReleaseEvent>(BIND_EVENT_FN(Application::on_key_released));
 		dispatcher.dipatch<WindowClosedEvent>(BIND_EVENT_FN(Application::on_window_closed));
+		dispatcher.dipatch<WindowResizedEvent>(BIND_EVENT_FN(Application::on_window_resized));
 
 		for (auto it = m_layer_stack.end(); it != m_layer_stack.begin();)
 		{
@@ -98,6 +99,11 @@ namespace RayEngine
 	void Application::app_spawn_obj(RCamera pos, TerrainBrush brush, int x, int y)
 	{
 		spawn_obj(pos, brush, x, y);
+	}
+
+	HitResult Application::cast_single_ray(RCamera cam, unsigned int x, unsigned int y)
+	{
+		return sphere_trace_ray(cam, x, y);
 	}
 
 	void Application::push_layer(RLayer* layer)
@@ -191,6 +197,12 @@ namespace RayEngine
 	bool Application::on_window_closed(WindowClosedEvent& e)
 	{
 		return false;
+	}
+
+	bool Application::on_window_resized(WindowResizedEvent& e)
+	{
+		application_window->set_resolution(e.get_width(), e.get_height());
+		return true;
 	}
 
 

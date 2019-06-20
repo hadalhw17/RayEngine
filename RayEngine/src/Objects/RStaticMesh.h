@@ -1,10 +1,8 @@
 #pragma once
 
-
-
 #include "rply.h"
 
-#include "ObjectComponent.h"
+#include "Objects/ObjectComponent.h"
 #include "RayEngine/RayEngine.h"
 #include <memory>
 #include <vector>

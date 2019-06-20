@@ -160,4 +160,3 @@ void RMovableCamera::fix_focial_distance()
 	float maxFocalDist = 100.0f;
 	focial_distance = clamp2(focial_distance, minFocalDist, maxFocalDist);
 }
-

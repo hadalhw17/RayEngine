@@ -317,6 +317,7 @@ namespace RayEngine
 				WindowResizedEvent event(width, height);
 				fun.function_callback(event);
 			});
+
 		glfwSetCursorPosCallback(window, [](GLFWwindow* _window, double x_pos, double y_pos) {
 			WindowData fun = *(WindowData*)glfwGetWindowUserPointer(_window);
 			glfwGetCursorPos(_window, &x_pos, &y_pos);

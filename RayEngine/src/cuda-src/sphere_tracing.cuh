@@ -182,7 +182,6 @@ HitResult single_ray_sphere_trace(const RenderingSettings& render_settings, cons
 		float2 sdf_dst;
 		if (curr_obj.index == -1)
 		{
-
 			min_dist = sphere_distance(from, 3);
 		}
 		else
@@ -572,7 +571,7 @@ void cuda_update_chunk(const RayEngine::RChunk& world_chunk, const RayEngine::RP
 }
 
 extern "C"
-void initialize_volume_render(RCamera& sceneCam, const RayEngine::RChunk& world_chunk, const int& num_sdf, const std::vector<VoxelMaterial>& materials, const RenderingSettings& render_settings,
+void initialize_volume_render(RCamera& sceneCam, const RayEngine::RChunk& world_chunk, const int& num_sdf, const std::vector<RMaterial*>& materials, const RenderingSettings& render_settings,
 	const SceneSettings& scene_settings, const RayEngine::RPerlinNoise& noise)
 {
 	const Grid& sdf = world_chunk.get_sdf();
@@ -690,15 +689,15 @@ void initialize_volume_render(RCamera& sceneCam, const RayEngine::RChunk& world_
 			{
 				size_t pitch;
 				float4* tex1;
-				uint tex_width = material.texture_aray.at(i).resolution.x * sizeof(float4);
-				uint tex_heighth = material.texture_aray.at(i).resolution.y;
+				uint tex_width = material->material.texture_aray.at(i).resolution.x * sizeof(float4);
+				uint tex_heighth = material->material.texture_aray.at(i).resolution.y;
 
 				// allocate memory for the triangle meshes on the GPU
 				gpuErrchk(cudaMallocPitch((void**)& tex1, &pitch, tex_width, tex_heighth));
 
 
 				// copy triangle data to GPU
-				gpuErrchk(cudaMemcpy2D(tex1, pitch, material.texture_aray.at(i).texels.data(), tex_width, tex_width, tex_heighth,
+				gpuErrchk(cudaMemcpy2D(tex1, pitch, material->material.texture_aray.at(i).texels.data(), tex_width, tex_width, tex_heighth,
 					cudaMemcpyHostToDevice));
 
 				bind_texture(&tex1, { tex_heighth , tex_heighth }, pitch, curr_mat, i);

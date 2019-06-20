@@ -11,16 +11,16 @@ public:
 	virtual bool on_mouse_button_pressed(RayEngine::MouseButtonPresedEvent& e) override;
 };
 
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<TestSceneLayer>()
-	{
-		return members(
-			member("brush_radius", &TestSceneLayer::brush_radius),
-			member("brush", &TestSceneLayer::brush),
-			member("m_scene", &TestSceneLayer::m_scene)
-		);
-	}
-} // end of na
+//#include <Meta.h>
+//namespace meta {
+//
+//	template <>
+//	inline auto registerMembers<TestSceneLayer>()
+//	{
+//		return members(
+//			member("brush_radius", &TestSceneLayer::brush_radius),
+//			member("brush", &TestSceneLayer::brush),
+//			member("m_scene", &TestSceneLayer::m_scene)
+//		);
+//	}
+//} // end of na

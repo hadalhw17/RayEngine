@@ -27,6 +27,12 @@
     <ClInclude Include="src\TextCharacter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ResourceManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Sandbox.rc">
@@ -44,6 +50,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\TextCharacter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Resource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ResourceManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

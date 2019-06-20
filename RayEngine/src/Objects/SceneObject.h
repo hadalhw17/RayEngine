@@ -5,38 +5,44 @@
 #include "Events/Event.h"
 #include "cuda-src/gpu_structs.h"
 
-namespace RayEngine
+class RAY_ENGINE_API RSceneObject
 {
-	class RAY_ENGINE_API RSceneObject
-	{
-	public:
-		RSceneObject();
+public:
+	RSceneObject();
 
-		virtual ~RSceneObject();
+	virtual ~RSceneObject();
 
-		virtual void tick(float delta_time);
+	virtual void tick(float delta_time);
 
-		std::vector<class RObjectComponent*> components;
-		//RStaticMesh* root_component;
+	RStaticMesh* root_component;
 
-		GPUSceneObject object_properties;
-		GPUBoundingBox collision_box;
-	};
+	GPUSceneObject object_properties;
+	GPUBoundingBox collision_box;
 
-}
+	inline void attach_component(RObjectComponent* compoent) { components.push_back(compoent); }
 
+	// Inherited via Attachable
+	virtual void on_attach();
+	virtual void on_detach();
+	virtual void on_update();
+	virtual void on_event(RayEngine::Event& event);
 
-#include <Meta.h>
-namespace meta {
+protected:
+	std::vector<class RObjectComponent*> components;
+};
 
-	template <>
-	inline auto registerMembers<RayEngine::RSceneObject>()
-	{
-		return members(
-			member("components", &RayEngine::RSceneObject::components),
-			member("object_properties", &RayEngine::RSceneObject::object_properties),
-			member("collision_box", &RayEngine::RSceneObject::collision_box)
-		);
-	}
-
-} // end of namespace meta
+//
+//#include <Meta.h>
+//namespace meta {
+//
+//	template <>
+//	inline auto registerMembers<RSceneObject>()
+//	{
+//		return members(
+//			member("components", &RSceneObject::components),
+//			member("object_properties", &RSceneObject::object_properties),
+//			member("collision_box", &RSceneObject::collision_box)
+//		);
+//	}
+//
+//} // end of namespace meta

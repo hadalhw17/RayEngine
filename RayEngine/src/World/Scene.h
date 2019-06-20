@@ -59,21 +59,21 @@ public:
 	RCharacter& main_character;
 	SceneSettings scene_settings;
 	RCamera scene_camera;
-	std::vector<RayEngine::RSceneObject*> scene_objects;
+	std::vector<RSceneObject*> scene_objects;
 protected:
 	std::vector<float4> read_ppm(char* filename);
 	virtual void clear_memory() {}
 	void setup_camera();
 };
 
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<RScene>()
-	{
-		return members(
-			member("should not use this one!", &RScene::scene_settings)
-		);
-	}
-} // end of namespace meta
+//#include <Meta.h>
+//namespace meta {
+//
+//	template <>
+//	inline auto registerMembers<RScene>()
+//	{
+//		return members(
+//			member("should not use this one!", &RScene::scene_settings)
+//		);
+//	}
+//} // end of namespace meta

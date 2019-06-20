@@ -30,8 +30,8 @@
 #define NOMINMAX
 
 // settings
-#define SCR_WIDTH 300
-#define SCR_HEIGHT 300
+#define SCR_WIDTH 500
+#define SCR_HEIGHT 500
 
 #define PATH_TO_VOLUMES "C://dev/SDFGenerator/SDFGenerator/SDFs/"
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }

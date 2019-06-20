@@ -5,18 +5,26 @@
 #include "TextCharacter.h"
 #include "TestSceneLayer.h"
 #include <iostream>
+#include "ResourceManager.h"
+
+TextCharacter::TextCharacter()
+{
+	ResourceManager* res_manager = new ResourceManager();
+	this->attach_component(res_manager);
+}
+
 void TextCharacter::on_attach()
 {
+	RCharacter::on_attach();
 }
 
 void TextCharacter::on_detach()
 {
+	RCharacter::on_detach();
 }
 
 bool exited_chunk(const GPUBoundingBox& tBox, const float3& vecPoint)
 {
-	RE_LOG("Checking if in chunk with bounds: " << tBox.Min.x << " " << tBox.Min.z << " "  << tBox.Max.x << " " << tBox.Max.z);
-	RE_LOG("At point: " << vecPoint.x << " " << vecPoint.z);
 	return
 		(vecPoint.x < tBox.Min.x || vecPoint.x > tBox.Max.x) ||
 		(vecPoint.z < tBox.Min.z || vecPoint.z > tBox.Max.z);
@@ -50,15 +58,12 @@ void TextCharacter::on_update()
 	if (app.should_spawn && app.edit_mode && !app.ctrl)
 	{
 		scene_layer.brush.brush_type = scene_layer.brush_type;
-		app.app_spawn_obj(scene_layer.m_scene->get_camera(), scene_layer.brush, last_x, SCR_HEIGHT - last_y);
+		app.app_spawn_obj(scene_layer.m_scene->get_camera(), scene_layer.brush, last_x, app.get_window().get_heigth() - last_y);
 	}
 	else if(app.should_spawn && !app.edit_mode && !app.ctrl)
 	{
 		
 	}
-	
-	
-
 	//-----------------------------------------------------------------------------------------------------
 }
 
@@ -90,6 +95,24 @@ bool TextCharacter::on_mouse_button_pressed(RayEngine::MouseButtonPresedEvent& e
 		if (app.shift)
 		{
 			scene_layer.brush_type = TerrainBrushType::SPHERE_SUBTRACT;
+			HitResult res = app.cast_single_ray(scene_layer.m_scene->get_camera(), last_x, app.get_window().get_heigth() - last_y);
+			SDFScene& sdf_scene = dynamic_cast<SDFScene&>(scene_layer.get_scene());
+			if (&sdf_scene)
+			{
+				if (res.hits)
+				{
+					for (auto component : components)
+					{
+						ResourceManager* resource_manager = dynamic_cast<ResourceManager*>(component);
+						if (resource_manager)
+						{
+							resource_manager->add_resource(Resource(sdf_scene.get_materials()[res.material_index]->get_name()), 10);
+						}
+
+					}
+				}
+			}
+
 		}
 		else
 		{
@@ -231,12 +254,12 @@ bool TextCharacter::on_key_pressed(RayEngine::KeyPressedEvent& e)
 
 	if (exited_chunk(world_box, camera.position))
 	{
-		float3 rounded_pos = { round(camera.position.x * scene.scene_settings.world_size.x) / scene.scene_settings.world_size.x, 0, 
-			round(camera.position.z * scene.scene_settings.world_size.z) / scene.scene_settings.world_size.z };
+		float3 rounded_pos = { floorf(camera.position.x * scene.scene_settings.world_size.x) / scene.scene_settings.world_size.x, 0, 
+			floorf(camera.position.z * scene.scene_settings.world_size.z) / scene.scene_settings.world_size.z };
 
 		float3 pos = position_chunk(world_box, rounded_pos);
-		scene.move_chunk({ round(pos.x * scene.scene_settings.world_size.x) / scene.scene_settings.world_size.x, 0, 
-			round(pos.z * scene.scene_settings.world_size.z) / scene.scene_settings.world_size.z });
+		scene.move_chunk({ floorf(pos.x * scene.scene_settings.world_size.x) / scene.scene_settings.world_size.x, 0,
+			floorf(pos.z * scene.scene_settings.world_size.z) / scene.scene_settings.world_size.z });
 
 		std::ostringstream file_name;
 

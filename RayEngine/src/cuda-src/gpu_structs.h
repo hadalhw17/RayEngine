@@ -95,7 +95,7 @@ struct RayData
 	float3 origin;			// Ray Origin.
 
 	// The folowing params should be set only in bounding volume intersection test.
-	float min_distance = 0;				// Ray nearest clipping.
+	float min_distance = K_EPSILON;		// Ray nearest clipping.
 	float max_distance = K_INFINITY;	// Ray far clipping.
 };
 
@@ -113,7 +113,7 @@ struct HitResult
 	float prel;
 
 	HOST_DEVICE_FUNCTION
-		HitResult()
+	HitResult()
 	{
 		t = K_INFINITY;
 		hits = false;

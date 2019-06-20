@@ -29,6 +29,9 @@ namespace RayEngine
 
 		inline size_t get_width() const { return m_data.m_width; }
 		inline size_t get_heigth() const { return m_data.m_heigth; }
+		inline void set_width(size_t width) { m_data.m_width = width; }
+		inline void set_heigth(size_t heigth) { m_data.m_width = heigth; }
+		inline void set_resolution(size_t width, size_t heigth) { set_width(width); set_heigth(heigth); }
 
 		inline bool set_vsync(bool vsync) { m_data.vsync = vsync; }
 		inline bool get_vsync() const { return m_data.vsync; }

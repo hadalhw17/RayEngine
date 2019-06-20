@@ -28,6 +28,19 @@ float2x2 m2;
 
 
 __global__
+void single_ray_cast(const RenderingSettings render_settings, const SceneSettings scene_settings, const cudaTextureObject_t tex,
+	const RayData ray, const  GPUVolumeObjectInstance* __restrict__ instances, const GPUBoundingBox *volumes,
+	const float3 step, HitResult *result)
+{
+	RayData r = ray;
+	r.origin -= instances[0].location;
+
+	bool isec_box = gpu_ray_box_intersect(volumes[0], r);
+	if (!isec_box)
+		return;
+	*result = single_ray_sphere_trace(render_settings, scene_settings, tex, r, instances, step, 0.f, 10e-6);
+}
+__global__
 void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings scene_settings, TerrainBrush brush, cudaTextureObject_t tex, RayData ray, const GPUVolumeObjectInstance* instances,
 	float3 step, float2* sdf_texute, GPUBoundingBox* volumes, uint3 tex_dim)
 {
@@ -731,7 +744,7 @@ uint* cuda_render_frame(uint* output, const uint& width, const uint& heigth)
 	gpuErrchk(cudaDeviceSynchronize());
 	// Generate primary rays and cast them throught the scene.
 	render_sphere_trace << < gridSize, blockSize >> > (cuda_render_settings, *h_camera, cuda_scene_settings, d_light, num_light, d_volume_instances, d_num_instances,
-		d_sdf_volumes, sdf_spacing, sdf_dim, d_pixels, d_num_sdf, texObject, should_shade, width, heigth, d_materials, permutation_texture, d_atmosphere);
+		d_sdf_volumes, sdf_spacing, sdf_dim, d_pixels, d_num_sdf, texObject, should_shade, SCR_WIDTH, SCR_HEIGHT, d_materials, permutation_texture, d_atmosphere);
 
 #endif
 	gpuErrchk(cudaDeviceSynchronize());
@@ -759,6 +772,30 @@ void toggle_shadow()
 		break;
 	}
 }
+
+
+extern
+HitResult sphere_trace_ray(RCamera cam, uint x, uint y)
+{
+	RayEngine::Application& app = RayEngine::Application::get();
+	uint width = app.get_window().get_width();
+	uint heigth = app.get_window().get_heigth();
+	HitResult* d_res;
+	gpuErrchk(cudaMalloc(&d_res, sizeof(HitResult)));
+	HitResult h_res;
+	RayData ray;
+	generate_ray(ray, cam, width, heigth, { x, y });
+
+	single_ray_cast<<<1,1>>>(cuda_render_settings, cuda_scene_settings, texObject,
+		ray, d_volume_instances, d_sdf_volumes, sdf_spacing, d_res);
+	gpuErrchk(cudaDeviceSynchronize());
+
+	gpuErrchk(cudaMemcpy(&h_res, d_res, sizeof(HitResult), cudaMemcpyDeviceToHost));
+	gpuErrchk(cudaFree(d_res));
+
+	return h_res;
+}
+
 
 extern
 void spawn_obj(RCamera cam, TerrainBrush brush, uint x, uint y)

@@ -16,6 +16,7 @@ RScene::RScene()
 RScene::RScene(RCharacter& _character)
 	:main_character(_character)
 {
+	main_character.on_attach();
 }
 
 extern "C"

@@ -6,14 +6,15 @@
 #include <World/SDFScene.h>
 #include <json.hpp>
 #include <JsonCast.h>
+#include "ResourceManager.h"
 
 template<typename T>
 void write_to_file(const T& obj)
 {
-	std::ofstream os("scene.json");
-	json scene;
-	to_json(scene, obj);
-	RE_LOG(std::setw(4) << scene);
+	//std::ofstream os("scene.json");
+	//json scene;
+	//to_json(scene, obj);
+	//RE_LOG(std::setw(4) << scene);
 }
 
 class Sandbox : public RayEngine::Application
@@ -25,9 +26,6 @@ public:
 		TextCharacter *main_chacter =  new TextCharacter();
 		TestScene *scene = new  TestScene(*main_chacter);
 		TestSceneLayer *scene_layer = new TestSceneLayer(*scene);
-
-
-
 
 		push_layer(scene_layer);
 		push_overlay(new RayEngine::RUILayer());

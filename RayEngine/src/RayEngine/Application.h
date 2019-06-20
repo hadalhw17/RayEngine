@@ -4,7 +4,7 @@
 #include "../Layers/LayerStack.h"
 #include "Engine/Window.h"
 
-
+struct HitResult;
 namespace RayEngine
 {
 	class RAY_ENGINE_API Application
@@ -26,6 +26,7 @@ namespace RayEngine
 		virtual bool on_key_released(class KeyReleaseEvent& e);
 		virtual bool on_mouse_scroll(class MouseScrolledEvent& e);
 		virtual bool on_window_closed(class WindowClosedEvent& e);
+		virtual bool on_window_resized(class WindowResizedEvent& e);
 
 		//-----------------------------------
 		bool should_spawn = false;
@@ -41,6 +42,7 @@ namespace RayEngine
 		void app_toggle_shadow();
 		bool app_sdf_collision(class RCamera cam);
 		void app_spawn_obj(class RCamera pos, TerrainBrush brush, int x, int y);
+		HitResult cast_single_ray(RCamera cam, unsigned int x, unsigned int y);
 
 		//------------------------Layer functions--------------------------
 		void push_layer(RLayer* layer);
