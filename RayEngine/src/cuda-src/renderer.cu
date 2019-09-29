@@ -62,8 +62,8 @@ void insert_sphere_to_texture(RenderingSettings render_settings, SceneSettings s
 			//placement_position.x = floor(placement_position.x / brush.brush_extent.x) * brush.brush_extent.x;
 			////placement_position.y = round(placement_position.y * brush.brush_extent.y) / brush.brush_extent.y;
 			//placement_position.z = floor(placement_position.z / brush.brush_extent.z) * brush.brush_extent.z;
-			placement_position.x = floor(placement_position.x - fabs(modff(placement_position.x, (float*)& snapx)));
-			placement_position.z = floor(placement_position.z - fabs(modff(placement_position.z, (float*)& snapz)));
+			placement_position.x = floor(placement_position.x - fabs(fmodf(placement_position.x, snapx)));
+			placement_position.z = floor(placement_position.z - fabs(fmodf(placement_position.z, snapz)));
 			
 			//printf("After: %f %f %f\n", placement_position.x, placement_position.y, placement_position.z);
 		}
