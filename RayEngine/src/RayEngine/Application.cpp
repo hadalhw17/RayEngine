@@ -78,6 +78,7 @@ namespace RayEngine
 
 		for (auto it = m_layer_stack.end(); it != m_layer_stack.begin();)
 		{
+			e.to_string();
 			(*--it)->on_event(e);
 			if (e.get_handled())
 				break;
@@ -122,11 +123,7 @@ namespace RayEngine
 			{
 				layer->on_update();
 			}
-
-
-			
 			application_window->RenderFrame();
-
 
 		}
 

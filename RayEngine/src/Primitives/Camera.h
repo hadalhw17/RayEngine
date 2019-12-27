@@ -16,23 +16,23 @@ struct RAY_ENGINE_API RCamera
 };
 
 
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<RCamera>()
-	{
-		return members(
-			member("campos", &RCamera::campos),
-			member("camdir", &RCamera::camdir),
-			member("camright", &RCamera::camright),
-			member("camdown", &RCamera::camdown),
-			member("lookat", &RCamera::lookat),
-			member("fov", &RCamera::fov),
-			member("focial_distance", &RCamera::focial_distance),
-			member("apertude_radius", &RCamera::apertude_radius),
-			member("view", &RCamera::view)
-		);
-	}
-
-} // end of namespace meta
+//#include <Meta.h>
+//namespace meta {
+//
+//	template <>
+//	inline auto registerMembers<RCamera>()
+//	{
+//		return members(
+//			member("campos", &RCamera::campos),
+//			member("camdir", &RCamera::camdir),
+//			member("camright", &RCamera::camright),
+//			member("camdown", &RCamera::camdown),
+//			member("lookat", &RCamera::lookat),
+//			member("fov", &RCamera::fov),
+//			member("focial_distance", &RCamera::focial_distance),
+//			member("apertude_radius", &RCamera::apertude_radius),
+//			member("view", &RCamera::view)
+//		);
+//	}
+//
+//} // end of namespace meta

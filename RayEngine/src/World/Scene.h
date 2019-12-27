@@ -65,15 +65,3 @@ protected:
 	virtual void clear_memory() {}
 	void setup_camera();
 };
-
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<RScene>()
-	{
-		return members(
-			member("should not use this one!", &RScene::scene_settings)
-		);
-	}
-} // end of namespace meta

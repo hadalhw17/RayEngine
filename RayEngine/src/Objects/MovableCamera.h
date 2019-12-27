@@ -47,22 +47,3 @@ private:
 	void fix_aperture_radius();
 	void fix_focial_distance();
 };
-
-namespace meta {
-
-	template <>
-	inline auto registerMembers<RMovableCamera>()
-	{
-		return members(
-			member("fov", &RMovableCamera::fov),
-			member("position", &RMovableCamera::position),
-			member("view_direction", &RMovableCamera::view_direction),
-			member("yaw", &RMovableCamera::yaw),
-			member("pitch", &RMovableCamera::pitch),
-			member("radius", &RMovableCamera::radius),
-			member("apertude_radius", &RMovableCamera::apertude_radius),
-			member("focial_distance", &RMovableCamera::focial_distance)
-		);
-	}
-
-} // end of namespace meta

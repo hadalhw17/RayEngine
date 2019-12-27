@@ -270,7 +270,6 @@ copy /Y "$(TargetDir)$(TargetName).lib" "$(SolutionDir)bin\$(Configuration)-$(Pl
     <ClCompile Include="src\Primitives\Triangle.cpp" />
     <ClCompile Include="src\Layers\UILayer.cpp" />
     <ClCompile Include="src\Engine\Window.cpp" />
-    <ClCompile Include="vendor\MetaStuff\include\StringCast.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\helper_math.h" />

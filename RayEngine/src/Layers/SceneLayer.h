@@ -50,17 +50,3 @@ namespace RayEngine
 
 	};
 }
-
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<RayEngine::RSceneLayer>()
-	{
-		return members(
-			member("brush_radius", &RayEngine::RSceneLayer::brush_radius),
-			member("brush", &RayEngine::RSceneLayer::brush),
-			member("m_scene", &RayEngine::RSceneLayer::m_scene)
-		);
-	}
-} // end of na

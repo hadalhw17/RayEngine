@@ -39,14 +39,14 @@ namespace RayEngine
 
 }
 
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<RayEngine::RLayer>()
-	{
-		return members(
-			member("m_debug_name", &RayEngine::RLayer::m_debug_name)
-		);
-	}
-} // end of na
+//#include <Meta.h>
+//namespace meta {
+//
+//	template <>
+//	inline auto registerMembers<RayEngine::RLayer>()
+//	{
+//		return members(
+//			member("m_debug_name", &RayEngine::RLayer::m_debug_name)
+//		);
+//	}
+//} // end of na

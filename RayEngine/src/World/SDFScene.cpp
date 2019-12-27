@@ -3,7 +3,6 @@
 
 #include "SDFScene.h"
 #include "RayEngine/Application.h"
-#include <JsonCast.h>
 #include "World/Chunk.h"
 
 extern "C" void initialize_volume_render(RCamera& sceneCam, const RayEngine::RChunk& world_chunk, const int& num_sdf, const std::vector<VoxelMaterial>& materials, const RenderingSettings& render_settings,
@@ -67,8 +66,8 @@ void SDFScene::load_chunk_from_file(std::string filename)
 
 void SDFScene::write_to_file()
 {
-	std::ofstream os("scene.json");
-	json scene = &*this;
-	RE_LOG(std::setw(4) << scene);
+	//std::ofstream os("scene.json");
+	//json scene = &*this;
+	//RE_LOG(std::setw(4) << scene);
 }
 

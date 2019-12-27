@@ -296,7 +296,7 @@ namespace RayEngine
 
 		//glfwSwapInterval(1); // Enable vsync
 
-
+		assert("Failed to initialize OpenGL loader!\n", !gl3wInit());
 		// Initialize OpenGL loader
 		RAY_ENGINE_ASSERT(!gl3wInit(), "Failed to initialize OpenGL loader!\n")
 

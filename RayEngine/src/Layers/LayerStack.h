@@ -26,16 +26,3 @@ namespace RayEngine
 	};
 
 }
-
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<RayEngine::RLayerStack>()
-	{
-		return members(
-			member("m_layers", &RayEngine::RLayerStack::m_layers),
-			member("m_layer_insert", &RayEngine::RLayerStack::m_layer_insert)
-		);
-	}
-} // end of namespace meta

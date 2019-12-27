@@ -24,19 +24,3 @@ namespace RayEngine
 	};
 
 }
-
-
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<RayEngine::RSceneObject>()
-	{
-		return members(
-			member("components", &RayEngine::RSceneObject::components),
-			member("object_properties", &RayEngine::RSceneObject::object_properties),
-			member("collision_box", &RayEngine::RSceneObject::collision_box)
-		);
-	}
-
-} // end of namespace meta
