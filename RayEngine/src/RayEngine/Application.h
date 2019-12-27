@@ -69,14 +69,14 @@ namespace RayEngine
 }
 
 
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<RayEngine::Application>()
-	{
-		return members(
-			member("m_layer_stack", &RayEngine::Application::m_layer_stack)
-		);
-	}
-} // end of namespace meta
+//#include <Meta.h>
+//namespace meta {
+//
+//	template <>
+//	inline auto registerMembers<RayEngine::Application>()
+//	{
+//		return members(
+//			member("m_layer_stack", &RayEngine::Application::m_layer_stack)
+//		);
+//	}
+//} // end of namespace meta

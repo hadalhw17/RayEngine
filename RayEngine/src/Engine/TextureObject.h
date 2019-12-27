@@ -18,15 +18,15 @@ public:
 	std::string texture_path;
 };
 
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<RTextureObject>()
-	{
-		return members(
-			member("resolution", &RTextureObject::resolution),
-			member("texture_path", &RTextureObject::texture_path)
-		);
-	}
-} // end of namespace meta
+//#include <Meta.h>
+//namespace meta {
+//
+//	template <>
+//	inline auto registerMembers<RTextureObject>()
+//	{
+//		return members(
+//			member("resolution", &RTextureObject::resolution),
+//			member("texture_path", &RTextureObject::texture_path)
+//		);
+//	}
+//} // end of namespace meta

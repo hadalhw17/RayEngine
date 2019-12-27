@@ -2,10 +2,7 @@
 #include "TestScene.h"
 #include"TextCharacter.h"
 #include "TestSceneLayer.h"
-#include <Meta.h>
 #include <World/SDFScene.h>
-#include <json.hpp>
-#include <JsonCast.h>
 #include "ResourceManager.h"
 
 template<typename T>

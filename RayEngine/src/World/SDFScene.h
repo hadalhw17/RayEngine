@@ -41,21 +41,21 @@ protected:
 protected:
 };
 
-#include <Meta.h>
-namespace meta {
-
-	template <>
-	inline auto registerMembers<SDFScene>()
-	{
-		return members(
-			member("noise", &SDFScene::noise),
-			member("materials", &SDFScene::materials),
-			member("world_chunk", &SDFScene::world_chunk),
-			member("scene_camera", &SDFScene::scene_camera),
-			member("scene_objects", &SDFScene::scene_objects),
-			member("scene_settings", &SDFScene::scene_settings)
-		);
-	}
-
-} // end of namespace meta
-
+//#include <Meta.h>
+//namespace meta {
+//
+//	template <>
+//	inline auto registerMembers<SDFScene>()
+//	{
+//		return members(
+//			member("noise", &SDFScene::noise),
+//			member("materials", &SDFScene::materials),
+//			member("world_chunk", &SDFScene::world_chunk),
+//			member("scene_camera", &SDFScene::scene_camera),
+//			member("scene_objects", &SDFScene::scene_objects),
+//			member("scene_settings", &SDFScene::scene_settings)
+//		);
+//	}
+//
+//} // end of namespace meta
+//
